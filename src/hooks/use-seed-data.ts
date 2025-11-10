@@ -418,65 +418,85 @@ export function useSeedData() {
     }
 
     if (!menuItems || menuItems.length === 0) {
-      const sampleMenuItems: MenuItem[] = [
+      const menuItemsData = [
         {
-          id: generateId(),
+          id: 'menu-001',
           name: 'Cheesecake',
           category: 'Tatlılar',
           description: 'Klasik New York usulü cheesecake',
           sellingPrice: 150,
-          costPrice: 0,
+          costPrice: 45,
           targetCostPercentage: 30,
           isActive: true,
           popularity: 0.8,
-          profitMargin: 0,
+          profitMargin: 0.7,
           servingSize: 12,
           isProduced: false,
         },
         {
-          id: generateId(),
+          id: 'menu-002',
           name: 'Tiramisu',
           category: 'Tatlılar',
           description: 'İtalyan tiramisu',
           sellingPrice: 120,
-          costPrice: 0,
+          costPrice: 38,
           targetCostPercentage: 30,
           isActive: true,
           popularity: 0.7,
-          profitMargin: 0,
+          profitMargin: 0.68,
           servingSize: 8,
           isProduced: true,
         },
         {
-          id: generateId(),
+          id: 'menu-003',
           name: 'Makarna Carbonara',
           category: 'Ana Yemekler',
           description: 'Kremalı carbonara sosu ile',
           sellingPrice: 180,
-          costPrice: 0,
+          costPrice: 52,
           targetCostPercentage: 25,
           isActive: true,
           popularity: 0.85,
-          profitMargin: 0,
+          profitMargin: 0.71,
           servingSize: 1,
           isProduced: true,
         },
         {
-          id: generateId(),
+          id: 'menu-004',
           name: 'Sezar Salata',
           category: 'Salatalar',
           description: 'Tavuklu sezar salata',
           sellingPrice: 95,
-          costPrice: 0,
+          costPrice: 32,
           targetCostPercentage: 28,
           isActive: true,
           popularity: 0.65,
-          profitMargin: 0,
+          profitMargin: 0.66,
           servingSize: 1,
           isProduced: true,
         },
       ];
-      setMenuItems(sampleMenuItems);
+      
+      setMenuItems(menuItemsData);
+      
+      const menuProducts: Product[] = menuItemsData.map(item => ({
+        id: item.id,
+        sku: `MENU-${item.id}`,
+        name: item.name,
+        description: item.description,
+        categoryId: 'cat-menu',
+        category: item.category,
+        basePrice: item.sellingPrice,
+        costPrice: item.costPrice,
+        taxRate: 18,
+        unit: 'porsiyon',
+        isActive: true,
+        stock: 999999,
+        minStockLevel: 0,
+        trackStock: false,
+      }));
+      
+      setProducts((current) => [...(current || []), ...menuProducts]);
     }
 
     if (!sales || sales.length === 0) {
@@ -493,6 +513,10 @@ export function useSeedData() {
         { id: 'prod-009', name: 'Latte', price: 55, taxRate: 18 },
         { id: 'prod-010', name: 'Cappuccino', price: 50, taxRate: 18 },
         { id: 'prod-011', name: 'Kola', price: 25, taxRate: 18 },
+        { id: 'menu-001', name: 'Cheesecake', price: 150, taxRate: 18 },
+        { id: 'menu-002', name: 'Tiramisu', price: 120, taxRate: 18 },
+        { id: 'menu-003', name: 'Makarna Carbonara', price: 180, taxRate: 18 },
+        { id: 'menu-004', name: 'Sezar Salata', price: 95, taxRate: 18 },
       ];
 
       const branchIds = ['branch-1', 'branch-2', 'branch-3'];

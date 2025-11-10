@@ -11,13 +11,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank } from '@phosphor-icons/react';
+import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
 
 interface MenuModuleProps {
   onBack: () => void;
+}
+
+interface PriceChangeProposal {
+  menuItemId: string;
+  currentPrice: number;
+  proposedPrice: number;
+  reason: string;
+  expectedProfitMargin: number;
 }
 
 export default function MenuModule({ onBack }: MenuModuleProps) {
@@ -37,10 +45,15 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showDeleteProductDialog, setShowDeleteProductDialog] = useState(false);
+  const [showPriceEditDialog, setShowPriceEditDialog] = useState(false);
+  const [showPriceProposalDialog, setShowPriceProposalDialog] = useState(false);
   
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
+  const [newPrice, setNewPrice] = useState<string>('');
+  const [priceProposal, setPriceProposal] = useState<PriceChangeProposal | null>(null);
   
   const [newProduct, setNewProduct] = useState({
     sku: '',
@@ -158,6 +171,144 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       ? ` (${analysisStartDate ? new Date(analysisStartDate).toLocaleDateString('tr-TR') : 'Başlangıç'} - ${analysisEndDate ? new Date(analysisEndDate).toLocaleDateString('tr-TR') : 'Bugün'})`
       : '';
     toast.success(`AI analizi tamamlandı${dateRangeText}`);
+  };
+
+  const generatePriceProposal = (menuItem: MenuItem, analysisItem: MenuAnalysis) => {
+    const targetProfitMargin = 0.60;
+    const minProfitMargin = 0.45;
+    const moderateIncrease = 0.12;
+    const maxIncrease = 0.20;
+    
+    let proposedPrice = menuItem.sellingPrice;
+    let reason = '';
+    
+    if (analysisItem.category === 'plow_horse') {
+      const profitMarginScore = analysisItem.revenue > 0 ? analysisItem.profit / analysisItem.revenue : 0;
+      
+      if (profitMarginScore < minProfitMargin) {
+        const targetRevenue = analysisItem.cost / (1 - targetProfitMargin);
+        const neededPriceIncrease = (targetRevenue - analysisItem.revenue) / analysisItem.totalSales;
+        proposedPrice = menuItem.sellingPrice + neededPriceIncrease;
+        
+        if ((proposedPrice - menuItem.sellingPrice) / menuItem.sellingPrice > maxIncrease) {
+          proposedPrice = menuItem.sellingPrice * (1 + maxIncrease);
+        }
+        
+        reason = 'Ürün popüler ancak kar marjı çok düşük. Makul fiyat artışı ile karlılığı iyileştirebilirsiniz.';
+      } else {
+        proposedPrice = menuItem.sellingPrice * (1 + moderateIncrease);
+        reason = 'Popülerliği yüksek, kar marjını artırmak için fırsat var.';
+      }
+    } else if (analysisItem.category === 'puzzle') {
+      proposedPrice = menuItem.sellingPrice * 0.90;
+      reason = 'Kar marjı yüksek ancak satışlar düşük. Fiyat düşürme ile daha fazla müşteri çekebilirsiniz.';
+    } else if (analysisItem.category === 'star') {
+      proposedPrice = menuItem.sellingPrice * 1.05;
+      reason = 'Yıldız ürün! Küçük fiyat artışı ile karlılığı daha da artırabilirsiniz.';
+    }
+    
+    const expectedProfitMargin = ((proposedPrice - menuItem.costPrice) / proposedPrice) * 100;
+    
+    const proposal: PriceChangeProposal = {
+      menuItemId: menuItem.id,
+      currentPrice: menuItem.sellingPrice,
+      proposedPrice: Math.round(proposedPrice * 100) / 100,
+      reason,
+      expectedProfitMargin,
+    };
+    
+    setPriceProposal(proposal);
+    setShowPriceProposalDialog(true);
+  };
+
+  const applyPriceProposal = () => {
+    if (!priceProposal) return;
+    
+    setMenuItems((current) =>
+      (current || []).map((item) => {
+        if (item.id === priceProposal.menuItemId) {
+          const newProfitMargin = priceProposal.proposedPrice > 0
+            ? ((priceProposal.proposedPrice - item.costPrice) / priceProposal.proposedPrice)
+            : 0;
+          
+          return {
+            ...item,
+            sellingPrice: priceProposal.proposedPrice,
+            profitMargin: newProfitMargin,
+          };
+        }
+        return item;
+      })
+    );
+    
+    setProducts((current) =>
+      (current || []).map((product) => {
+        if (product.id === priceProposal.menuItemId) {
+          return {
+            ...product,
+            basePrice: priceProposal.proposedPrice,
+          };
+        }
+        return product;
+      })
+    );
+    
+    const item = (menuItems || []).find(m => m.id === priceProposal.menuItemId);
+    const change = priceProposal.proposedPrice > priceProposal.currentPrice ? 'artırıldı' : 'düşürüldü';
+    toast.success(`${item?.name} fiyatı ${change}: ${formatCurrency(priceProposal.proposedPrice)}`);
+    
+    setShowPriceProposalDialog(false);
+    setPriceProposal(null);
+  };
+
+  const openPriceEditDialog = (menuItem: MenuItem) => {
+    setEditingMenuItem(menuItem);
+    setNewPrice(menuItem.sellingPrice.toString());
+    setShowPriceEditDialog(true);
+  };
+
+  const savePriceEdit = () => {
+    if (!editingMenuItem) return;
+    
+    const price = parseFloat(newPrice);
+    if (isNaN(price) || price < 0) {
+      toast.error('Geçerli bir fiyat girin');
+      return;
+    }
+    
+    setMenuItems((current) =>
+      (current || []).map((item) => {
+        if (item.id === editingMenuItem.id) {
+          const newProfitMargin = price > 0
+            ? ((price - item.costPrice) / price)
+            : 0;
+          
+          return {
+            ...item,
+            sellingPrice: price,
+            profitMargin: newProfitMargin,
+          };
+        }
+        return item;
+      })
+    );
+    
+    setProducts((current) =>
+      (current || []).map((product) => {
+        if (product.id === editingMenuItem.id) {
+          return {
+            ...product,
+            basePrice: price,
+          };
+        }
+        return product;
+      })
+    );
+    
+    toast.success(`${editingMenuItem.name} fiyatı güncellendi: ${formatCurrency(price)}`);
+    setShowPriceEditDialog(false);
+    setEditingMenuItem(null);
+    setNewPrice('');
   };
 
   const getCategoryBadge = (category: MenuCategory) => {
@@ -312,8 +463,9 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       return;
     }
 
+    const menuItemId = generateId();
     const menuItem: MenuItem = {
-      id: generateId(),
+      id: menuItemId,
       name: newMenuItem.name,
       category: newMenuItem.category,
       description: newMenuItem.description,
@@ -328,7 +480,27 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     };
 
     setMenuItems((current) => [...(current || []), menuItem]);
-    toast.success('Menü öğesi eklendi');
+    
+    const product: Product = {
+      id: menuItemId,
+      sku: `MENU-${menuItemId.substring(0, 8)}`,
+      name: newMenuItem.name,
+      description: newMenuItem.description,
+      categoryId: 'cat-menu',
+      category: newMenuItem.category,
+      basePrice: 0,
+      costPrice: 0,
+      taxRate: 18,
+      unit: 'porsiyon',
+      isActive: true,
+      stock: 999999,
+      minStockLevel: 0,
+      trackStock: false,
+    };
+    
+    setProducts((current) => [...(current || []), product]);
+    
+    toast.success('Menü öğesi eklendi ve satış ekranında görünür hale geldi');
     setShowMenuItemDialog(false);
   };
 
@@ -586,9 +758,19 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Satış Fiyatı</span>
-                      <span className="text-lg font-semibold font-tabular-nums">
-                        {formatCurrency(item.sellingPrice)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold font-tabular-nums">
+                          {formatCurrency(item.sellingPrice)}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => openPriceEditDialog(item)}
+                        >
+                          <PencilSimple className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Maliyet/Porsiyon</span>
@@ -975,11 +1157,25 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                           <Progress value={item.popularityScore * 100} />
                         </div>
 
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-sm font-medium mb-1">AI Önerisi</p>
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            {item.recommendation}
-                          </p>
+                        <div className="p-3 bg-muted rounded-lg space-y-3">
+                          <div>
+                            <p className="text-sm font-medium mb-1">AI Önerisi</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {item.recommendation}
+                            </p>
+                          </div>
+                          
+                          {(item.category === 'plow_horse' || item.category === 'puzzle' || item.category === 'star') && item.totalSales > 0 && (
+                            <Button
+                              size="sm"
+                              variant={item.category === 'puzzle' ? 'secondary' : 'default'}
+                              className="w-full"
+                              onClick={() => generatePriceProposal(menuItem, item)}
+                            >
+                              <Sparkle className="h-4 w-4 mr-2" weight="fill" />
+                              {item.category === 'puzzle' ? 'Fiyat Düşür' : 'Fiyat Arttır'}
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -1511,6 +1707,151 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             <Button variant="destructive" onClick={deleteProduct}>
               <Trash className="h-4 w-4 mr-2" />
               Ürünü Sil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPriceEditDialog} onOpenChange={setShowPriceEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fiyat Düzenle</DialogTitle>
+            <DialogDescription>
+              {editingMenuItem?.name} için yeni satış fiyatını girin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Mevcut Fiyat</span>
+                <span className="font-semibold font-tabular-nums">
+                  {formatCurrency(editingMenuItem?.sellingPrice || 0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Maliyet</span>
+                <span className="font-semibold font-tabular-nums">
+                  {formatCurrency(editingMenuItem?.costPrice || 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Yeni Satış Fiyatı (₺)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newPrice}
+                onChange={(e) => setNewPrice(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+
+            {newPrice && parseFloat(newPrice) > 0 && editingMenuItem && (
+              <div className="p-3 bg-accent/10 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Yeni Kar Marjı</span>
+                  <span className="text-lg font-bold font-tabular-nums text-accent">
+                    {(((parseFloat(newPrice) - editingMenuItem.costPrice) / parseFloat(newPrice)) * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPriceEditDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={savePriceEdit}>
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPriceProposalDialog} onOpenChange={setShowPriceProposalDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>AI Fiyat Önerisi</DialogTitle>
+            <DialogDescription>
+              Sistem, veri analizine dayalı fiyat önerisi sunuyor
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {priceProposal && (
+              <>
+                <div className="p-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Mevcut Fiyat</p>
+                      <p className="text-2xl font-bold font-tabular-nums">
+                        {formatCurrency(priceProposal.currentPrice)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {priceProposal.proposedPrice > priceProposal.currentPrice ? (
+                        <TrendUp className="h-8 w-8 text-accent" weight="bold" />
+                      ) : (
+                        <TrendDown className="h-8 w-8 text-secondary" weight="bold" />
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Önerilen Fiyat</p>
+                      <p className="text-2xl font-bold font-tabular-nums text-accent">
+                        {formatCurrency(priceProposal.proposedPrice)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <span className={priceProposal.proposedPrice > priceProposal.currentPrice ? 'text-accent' : 'text-secondary'}>
+                      {priceProposal.proposedPrice > priceProposal.currentPrice ? '+' : ''}
+                      {formatCurrency(priceProposal.proposedPrice - priceProposal.currentPrice)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      ({((priceProposal.proposedPrice - priceProposal.currentPrice) / priceProposal.currentPrice * 100).toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkle className="h-4 w-4 text-primary" weight="fill" />
+                    <p className="text-sm font-medium">AI Analizi</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {priceProposal.reason}
+                  </p>
+                </div>
+
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Beklenen Kar Marjı</span>
+                    <span className="text-lg font-bold font-tabular-nums">
+                      {priceProposal.expectedProfitMargin.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-900">
+                    ⚠️ Bu öneri, geçmiş satış verilerine ve pazar koşullarına dayalıdır. 
+                    Değişiklikleri uygulamadan önce dikkatli değerlendirin.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPriceProposalDialog(false)}>
+              <X className="h-4 w-4 mr-2" />
+              İptal
+            </Button>
+            <Button onClick={applyPriceProposal} variant="default">
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Onayla ve Uygula
             </Button>
           </DialogFooter>
         </DialogContent>
