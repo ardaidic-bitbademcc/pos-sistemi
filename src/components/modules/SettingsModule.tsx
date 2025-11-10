@@ -24,6 +24,7 @@ interface AppSettings {
   autoCalculateSalary: boolean;
   pricesIncludeVAT: boolean;
   lazyTableWarningMinutes?: number;
+  requireGuestCount?: boolean;
 }
 
 interface TaxRate {
@@ -66,6 +67,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
     autoCalculateSalary: false,
     pricesIncludeVAT: false,
     lazyTableWarningMinutes: 120,
+    requireGuestCount: false,
   };
   
   const [settings, setSettings] = useKV<AppSettings>('appSettings', defaultSettings);
@@ -644,6 +646,25 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                     Kaydet
                   </Button>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <p className="font-medium">Kişi Sayısı Girişi</p>
+                  <p className="text-sm text-muted-foreground">
+                    Masa açılırken kişi sayısı girişi zorunlu olsun mu?
+                  </p>
+                </div>
+                <Switch
+                  checked={(settings || defaultSettings).requireGuestCount || false}
+                  onCheckedChange={(checked) => {
+                    setSettings((current) => {
+                      const curr = current || defaultSettings;
+                      return { ...curr, requireGuestCount: checked };
+                    });
+                    toast.success(`Kişi sayısı girişi ${checked ? 'aktif' : 'pasif'} edildi`);
+                  }}
+                />
               </div>
             </CardContent>
           </Card>

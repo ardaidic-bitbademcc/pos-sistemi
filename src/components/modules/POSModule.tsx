@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
-import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole } from '@/lib/types';
+import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 
 interface POSModuleProps {
@@ -33,6 +33,7 @@ interface AppSettings {
   autoCalculateSalary: boolean;
   pricesIncludeVAT: boolean;
   lazyTableWarningMinutes?: number;
+  requireGuestCount?: boolean;
 }
 
 interface PaymentMethodSetting {
@@ -53,6 +54,18 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [sales, setSales] = useKV<Sale[]>('sales', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
   const [tableOrders, setTableOrders] = useKV<TableOrder[]>('tableOrders', []);
+  const [cashRegister, setCashRegister] = useKV<CashRegister>('cashRegister', {
+    id: generateId(),
+    branchId: 'branch-1',
+    date: new Date().toISOString().split('T')[0],
+    openingBalance: 0,
+    currentBalance: 0,
+    totalCashSales: 0,
+    totalCardSales: 0,
+    totalMobileSales: 0,
+    totalSales: 0,
+    lastUpdated: new Date().toISOString(),
+  });
   const [settings] = useKV<AppSettings>('appSettings', {
     taxRates: [],
     paymentMethods: [
@@ -64,6 +77,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     autoCalculateSalary: false,
     pricesIncludeVAT: false,
     lazyTableWarningMinutes: 120,
+    requireGuestCount: false,
   });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -72,6 +86,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [activeTab, setActiveTab] = useState<'quick-sale' | 'tables'>('quick-sale');
   const [showCheckout, setShowCheckout] = useState(false);
   const [showTableSelect, setShowTableSelect] = useState(false);
+  const [showGuestCountDialog, setShowGuestCountDialog] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showOrderDetailsDialog, setShowOrderDetailsDialog] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
@@ -84,10 +99,13 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [currentSplitMethod, setCurrentSplitMethod] = useState<PaymentMethod>('cash');
   const [currentSplitAmount, setCurrentSplitAmount] = useState('');
   const [showNumpad, setShowNumpad] = useState(false);
+  const [pendingTable, setPendingTable] = useState<Table | null>(null);
+  const [guestCount, setGuestCount] = useState('');
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
   const lazyTableWarningMinutes = settings?.lazyTableWarningMinutes || 120;
+  const requireGuestCount = settings?.requireGuestCount || false;
   const isWaiter = currentUserRole === 'waiter';
 
   const visibleCategories = (categories || []).filter(cat => cat.showInPOS !== false);
@@ -156,6 +174,17 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   }, [selectedTable]);
 
   const selectTable = (table: Table) => {
+    if (requireGuestCount && !table.currentSaleId) {
+      setPendingTable(table);
+      setGuestCount('');
+      setShowGuestCountDialog(true);
+      return;
+    }
+
+    finalizeTableSelection(table);
+  };
+
+  const finalizeTableSelection = (table: Table, customersCount?: number) => {
     setSelectedTable(table);
     setShowTableSelect(false);
     setActiveTab('quick-sale');
@@ -171,6 +200,32 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           t.id === table.id ? { ...t, status: 'occupied' as const } : t
         )
       );
+      
+      if (customersCount !== undefined && requireGuestCount) {
+        const newOrder: TableOrder = {
+          id: generateId(),
+          tableId: table.id,
+          saleId: '',
+          openedAt: new Date().toISOString(),
+          customersCount: customersCount,
+        };
+        setTableOrders((current) => [...(current || []), newOrder]);
+      }
+    }
+  };
+
+  const confirmGuestCount = () => {
+    const count = parseInt(guestCount);
+    if (!count || count < 1) {
+      toast.error('Geçerli bir kişi sayısı girin');
+      return;
+    }
+    
+    if (pendingTable) {
+      finalizeTableSelection(pendingTable, count);
+      setShowGuestCountDialog(false);
+      setPendingTable(null);
+      setGuestCount('');
     }
   };
 
@@ -290,14 +345,25 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     } else {
       setSales((currentSales) => [...(currentSales || []), newSale]);
       
-      const newOrder: TableOrder = {
-        id: generateId(),
-        tableId: selectedTable.id,
-        saleId: saleId,
-        openedAt: now,
-        customersCount: selectedTable.capacity,
-      };
-      setTableOrders((current) => [...(current || []), newOrder]);
+      const existingOrder = (tableOrders || []).find(o => o.tableId === selectedTable.id && !o.closedAt);
+      if (existingOrder) {
+        setTableOrders((current) =>
+          (current || []).map(o =>
+            o.id === existingOrder.id
+              ? { ...o, saleId: saleId }
+              : o
+          )
+        );
+      } else {
+        const newOrder: TableOrder = {
+          id: generateId(),
+          tableId: selectedTable.id,
+          saleId: saleId,
+          openedAt: now,
+          customersCount: undefined,
+        };
+        setTableOrders((current) => [...(current || []), newOrder]);
+      }
       
       setTables((current) =>
         (current || []).map(t =>
@@ -522,6 +588,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     }
 
     const saleId = selectedTable?.currentSaleId || generateId();
+    const finalPaymentMethod = splitPayments.length > 0 ? 'card' : paymentMethod;
+    
     const newSale: Sale = {
       id: saleId,
       branchId: 'branch-1',
@@ -532,7 +600,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       taxAmount: totals.taxAmount,
       discountAmount: orderDiscount,
       totalAmount: totals.total,
-      paymentMethod: splitPayments.length > 0 ? 'card' : paymentMethod,
+      paymentMethod: finalPaymentMethod,
       paymentStatus: 'completed',
       items: cart,
       notes: splitPayments.length > 0 ? `Parçalı ödeme: ${splitPayments.map(p => `${p.method}=${formatCurrency(p.amount)}`).join(', ')}` : undefined,
@@ -545,6 +613,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     } else {
       setSales((currentSales) => [...(currentSales || []), newSale]);
     }
+
+    updateCashRegister(finalPaymentMethod, totals.total, splitPayments);
 
     if (selectedTable) {
       setTables((current) =>
@@ -574,6 +644,55 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     setSplitPayments([]);
     setOrderDiscount(0);
     setPaymentMethod('cash');
+    setActiveTab('tables');
+  };
+
+  const updateCashRegister = (method: PaymentMethod, amount: number, splits: SplitPayment[]) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    setCashRegister((current) => {
+      if (!current || current.date !== today) {
+        const newRegister: CashRegister = {
+          id: generateId(),
+          branchId: 'branch-1',
+          date: today,
+          openingBalance: current?.currentBalance || 0,
+          currentBalance: current?.currentBalance || 0,
+          totalCashSales: 0,
+          totalCardSales: 0,
+          totalMobileSales: 0,
+          totalSales: 0,
+          lastUpdated: new Date().toISOString(),
+        };
+        current = newRegister;
+      }
+
+      let cashAmount = 0;
+      let cardAmount = 0;
+      let mobileAmount = 0;
+
+      if (splits.length > 0) {
+        splits.forEach(split => {
+          if (split.method === 'cash') cashAmount += split.amount;
+          else if (split.method === 'card') cardAmount += split.amount;
+          else if (split.method === 'mobile') mobileAmount += split.amount;
+        });
+      } else {
+        if (method === 'cash') cashAmount = amount;
+        else if (method === 'card') cardAmount = amount;
+        else if (method === 'mobile') mobileAmount = amount;
+      }
+
+      return {
+        ...current,
+        currentBalance: current.currentBalance + cashAmount,
+        totalCashSales: current.totalCashSales + cashAmount,
+        totalCardSales: current.totalCardSales + cardAmount,
+        totalMobileSales: current.totalMobileSales + mobileAmount,
+        totalSales: current.totalSales + amount,
+        lastUpdated: new Date().toISOString(),
+      };
+    });
   };
 
   const totals = calculateTotals();
@@ -986,10 +1105,6 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                             )}
                           </div>
                         )}
-                        <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                          <Users className="h-3 w-3" />
-                          <span>{table.capacity} kişi</span>
-                        </div>
                       </CardContent>
                     </Card>
                   );
@@ -1447,6 +1562,57 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
             >
               <Check className="h-4 w-4 mr-2" weight="bold" />
               Satışı Tamamla
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGuestCountDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowGuestCountDialog(false);
+          setPendingTable(null);
+          setGuestCount('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Kişi Sayısı Gir</DialogTitle>
+            <DialogDescription>
+              {pendingTable ? `Masa ${pendingTable.tableNumber} için kişi sayısı girin` : 'Kişi sayısı girin'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Kişi Sayısı</Label>
+              <Input
+                type="number"
+                min="1"
+                value={guestCount}
+                onChange={(e) => setGuestCount(e.target.value)}
+                placeholder="Örn: 4"
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmGuestCount();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowGuestCountDialog(false);
+                setPendingTable(null);
+                setGuestCount('');
+              }}
+            >
+              İptal
+            </Button>
+            <Button onClick={confirmGuestCount}>
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Onayla
             </Button>
           </DialogFooter>
         </DialogContent>

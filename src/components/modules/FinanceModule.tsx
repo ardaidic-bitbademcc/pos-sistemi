@@ -3,8 +3,8 @@ import { useKV } from '@github/spark/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, TrendUp, TrendDown, CurrencyCircleDollar, Receipt } from '@phosphor-icons/react';
-import type { Sale, Expense, FinancialSummary } from '@/lib/types';
+import { ArrowLeft, TrendUp, TrendDown, CurrencyCircleDollar, Receipt, Wallet, CreditCard, DeviceMobile } from '@phosphor-icons/react';
+import type { Sale, Expense, FinancialSummary, CashRegister } from '@/lib/types';
 import { formatCurrency, getStartOfDay } from '@/lib/helpers';
 
 interface FinanceModuleProps {
@@ -14,6 +14,7 @@ interface FinanceModuleProps {
 export default function FinanceModule({ onBack }: FinanceModuleProps) {
   const [sales] = useKV<Sale[]>('sales', []);
   const [expenses] = useKV<Expense[]>('expenses', []);
+  const [cashRegister] = useKV<CashRegister | null>('cashRegister', null);
 
   const summary: FinancialSummary = useMemo(() => {
     const today = getStartOfDay();
@@ -123,12 +124,123 @@ export default function FinanceModule({ onBack }: FinanceModuleProps) {
         </Card>
       </div>
 
-      <Tabs defaultValue="income" className="space-y-4">
+      <Tabs defaultValue="cash-register" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="cash-register">Kasa</TabsTrigger>
           <TabsTrigger value="income">Gelir Takibi</TabsTrigger>
           <TabsTrigger value="expenses">Gider Takibi</TabsTrigger>
           <TabsTrigger value="reports">Raporlar</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="cash-register" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Kasa Durumu</CardTitle>
+              <CardDescription>
+                {cashRegister ? new Date(cashRegister.date).toLocaleDateString('tr-TR', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                }) : 'Bugün'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {!cashRegister ? (
+                <p className="text-muted-foreground text-sm text-center py-8">
+                  Henüz kasa hareketi yok
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Açılış Bakiyesi</span>
+                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-2xl font-semibold font-tabular-nums">
+                        {formatCurrency(cashRegister.openingBalance)}
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 border rounded-lg space-y-2 bg-primary/5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Mevcut Bakiye</span>
+                        <Wallet className="h-4 w-4 text-primary" weight="bold" />
+                      </div>
+                      <p className="text-2xl font-semibold font-tabular-nums text-primary">
+                        {formatCurrency(cashRegister.currentBalance)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium">Ödeme Yöntemine Göre Satışlar</h3>
+                    
+                    <div className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-accent/10">
+                            <Wallet className="h-5 w-5 text-accent" weight="bold" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Nakit Satışlar</p>
+                            <p className="text-xs text-muted-foreground">Kasaya giriş yapıldı</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-semibold font-tabular-nums text-accent">
+                          {formatCurrency(cashRegister.totalCashSales)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <CreditCard className="h-5 w-5 text-primary" weight="bold" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Kredi Kartı Satışlar</p>
+                            <p className="text-xs text-muted-foreground">Kasaya giriş yapılmadı</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-semibold font-tabular-nums">
+                          {formatCurrency(cashRegister.totalCardSales)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-secondary/10">
+                            <DeviceMobile className="h-5 w-5 text-secondary-foreground" weight="bold" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Mobil Ödeme Satışlar</p>
+                            <p className="text-xs text-muted-foreground">Kasaya giriş yapılmadı</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-semibold font-tabular-nums">
+                          {formatCurrency(cashRegister.totalMobileSales)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Toplam Satış</span>
+                        <span className="text-xl font-bold font-tabular-nums">
+                          {formatCurrency(cashRegister.totalSales)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Son güncelleme: {new Date(cashRegister.lastUpdated).toLocaleString('tr-TR')}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="income" className="space-y-4">
           <Card>

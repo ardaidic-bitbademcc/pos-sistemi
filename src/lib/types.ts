@@ -184,8 +184,21 @@ export interface TableOrder {
   saleId: string;
   openedAt: string;
   closedAt?: string;
-  customersCount: number;
+  customersCount?: number;
   notes?: string;
+}
+
+export interface CashRegister {
+  id: string;
+  branchId: string;
+  date: string;
+  openingBalance: number;
+  currentBalance: number;
+  totalCashSales: number;
+  totalCardSales: number;
+  totalMobileSales: number;
+  totalSales: number;
+  lastUpdated: string;
 }
 
 export interface MenuItem {
