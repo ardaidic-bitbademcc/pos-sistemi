@@ -563,7 +563,7 @@ export function useSeedData() {
     }
 
     setSeeded(true);
-  }, [employees, products, categories, tables, menuItems, branches, sales, setEmployees, setProducts, setCategories, setTables, setMenuItems, setBranches, setSales, seeded]);
+  }, [employees, products, categories, tables, menuItems, branches, sales, seeded]);
 
   return { seeded };
 }
