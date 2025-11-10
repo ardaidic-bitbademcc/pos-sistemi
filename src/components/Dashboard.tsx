@@ -11,6 +11,7 @@ import {
   Package,
   Bell,
   ClockClockwise,
+  Gear,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
 import type { DashboardStats, Sale } from '@/lib/types';
@@ -81,6 +82,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       icon: ChartLine,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
+    },
+    {
+      id: 'settings' as Module,
+      title: 'Ayarlar',
+      description: 'Stok, KDV, ödeme ve sistem ayarları',
+      icon: Gear,
+      color: 'text-accent',
+      bgColor: 'bg-accent/10',
     },
   ];
 

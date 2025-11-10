@@ -6,9 +6,10 @@ import PersonnelModule from '@/components/modules/PersonnelModule';
 import BranchModule from '@/components/modules/BranchModule';
 import MenuModule from '@/components/modules/MenuModule';
 import FinanceModule from '@/components/modules/FinanceModule';
+import SettingsModule from '@/components/modules/SettingsModule';
 import { useSeedData } from '@/hooks/use-seed-data';
 
-export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance';
+export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
@@ -28,6 +29,8 @@ function App() {
         return <MenuModule onBack={() => setActiveModule('dashboard')} />;
       case 'finance':
         return <FinanceModule onBack={() => setActiveModule('dashboard')} />;
+      case 'settings':
+        return <SettingsModule onBack={() => setActiveModule('dashboard')} />;
       default:
         return <Dashboard onNavigate={setActiveModule} />;
     }

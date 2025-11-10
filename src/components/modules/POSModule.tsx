@@ -20,17 +20,43 @@ interface CartItem extends SaleItem {
   productName: string;
 }
 
+interface AppSettings {
+  taxRates: any[];
+  paymentMethods: PaymentMethodSetting[];
+  stockAlerts: boolean;
+  autoCalculateSalary: boolean;
+}
+
+interface PaymentMethodSetting {
+  method: PaymentMethod;
+  displayName: string;
+  isActive: boolean;
+  icon: string;
+}
+
 export default function POSModule({ onBack }: POSModuleProps) {
   const [products] = useKV<Product[]>('products', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
   const [tableOrders, setTableOrders] = useKV<TableOrder[]>('tableOrders', []);
+  const [settings] = useKV<AppSettings>('appSettings', {
+    taxRates: [],
+    paymentMethods: [
+      { method: 'cash', displayName: 'Nakit', isActive: true, icon: 'Money' },
+      { method: 'card', displayName: 'Kredi Kartı', isActive: true, icon: 'CreditCard' },
+      { method: 'mobile', displayName: 'Mobil Ödeme', isActive: true, icon: 'DeviceMobile' },
+    ],
+    stockAlerts: true,
+    autoCalculateSalary: false,
+  });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCheckout, setShowCheckout] = useState(false);
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+
+  const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
 
   const filteredProducts = (products || []).filter((product) =>
     product.isActive &&
@@ -458,31 +484,21 @@ export default function POSModule({ onBack }: POSModuleProps) {
           <div className="space-y-4 py-4">
             <div className="space-y-3">
               <p className="text-sm font-medium">Ödeme Yöntemi</p>
-              <div className="grid grid-cols-3 gap-3">
-                <Button
-                  variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                  className="h-24 flex-col gap-2"
-                  onClick={() => setPaymentMethod('cash')}
-                >
-                  <Money className="h-8 w-8" weight="bold" />
-                  <span>Nakit</span>
-                </Button>
-                <Button
-                  variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                  className="h-24 flex-col gap-2"
-                  onClick={() => setPaymentMethod('card')}
-                >
-                  <CreditCard className="h-8 w-8" weight="bold" />
-                  <span>Kredi Kartı</span>
-                </Button>
-                <Button
-                  variant={paymentMethod === 'mobile' ? 'default' : 'outline'}
-                  className="h-24 flex-col gap-2"
-                  onClick={() => setPaymentMethod('mobile')}
-                >
-                  <DeviceMobile className="h-8 w-8" weight="bold" />
-                  <span>Mobil Ödeme</span>
-                </Button>
+              <div className={`grid gap-3 ${activePaymentMethods.length === 3 ? 'grid-cols-3' : activePaymentMethods.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {activePaymentMethods.map((pm) => {
+                  const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
+                  return (
+                    <Button
+                      key={pm.method}
+                      variant={paymentMethod === pm.method ? 'default' : 'outline'}
+                      className="h-24 flex-col gap-2"
+                      onClick={() => setPaymentMethod(pm.method)}
+                    >
+                      <Icon className="h-8 w-8" weight="bold" />
+                      <span>{pm.displayName}</span>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
             <Separator />

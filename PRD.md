@@ -84,6 +84,34 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Akış**: Dashboard → Dönem seç → Gelir/gider raporu görüntüle → Trend analizi → Export
 - **Başarı Kriterleri**: Gerçek zamanlı güncellemeler, doğru kar/zarar hesaplaması
 
+### 6. Ayarlar Modülü
+- **İşlevsellik**: Stok girişi, KDV oranları düzenleme, ödeme yöntemi yönetimi, genel sistem ayarları
+- **Amaç**: Sistem parametrelerini özelleştirmek ve işletme ihtiyaçlarına göre yapılandırmak
+- **Tetikleyici**: Yönetici ayarlar modülüne girer
+- **Akış**: Ayarlar → Stok/KDV/Ödeme/Genel sekmesi seç → Değişiklik yap → Kaydet → Sistem güncellenir
+- **Başarı Kriterleri**: Kolay navigasyon, anlık kaydetme, değişikliklerin tüm modüllere yansıması
+
+#### Stok Yönetimi
+- **İşlevsellik**: Manuel stok girişi, stok seviyelerini izleme, düşük stok uyarıları
+- **Amaç**: Stok takibini kolaylaştırmak ve eksik ürün durumlarını önlemek
+- **Tetikleyici**: Yönetici "Stok Ekle" butonuna tıklar
+- **Akış**: Ürün seç → Miktar gir → Onayla → Stok güncellenir
+- **Başarı Kriterleri**: Hızlı stok girişi, anlık güncelleme, düşük stok görselleştirmesi
+
+#### KDV Ayarları
+- **İşlevsellik**: Çoklu KDV oranı tanımlama, ürünlere KDV atama, varsayılan oran belirleme
+- **Amaç**: Farklı KDV oranlarını yönetmek ve ürün bazında özelleştirmek
+- **Tetikleyici**: Yönetici "Yeni KDV Ekle" veya ürün KDV'sini değiştirir
+- **Akış**: KDV tanımla/düzenle → Ürünlere ata → Varsayılan belirle → Kaydet
+- **Başarı Kriterleri**: Esnek KDV yönetimi, toplu atama, satışlara otomatik yansıma
+
+#### Ödeme Yöntemi Yönetimi
+- **İşlevsellik**: Ödeme yöntemlerini aktif/pasif yapma, POS ekranında gösterim kontrolü
+- **Amaç**: Kullanılmayan ödeme yöntemlerini gizlemek ve kullanıcı deneyimini sadeleştirmek
+- **Tetikleyici**: Yönetici bir ödeme yöntemini toggle eder
+- **Akış**: Ödeme listesi → Toggle aktif/pasif → POS ekranında güncellenir
+- **Başarı Kriterleri**: Anlık güncelleme, POS'ta sadece aktif metodlar görünür
+
 ## İstisna Durumları
 
 - **Çevrimdışı Mod**: Offline satış işlemleri kuyruğa alınır, internet geldiğinde senkronize edilir
