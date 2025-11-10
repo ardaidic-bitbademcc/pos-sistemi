@@ -23,6 +23,7 @@ export interface Product {
   isActive: boolean;
   stock: number;
   minStockLevel: number;
+  trackStock?: boolean;
 }
 
 export interface Category {

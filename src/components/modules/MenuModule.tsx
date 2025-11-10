@@ -32,9 +32,25 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [showRecipeDialog, setShowRecipeDialog] = useState(false);
   const [showMenuItemDialog, setShowMenuItemDialog] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
+  const [showDeleteProductDialog, setShowDeleteProductDialog] = useState(false);
   
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  
+  const [newProduct, setNewProduct] = useState({
+    sku: '',
+    name: '',
+    description: '',
+    categoryId: 'cat-1',
+    basePrice: 0,
+    costPrice: 0,
+    taxRate: 18,
+    unit: 'adet',
+    minStockLevel: 10,
+    trackStock: true,
+  });
   
   const [newMenuItem, setNewMenuItem] = useState({
     name: '',
@@ -401,6 +417,62 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     return getInvoiceSubtotal() + getInvoiceTaxAmount();
   };
 
+  const addProduct = () => {
+    if (!newProduct.name.trim() || !newProduct.sku.trim()) {
+      toast.error('Ürün adı ve SKU gerekli');
+      return;
+    }
+
+    const product: Product = {
+      id: generateId(),
+      ...newProduct,
+      isActive: true,
+      stock: 0,
+    };
+
+    setProducts((current) => [...(current || []), product]);
+    toast.success(`${newProduct.name} ürün olarak eklendi`);
+    setShowProductDialog(false);
+    setNewProduct({
+      sku: '',
+      name: '',
+      description: '',
+      categoryId: 'cat-1',
+      basePrice: 0,
+      costPrice: 0,
+      taxRate: 18,
+      unit: 'adet',
+      minStockLevel: 10,
+      trackStock: true,
+    });
+  };
+
+  const deleteProduct = () => {
+    if (!productToDelete) return;
+
+    setProducts((current) =>
+      (current || []).map(p =>
+        p.id === productToDelete.id ? { ...p, isActive: false } : p
+      )
+    );
+
+    toast.success(`${productToDelete.name} ürün listesinden silindi`);
+    setShowDeleteProductDialog(false);
+    setProductToDelete(null);
+  };
+
+  const toggleProductStockTracking = (productId: string) => {
+    setProducts((current) =>
+      (current || []).map(p =>
+        p.id === productId ? { ...p, trackStock: !p.trackStock } : p
+      )
+    );
+    const product = (products || []).find(p => p.id === productId);
+    if (product) {
+      toast.success(`${product.name} stok takibi ${product.trackStock ? 'kapatıldı' : 'açıldı'}`);
+    }
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6">
       <header className="flex items-center gap-4">
@@ -426,6 +498,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       <Tabs defaultValue="menu" className="space-y-4">
         <TabsList>
           <TabsTrigger value="menu">Menü Öğeleri</TabsTrigger>
+          <TabsTrigger value="products">Ürünler</TabsTrigger>
           <TabsTrigger value="recipes">Reçeteler</TabsTrigger>
           <TabsTrigger value="invoices">Faturalar</TabsTrigger>
           <TabsTrigger value="analysis">AI Analizi</TabsTrigger>
@@ -509,6 +582,76 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
               );
             })}
           </div>
+        </TabsContent>
+
+        <TabsContent value="products" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Ürün Yönetimi</CardTitle>
+                  <CardDescription>Ürünleri ekleyin, silin ve stok takibini yönetin</CardDescription>
+                </div>
+                <Button onClick={() => setShowProductDialog(true)}>
+                  <Plus className="h-5 w-5 mr-2" weight="bold" />
+                  Yeni Ürün
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(products || []).filter(p => p.isActive).length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Henüz ürün yok. "Yeni Ürün" butonunu kullanarak ürün ekleyebilirsiniz.
+                  </p>
+                ) : (
+                  (products || []).filter(p => p.isActive).map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-3">
+                          <p className="font-medium">{product.name}</p>
+                          {product.trackStock !== false && (
+                            <Badge variant="outline" className="text-xs">
+                              <Package className="h-3 w-3 mr-1" />
+                              Stok Takipli
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>SKU: {product.sku}</span>
+                          <span>Birim: {product.unit}</span>
+                          <span className="font-tabular-nums">Stok: {product.stock}</span>
+                          <span className="font-tabular-nums">Fiyat: {formatCurrency(product.basePrice)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => toggleProductStockTracking(product.id)}
+                        >
+                          {product.trackStock !== false ? 'Stok Takibini Kapat' : 'Stok Takibini Aç'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setProductToDelete(product);
+                            setShowDeleteProductDialog(true);
+                          }}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="recipes" className="space-y-4">
@@ -1134,6 +1277,141 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             </Button>
             <Button onClick={saveInvoice}>
               Faturayı Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Yeni Ürün Ekle</DialogTitle>
+            <DialogDescription>
+              Ürün bilgilerini doldurun
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ürün Adı *</Label>
+                <Input
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                  placeholder="Cheesecake"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>SKU *</Label>
+                <Input
+                  value={newProduct.sku}
+                  onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
+                  placeholder="CAKE-001"
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Açıklama</Label>
+                <Textarea
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                  placeholder="Ürün açıklaması..."
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Birim</Label>
+                <Input
+                  value={newProduct.unit}
+                  onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
+                  placeholder="adet, kg, lt"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Minimum Stok Seviyesi</Label>
+                <Input
+                  type="number"
+                  value={newProduct.minStockLevel}
+                  onChange={(e) => setNewProduct({...newProduct, minStockLevel: Number(e.target.value)})}
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Satış Fiyatı (₺)</Label>
+                <Input
+                  type="number"
+                  value={newProduct.basePrice}
+                  onChange={(e) => setNewProduct({...newProduct, basePrice: Number(e.target.value)})}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Maliyet Fiyatı (₺)</Label>
+                <Input
+                  type="number"
+                  value={newProduct.costPrice}
+                  onChange={(e) => setNewProduct({...newProduct, costPrice: Number(e.target.value)})}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>KDV Oranı (%)</Label>
+                <Input
+                  type="number"
+                  value={newProduct.taxRate}
+                  onChange={(e) => setNewProduct({...newProduct, taxRate: Number(e.target.value)})}
+                  min="0"
+                  max="100"
+                />
+              </div>
+              <div className="col-span-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="trackStock"
+                  checked={newProduct.trackStock}
+                  onChange={(e) => setNewProduct({...newProduct, trackStock: e.target.checked})}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="trackStock" className="cursor-pointer">
+                  Stok takibi yap
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProductDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={addProduct}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ürün Ekle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteProductDialog} onOpenChange={setShowDeleteProductDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ürün Sil</DialogTitle>
+            <DialogDescription>
+              {productToDelete?.name} silinecek. Emin misiniz?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Bu işlem ürünü pasif hale getirecektir. Geçmiş kayıtlar silinmeyecektir.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteProductDialog(false)}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={deleteProduct}>
+              <Trash className="h-4 w-4 mr-2" />
+              Ürünü Sil
             </Button>
           </DialogFooter>
         </DialogContent>

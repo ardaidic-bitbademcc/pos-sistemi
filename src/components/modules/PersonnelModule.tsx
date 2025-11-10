@@ -9,9 +9,10 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear } from '@phosphor-icons/react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings } from '@/lib/types';
+import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole } from '@/lib/types';
 import { formatCurrency, formatDateTime, calculateHoursWorked, generateId } from '@/lib/helpers';
 
 interface PersonnelModuleProps {
@@ -19,7 +20,7 @@ interface PersonnelModuleProps {
 }
 
 export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
-  const [employees] = useKV<Employee[]>('employees', []);
+  const [employees, setEmployees] = useKV<Employee[]>('employees', []);
   const [shifts, setShifts] = useKV<Shift[]>('shifts', []);
   const [salaries, setSalaries] = useKV<SalaryCalculation[]>('salaries', []);
   const [salarySettings, setSalarySettings] = useKV<SalaryCalculationSettings[]>('salarySettings', []);
@@ -28,11 +29,24 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showAddEmployeeDialog, setShowAddEmployeeDialog] = useState(false);
+  const [showDeleteEmployeeDialog, setShowDeleteEmployeeDialog] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [selectedSalary, setSelectedSalary] = useState<SalaryCalculation | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [loginPin, setLoginPin] = useState('');
   const [loginQr, setLoginQr] = useState('');
   const [editingSettings, setEditingSettings] = useState<SalaryCalculationSettings | null>(null);
+  
+  const [newEmployee, setNewEmployee] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    role: 'staff' as UserRole,
+    branchId: 'branch-1',
+    hourlyRate: 0,
+    employeePin: '',
+  });
 
   const activeEmployees = (employees || []).filter((e) => e.isActive);
   const todayShifts = (shifts || []).filter((s) => {
@@ -202,6 +216,47 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
     setEditingSettings(null);
   };
 
+  const addEmployee = () => {
+    if (!newEmployee.fullName || !newEmployee.email || !newEmployee.employeePin) {
+      toast.error('Lütfen gerekli alanları doldurun');
+      return;
+    }
+
+    const employee: Employee = {
+      id: generateId(),
+      ...newEmployee,
+      isActive: true,
+      qrCode: generateId(),
+    };
+
+    setEmployees((current) => [...(current || []), employee]);
+    toast.success(`${newEmployee.fullName} personel olarak eklendi`);
+    setShowAddEmployeeDialog(false);
+    setNewEmployee({
+      fullName: '',
+      email: '',
+      phone: '',
+      role: 'staff',
+      branchId: 'branch-1',
+      hourlyRate: 0,
+      employeePin: '',
+    });
+  };
+
+  const deleteEmployee = () => {
+    if (!employeeToDelete) return;
+
+    setEmployees((current) =>
+      (current || []).map(e =>
+        e.id === employeeToDelete.id ? { ...e, isActive: false } : e
+      )
+    );
+
+    toast.success(`${employeeToDelete.fullName} personel listesinden çıkarıldı`);
+    setShowDeleteEmployeeDialog(false);
+    setEmployeeToDelete(null);
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6">
       <header className="flex items-center justify-between">
@@ -288,6 +343,20 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
         </TabsContent>
 
         <TabsContent value="employees" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Çalışanlar</CardTitle>
+                  <CardDescription>Aktif personel listesi</CardDescription>
+                </div>
+                <Button onClick={() => setShowAddEmployeeDialog(true)}>
+                  <Plus className="h-5 w-5 mr-2" weight="bold" />
+                  Personel Ekle
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeEmployees.map((employee) => {
               const hasActiveShift = todayShifts.some(
@@ -298,7 +367,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                 <Card key={employee.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div className="space-y-1">
+                      <div className="space-y-1 flex-1">
                         <CardTitle className="text-base">{employee.fullName}</CardTitle>
                         <CardDescription className="text-xs capitalize">
                           {employee.role}
@@ -317,16 +386,28 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                     <p className="text-xs text-muted-foreground">
                       PIN: {employee.employeePin}
                     </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      disabled={hasActiveShift}
-                      onClick={() => clockIn(employee.id)}
-                    >
-                      <ClockClockwise className="h-4 w-4 mr-2" />
-                      Vardiya Başlat
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        disabled={hasActiveShift}
+                        onClick={() => clockIn(employee.id)}
+                      >
+                        <ClockClockwise className="h-4 w-4 mr-2" />
+                        Vardiya Başlat
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setEmployeeToDelete(employee);
+                          setShowDeleteEmployeeDialog(true);
+                        }}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -637,6 +718,116 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
             </Button>
             <Button onClick={saveSettings}>
               Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddEmployeeDialog} onOpenChange={setShowAddEmployeeDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Yeni Personel Ekle</DialogTitle>
+            <DialogDescription>
+              Personel bilgilerini doldurun
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ad Soyad *</Label>
+                <Input
+                  value={newEmployee.fullName}
+                  onChange={(e) => setNewEmployee({...newEmployee, fullName: e.target.value})}
+                  placeholder="Ahmet Yılmaz"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>E-posta *</Label>
+                <Input
+                  type="email"
+                  value={newEmployee.email}
+                  onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
+                  placeholder="ahmet@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefon</Label>
+                <Input
+                  type="tel"
+                  value={newEmployee.phone}
+                  onChange={(e) => setNewEmployee({...newEmployee, phone: e.target.value})}
+                  placeholder="0555 123 45 67"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Pozisyon</Label>
+                <Select value={newEmployee.role} onValueChange={(value: UserRole) => setNewEmployee({...newEmployee, role: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">Personel</SelectItem>
+                    <SelectItem value="cashier">Kasiyer</SelectItem>
+                    <SelectItem value="chef">Aşçı</SelectItem>
+                    <SelectItem value="manager">Müdür</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Saatlik Ücret (₺)</Label>
+                <Input
+                  type="number"
+                  value={newEmployee.hourlyRate}
+                  onChange={(e) => setNewEmployee({...newEmployee, hourlyRate: Number(e.target.value)})}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>PIN Kodu (6 haneli) *</Label>
+                <Input
+                  type="text"
+                  value={newEmployee.employeePin}
+                  onChange={(e) => setNewEmployee({...newEmployee, employeePin: e.target.value})}
+                  placeholder="123456"
+                  maxLength={6}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddEmployeeDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={addEmployee}>
+              <Plus className="h-4 w-4 mr-2" />
+              Personel Ekle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteEmployeeDialog} onOpenChange={setShowDeleteEmployeeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Personel Çıkar</DialogTitle>
+            <DialogDescription>
+              {employeeToDelete?.fullName} personel listesinden çıkarılacak. Emin misiniz?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Bu işlem personeli pasif hale getirecektir. Geçmiş kayıtlar silinmeyecektir.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteEmployeeDialog(false)}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={deleteEmployee}>
+              <Trash className="h-4 w-4 mr-2" />
+              Personel Çıkar
             </Button>
           </DialogFooter>
         </DialogContent>
