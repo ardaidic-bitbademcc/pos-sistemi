@@ -25,7 +25,7 @@ function App() {
       case 'dashboard':
         return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} />;
       case 'pos':
-        return <POSModule onBack={() => setActiveModule('dashboard')} />;
+        return <POSModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} />;
       case 'personnel':
         return <PersonnelModule onBack={() => setActiveModule('dashboard')} />;
       case 'branch':

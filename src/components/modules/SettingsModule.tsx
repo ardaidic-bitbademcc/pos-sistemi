@@ -23,6 +23,7 @@ interface AppSettings {
   stockAlerts: boolean;
   autoCalculateSalary: boolean;
   pricesIncludeVAT: boolean;
+  lazyTableWarningMinutes?: number;
 }
 
 interface TaxRate {
@@ -64,6 +65,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
     stockAlerts: true,
     autoCalculateSalary: false,
     pricesIncludeVAT: false,
+    lazyTableWarningMinutes: 120,
   };
   
   const [settings, setSettings] = useKV<AppSettings>('appSettings', defaultSettings);
@@ -606,6 +608,42 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                     toast.success(`Fiyatlar KDV ${checked ? 'dahil' : 'hariç'} olarak ayarlandı`);
                   }}
                 />
+              </div>
+
+              <div className="p-4 border rounded-lg space-y-3">
+                <div className="space-y-1">
+                  <p className="font-medium">Tembel Masa Uyarı Süresi</p>
+                  <p className="text-sm text-muted-foreground">
+                    Son sipariş sonrası kaç dakika geçince uyarı gösterilsin?
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min="30"
+                    max="300"
+                    step="15"
+                    value={(settings || defaultSettings).lazyTableWarningMinutes || 120}
+                    onChange={(e) => {
+                      const minutes = Number(e.target.value);
+                      setSettings((current) => {
+                        const curr = current || defaultSettings;
+                        return { ...curr, lazyTableWarningMinutes: minutes };
+                      });
+                    }}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">dakika</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      toast.success(`Tembel masa uyarısı ${(settings || defaultSettings).lazyTableWarningMinutes || 120} dakika olarak ayarlandı`);
+                    }}
+                  >
+                    Kaydet
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

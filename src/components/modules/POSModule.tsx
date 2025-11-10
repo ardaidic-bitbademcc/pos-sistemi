@@ -10,14 +10,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye } from '@phosphor-icons/react';
+import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
-import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category } from '@/lib/types';
+import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 
 interface POSModuleProps {
   onBack: () => void;
+  currentUserRole?: UserRole;
 }
 
 interface CartItem extends SaleItem {
@@ -31,6 +32,7 @@ interface AppSettings {
   stockAlerts: boolean;
   autoCalculateSalary: boolean;
   pricesIncludeVAT: boolean;
+  lazyTableWarningMinutes?: number;
 }
 
 interface PaymentMethodSetting {
@@ -45,7 +47,7 @@ interface SplitPayment {
   amount: number;
 }
 
-export default function POSModule({ onBack }: POSModuleProps) {
+export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSModuleProps) {
   const [products] = useKV<Product[]>('products', []);
   const [categories] = useKV<Category[]>('categories', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
@@ -61,6 +63,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
     stockAlerts: true,
     autoCalculateSalary: false,
     pricesIncludeVAT: false,
+    lazyTableWarningMinutes: 120,
   });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -84,8 +87,36 @@ export default function POSModule({ onBack }: POSModuleProps) {
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
+  const lazyTableWarningMinutes = settings?.lazyTableWarningMinutes || 120;
+  const isWaiter = currentUserRole === 'waiter';
 
   const visibleCategories = (categories || []).filter(cat => cat.showInPOS !== false);
+
+  const getTimeSinceLastOrder = (table: Table): number | null => {
+    if (!table.lastOrderTime) return null;
+    const lastOrder = new Date(table.lastOrderTime);
+    const now = new Date();
+    return Math.floor((now.getTime() - lastOrder.getTime()) / (1000 * 60));
+  };
+
+  const getOrderDuration = (table: Table): string | null => {
+    if (!table.firstOrderTime) return null;
+    const firstOrder = new Date(table.firstOrderTime);
+    const now = new Date();
+    const minutes = Math.floor((now.getTime() - firstOrder.getTime()) / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}s ${mins}dk`;
+    }
+    return `${mins}dk`;
+  };
+
+  const isLazyTable = (table: Table): boolean => {
+    if (!table.currentSaleId || !table.lastOrderTime) return false;
+    const minutesSinceLastOrder = getTimeSinceLastOrder(table);
+    return minutesSinceLastOrder !== null && minutesSinceLastOrder >= lazyTableWarningMinutes;
+  };
 
   const filteredProducts = (products || []).filter((product) => {
     const matchesSearch = product.isActive &&
@@ -223,13 +254,14 @@ export default function POSModule({ onBack }: POSModuleProps) {
 
     const totals = calculateTotals();
     const saleId = selectedTable.currentSaleId || generateId();
+    const now = new Date().toISOString();
     
     const newSale: Sale = {
       id: saleId,
       branchId: 'branch-1',
       cashierId: 'cashier-1',
       saleNumber: generateSaleNumber(),
-      saleDate: new Date().toISOString(),
+      saleDate: now,
       subtotal: totals.subtotal,
       taxAmount: totals.taxAmount,
       discountAmount: orderDiscount,
@@ -243,6 +275,14 @@ export default function POSModule({ onBack }: POSModuleProps) {
       setSales((currentSales) => 
         (currentSales || []).map(s => s.id === saleId ? newSale : s)
       );
+      
+      setTables((current) =>
+        (current || []).map(t =>
+          t.id === selectedTable.id
+            ? { ...t, lastOrderTime: now }
+            : t
+        )
+      );
     } else {
       setSales((currentSales) => [...(currentSales || []), newSale]);
       
@@ -250,7 +290,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
         id: generateId(),
         tableId: selectedTable.id,
         saleId: saleId,
-        openedAt: new Date().toISOString(),
+        openedAt: now,
         customersCount: selectedTable.capacity,
       };
       setTableOrders((current) => [...(current || []), newOrder]);
@@ -258,13 +298,17 @@ export default function POSModule({ onBack }: POSModuleProps) {
       setTables((current) =>
         (current || []).map(t =>
           t.id === selectedTable.id
-            ? { ...t, currentSaleId: saleId, status: 'occupied' as const }
+            ? { ...t, currentSaleId: saleId, status: 'occupied' as const, firstOrderTime: now, lastOrderTime: now }
             : t
         )
       );
     }
 
     toast.success(`Sipariş kaydedildi - Masa ${selectedTable.tableNumber}`);
+    setCart([]);
+    setOrderDiscount(0);
+    setSelectedTable(null);
+    setActiveTab('tables');
   };
 
   const deleteOrder = () => {
@@ -284,7 +328,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
     setTables((current) =>
       (current || []).map(t =>
         t.id === selectedTable.id
-          ? { ...t, status: 'available' as const, currentSaleId: undefined }
+          ? { ...t, status: 'available' as const, currentSaleId: undefined, firstOrderTime: undefined, lastOrderTime: undefined }
           : t
       )
     );
@@ -502,7 +546,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
       setTables((current) =>
         (current || []).map(t =>
           t.id === selectedTable.id
-            ? { ...t, status: 'available' as const, currentSaleId: undefined }
+            ? { ...t, status: 'available' as const, currentSaleId: undefined, firstOrderTime: undefined, lastOrderTime: undefined }
             : t
         )
       );
@@ -778,20 +822,22 @@ export default function POSModule({ onBack }: POSModuleProps) {
                             Kaydet
                           </Button>
                         )}
-                        <Button
-                          className="flex-1"
-                          size="lg"
-                          onClick={() => {
-                            if (splitPayments.length > 0) {
-                              completeSale();
-                            } else {
-                              setShowCheckout(true);
-                            }
-                          }}
-                        >
-                          <Check className="h-5 w-5 mr-2" weight="bold" />
-                          Ödeme Al
-                        </Button>
+                        {!isWaiter && (
+                          <Button
+                            className="flex-1"
+                            size="lg"
+                            onClick={() => {
+                              if (splitPayments.length > 0) {
+                                completeSale();
+                              } else {
+                                setShowCheckout(true);
+                              }
+                            }}
+                          >
+                            <Check className="h-5 w-5 mr-2" weight="bold" />
+                            Ödeme Al
+                          </Button>
+                        )}
                       </div>
                     </>
                   )}
@@ -809,37 +855,68 @@ export default function POSModule({ onBack }: POSModuleProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                {availableTables.map((table) => (
-                  <Card
-                    key={table.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      table.status === 'occupied' ? 'border-accent' : ''
-                    } ${selectedTable?.id === table.id ? 'ring-2 ring-primary' : ''}`}
-                    onClick={() => selectTable(table)}
-                  >
-                    <CardContent className="p-6 text-center space-y-2">
-                      <TableIcon
-                        className={`h-10 w-10 mx-auto ${
-                          table.status === 'occupied' ? 'text-accent' : 'text-muted-foreground'
-                        }`}
-                        weight="bold"
-                      />
-                      <div>
-                        <p className="font-semibold text-lg">Masa {table.tableNumber}</p>
-                        <Badge
-                          variant={table.status === 'occupied' ? 'default' : 'secondary'}
-                          className="text-xs mt-1"
-                        >
-                          {table.status === 'occupied' ? 'Dolu' : 'Boş'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{table.capacity} kişi</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {availableTables.map((table) => {
+                  const hasOrder = table.status === 'occupied' && table.currentSaleId;
+                  const isLazy = isLazyTable(table);
+                  const duration = getOrderDuration(table);
+                  const minutesSinceLastOrder = getTimeSinceLastOrder(table);
+                  
+                  return (
+                    <Card
+                      key={table.id}
+                      className={`cursor-pointer transition-all hover:shadow-md relative ${
+                        hasOrder ? 'border-amber-500 bg-amber-50/50' : 'border-emerald-500 bg-emerald-50/50'
+                      } ${selectedTable?.id === table.id ? 'ring-2 ring-primary' : ''} ${
+                        isLazy ? 'ring-2 ring-destructive' : ''
+                      }`}
+                      onClick={() => selectTable(table)}
+                    >
+                      {isLazy && (
+                        <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 shadow-md z-10">
+                          <Warning className="h-3 w-3" weight="bold" />
+                          TEMBEL MASA
+                        </div>
+                      )}
+                      <CardContent className="p-6 text-center space-y-2">
+                        <TableIcon
+                          className={`h-10 w-10 mx-auto ${
+                            hasOrder ? 'text-amber-600' : 'text-emerald-600'
+                          }`}
+                          weight="bold"
+                        />
+                        <div>
+                          <p className="font-semibold text-lg">Masa {table.tableNumber}</p>
+                          <Badge
+                            variant={hasOrder ? 'default' : 'secondary'}
+                            className={`text-xs mt-1 ${hasOrder ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+                          >
+                            {hasOrder ? 'Dolu' : 'Boş'}
+                          </Badge>
+                        </div>
+                        {hasOrder && (
+                          <div className="space-y-1 text-xs text-muted-foreground pt-2 border-t">
+                            {duration && (
+                              <div className="flex items-center justify-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>Süre: {duration}</span>
+                              </div>
+                            )}
+                            {minutesSinceLastOrder !== null && (
+                              <div className="flex items-center justify-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>Son: {minutesSinceLastOrder}dk</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          <span>{table.capacity} kişi</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

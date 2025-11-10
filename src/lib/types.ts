@@ -166,6 +166,8 @@ export interface Table {
   status: 'available' | 'occupied' | 'reserved' | 'cleaning';
   currentSaleId?: string;
   section?: string;
+  firstOrderTime?: string;
+  lastOrderTime?: string;
 }
 
 export interface TableOrder {

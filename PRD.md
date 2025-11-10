@@ -22,18 +22,28 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Başarı Kriterleri**: 30 saniye içinde satış tamamlanır, masa durumu otomatik güncellenir, fatura oluşturulur
 
 #### Masa Yönetimi
-- **İşlevsellik**: Masa durumu takibi (Boş/Dolu/Rezerve), masa kapasitesi görüntüleme
+- **İşlevsellik**: Masa durumu takibi (Boş/Dolu/Rezerve), masa kapasitesi görüntüleme, sipariş zamanı takibi, tembel masa uyarıları
 - **Amaç**: Restoran masalarını verimli yönetmek ve masa bazlı sipariş takibi
-- **Tetikleyici**: Kasiyer masa seçer veya masa durumu değişir
-- **Akış**: Masa listesi görüntüle → Masa seç → Sipariş ekle → Ödeme al → Masa otomatik boşalt
-- **Başarı Kriterleri**: Masa durumları gerçek zamanlı güncellenir, müşteri sayısı görünür
+- **Tetikleyici**: Kasiyer/garson masa seçer veya masa durumu değişir
+- **Akış**: Masa listesi görüntüle → Masa seç → Sipariş ekle → Kaydet → Masalar ekranına yönlendir → Ödeme al (sadece yetkili kullanıcılar) → Masa otomatik boşalt
+- **Başarı Kriterleri**: 
+  - Masa durumları gerçek zamanlı güncellenir
+  - Sipariş girilmiş masalar amber/turuncu, boş masalar yeşil renkle gösterilir
+  - Her masada ilk sipariş zamanı ve son sipariş arası geçen süre görünür
+  - Son sipariş dakikası gösterilir
+  - Kullanıcı tarafından ayarlanabilir süre sonunda (varsayılan 120 dk) "TEMBEL MASA" uyarısı gösterilir
+  - Sipariş kaydedildikten sonra otomatik olarak masalar ekranına yönlendirilir
 
-#### Ödeme Yöntemleri
-- **İşlevsellik**: Buton bazlı ödeme yöntemi seçimi (Nakit, Kredi Kartı, Mobil Ödeme)
-- **Amaç**: Hızlı ve kolay ödeme işlemi
+#### Ödeme Yöntemleri ve Yetkiler
+- **İşlevsellik**: Buton bazlı ödeme yöntemi seçimi (Nakit, Kredi Kartı, Mobil Ödeme), rol bazlı yetkilendirme
+- **Amaç**: Hızlı ve kolay ödeme işlemi, güvenli ödeme alma yetkisi kontrolü
 - **Tetikleyici**: Kasiyer ödeme ekranında ilgili butona tıklar
-- **Akış**: Sepeti kontrol et → Ödeme butonlarından birini seç → Tutarı onayla → Satışı tamamla
-- **Başarı Kriterleri**: Tek tıkla ödeme yöntemi seçimi, görsel geri bildirim
+- **Akış**: Sepeti kontrol et → Ödeme butonlarından birini seç (yetki kontrolü) → Tutarı onayla → Satışı tamamla
+- **Başarı Kriterleri**: 
+  - Tek tıkla ödeme yöntemi seçimi
+  - Garson rolü ödeme alma butonunu göremez/kullanamaz
+  - Sadece sipariş kaydedebilir
+  - Görsel geri bildirim
 
 ### 2. Personel Yönetimi Modülü
 - **İşlevsellik**: Vardiya takibi, PIN/QR kod ile giriş-çıkış, özelleştirilebilir maaş hesaplama, maaş onay/red sistemi
@@ -119,7 +129,7 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Başarı Kriterleri**: Gerçek zamanlı güncellemeler, doğru kar/zarar hesaplaması
 
 ### 6. Ayarlar Modülü
-- **İşlevsellik**: Stok girişi, KDV oranları düzenleme, ödeme yöntemi yönetimi, genel sistem ayarları
+- **İşlevsellik**: Stok girişi, KDV oranları düzenleme, ödeme yöntemi yönetimi, genel sistem ayarları, tembel masa uyarı süresi özelleştirme
 - **Amaç**: Sistem parametrelerini özelleştirmek ve işletme ihtiyaçlarına göre yapılandırmak
 - **Tetikleyici**: Yönetici ayarlar modülüne girer
 - **Akış**: Ayarlar → Stok/KDV/Ödeme/Genel sekmesi seç → Değişiklik yap → Kaydet → Sistem güncellenir
@@ -157,6 +167,16 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Kategoride ürün varken silme engellenir
   - Her kategori için ürün sayısı görüntülenir
 
+#### Genel Ayarlar
+- **İşlevsellik**: Stok uyarıları, otomatik maaş hesaplama, KDV dahil/hariç fiyatlandırma, tembel masa uyarı süresi
+- **Amaç**: Sistem davranışlarını özelleştirmek
+- **Tetikleyici**: Yönetici "Genel" sekmesine girer
+- **Akış**: Ayarlar → Toggle aç/kapat veya değer gir → Otomatik kaydet
+- **Başarı Kriterleri**: 
+  - Tembel masa uyarı süresi kullanıcı tarafından özelleştirilebilir (varsayılan: 120 dakika)
+  - Süre 30-300 dakika arasında ayarlanabilir
+  - Değişiklikler masalar ekranında anlık yansır
+
 ### 7. Rol Yönetimi ve Yetkilendirme Modülü
 - **İşlevsellik**: Kullanıcı rollerine modül erişim yetkileri atama, özel yetkileri yönetme
 - **Amaç**: Personelin sadece görevleriyle ilgili modüllere erişmesini sağlamak, veri güvenliğini artırmak
@@ -167,7 +187,7 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 #### Rol Tipleri
 - **Sahip (Owner)**: Tüm modüllere tam erişim, değiştirilemez
 - **Yönetici (Manager)**: POS, Personel, Şube, Menü, Finans, Raporlama - finansal verileri görebilir
-- **Garson (Waiter)**: Sadece POS modülü - finansal verileri göremez, fiyat değiştiremez
+- **Garson (Waiter)**: Sadece POS modülü - finansal verileri göremez, fiyat değiştiremez, **ödeme alma yetkisi yok** (sadece sipariş kaydedebilir)
 - **Kasiyer (Cashier)**: POS ve Raporlama - sınırlı finansal görünüm
 - **Şef (Chef)**: Menü Mühendisliği - reçete ve malzeme yönetimi
 - **Personel (Staff)**: Sınırlı erişim
