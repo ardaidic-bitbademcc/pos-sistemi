@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useKV } from '@github/spark/hooks';
-import type { Employee, Product, Table } from '@/lib/types';
+import type { Employee, Product, Table, MenuItem } from '@/lib/types';
 import { generateId } from '@/lib/helpers';
 
 export function useSeedData() {
   const [employees, setEmployees] = useKV<Employee[]>('employees', []);
   const [products, setProducts] = useKV<Product[]>('products', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
+  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
@@ -134,6 +135,110 @@ export function useSeedData() {
           stock: 80,
           minStockLevel: 20,
         },
+        {
+          id: generateId(),
+          sku: 'PRD007',
+          name: 'Labne Peyniri',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 80,
+          taxRate: 18,
+          unit: 'kg',
+          isActive: true,
+          stock: 50,
+          minStockLevel: 10,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD008',
+          name: 'Krema',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 45,
+          taxRate: 18,
+          unit: 'lt',
+          isActive: true,
+          stock: 30,
+          minStockLevel: 10,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD009',
+          name: 'Un',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 20,
+          taxRate: 18,
+          unit: 'kg',
+          isActive: true,
+          stock: 100,
+          minStockLevel: 20,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD010',
+          name: 'Şeker',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 25,
+          taxRate: 18,
+          unit: 'kg',
+          isActive: true,
+          stock: 80,
+          minStockLevel: 20,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD011',
+          name: 'Yumurta',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 5,
+          taxRate: 18,
+          unit: 'adet',
+          isActive: true,
+          stock: 200,
+          minStockLevel: 50,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD012',
+          name: 'Tereyağı',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 180,
+          taxRate: 18,
+          unit: 'kg',
+          isActive: true,
+          stock: 25,
+          minStockLevel: 5,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD013',
+          name: 'Vanilya',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 150,
+          taxRate: 18,
+          unit: 'gr',
+          isActive: true,
+          stock: 500,
+          minStockLevel: 100,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD014',
+          name: 'Limon Suyu',
+          categoryId: 'ingredients',
+          basePrice: 0,
+          costPrice: 15,
+          taxRate: 18,
+          unit: 'lt',
+          isActive: true,
+          stock: 20,
+          minStockLevel: 5,
+        },
       ];
       setProducts(sampleProducts);
     }
@@ -150,8 +255,70 @@ export function useSeedData() {
       setTables(sampleTables);
     }
 
+    if (!menuItems || menuItems.length === 0) {
+      const sampleMenuItems: MenuItem[] = [
+        {
+          id: generateId(),
+          name: 'Cheesecake',
+          category: 'Tatlılar',
+          description: 'Klasik New York usulü cheesecake',
+          sellingPrice: 150,
+          costPrice: 0,
+          targetCostPercentage: 30,
+          isActive: true,
+          popularity: 0.8,
+          profitMargin: 0,
+          servingSize: 12,
+          isProduced: false,
+        },
+        {
+          id: generateId(),
+          name: 'Tiramisu',
+          category: 'Tatlılar',
+          description: 'İtalyan tiramisu',
+          sellingPrice: 120,
+          costPrice: 0,
+          targetCostPercentage: 30,
+          isActive: true,
+          popularity: 0.7,
+          profitMargin: 0,
+          servingSize: 8,
+          isProduced: true,
+        },
+        {
+          id: generateId(),
+          name: 'Makarna Carbonara',
+          category: 'Ana Yemekler',
+          description: 'Kremalı carbonara sosu ile',
+          sellingPrice: 180,
+          costPrice: 0,
+          targetCostPercentage: 25,
+          isActive: true,
+          popularity: 0.85,
+          profitMargin: 0,
+          servingSize: 1,
+          isProduced: true,
+        },
+        {
+          id: generateId(),
+          name: 'Sezar Salata',
+          category: 'Salatalar',
+          description: 'Tavuklu sezar salata',
+          sellingPrice: 95,
+          costPrice: 0,
+          targetCostPercentage: 28,
+          isActive: true,
+          popularity: 0.65,
+          profitMargin: 0,
+          servingSize: 1,
+          isProduced: true,
+        },
+      ];
+      setMenuItems(sampleMenuItems);
+    }
+
     setSeeded(true);
-  }, [employees, products, tables, setEmployees, setProducts, setTables, seeded]);
+  }, [employees, products, tables, menuItems, setEmployees, setProducts, setTables, setMenuItems, seeded]);
 
   return { seeded };
 }

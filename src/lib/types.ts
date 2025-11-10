@@ -148,6 +148,9 @@ export interface MenuItem {
   imageUrl?: string;
   popularity: number;
   profitMargin: number;
+  recipeId?: string;
+  servingSize?: number;
+  isProduced?: boolean;
 }
 
 export type MenuCategory = 'star' | 'puzzle' | 'plow_horse' | 'dog';
@@ -161,6 +164,65 @@ export interface MenuAnalysis {
   profit: number;
   popularityScore: number;
   recommendation: string;
+}
+
+export interface RecipeIngredient {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: string;
+  costPerUnit: number;
+  totalCost: number;
+}
+
+export interface Recipe {
+  id: string;
+  menuItemId: string;
+  menuItemName: string;
+  servings: number;
+  ingredients: RecipeIngredient[];
+  totalCost: number;
+  costPerServing: number;
+  profitMarginPercentage?: number;
+  instructions?: string;
+  prepTime?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InvoiceType = 'purchase' | 'sale';
+export type InvoiceStatus = 'draft' | 'completed' | 'cancelled';
+
+export interface InvoiceItem {
+  id: string;
+  productId?: string;
+  menuItemId?: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  taxRate: number;
+  taxAmount: number;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  type: InvoiceType;
+  branchId: string;
+  supplierName?: string;
+  customerName?: string;
+  date: string;
+  dueDate?: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: InvoiceStatus;
+  notes?: string;
+  createdAt: string;
+  autoUpdateStock: boolean;
 }
 
 export interface Expense {

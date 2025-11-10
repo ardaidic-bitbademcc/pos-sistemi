@@ -70,7 +70,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     {
       id: 'menu' as Module,
       title: 'Menü Mühendisliği',
-      description: 'Reçete yönetimi ve AI optimizasyon',
+      description: 'Reçete, fatura ve AI optimizasyon',
       icon: ForkKnife,
       color: 'text-accent',
       bgColor: 'bg-accent/10',

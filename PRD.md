@@ -71,11 +71,45 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Başarı Kriterleri**: Tüm şubeler 5 saniye içinde güncellenir, çakışma yok
 
 ### 4. Menü Mühendisliği Modülü
-- **İşlevsellik**: Reçete yönetimi, maliyet analizi, AI destekli menü optimizasyonu
-- **Amaç**: Karlılığı artırmak ve menü performansını optimize etmek
-- **Tetikleyici**: Aşçıbaşı/müdür AI analiz başlatır
-- **Akış**: Menü listesi → AI analiz başlat → Satış/maliyet verisi analizi → Yıldız/Köpek kategorileme → Öneriler → Uygula
-- **Başarı Kriterleri**: Actionable öneriler, kar marjı artışı tahmini
+- **İşlevsellik**: Reçete yönetimi, fatura girişi, otomatik stok güncelleme, maliyet analizi, AI destekli menü optimizasyonu
+- **Amaç**: Karlılığı artırmak, menü performansını optimize etmek ve stok maliyetlerini doğru takip etmek
+- **Tetikleyici**: Aşçıbaşı/müdür reçete oluşturur, fatura girer veya AI analiz başlatır
+- **Akış**: 
+  - **Reçete Yönetimi**: Menü öğesi seç → Malzeme ekle → Miktar belirle → Porsiyon sayısı gir → Otomatik maliyet hesaplama → Kar marjı görüntüle → Kaydet
+  - **Fatura Girişi**: Fatura Gir → Tedarikçi adı → Ürün/Menü öğesi seç → Adet ve birim fiyat → Otomatik stok güncelle → KDV hesapla → Kaydet
+  - **AI Analizi**: Menü listesi → AI analiz başlat → Satış/maliyet verisi analizi → Yıldız/Köpek kategorileme → Öneriler → Uygula
+- **Başarı Kriterleri**: 
+  - Reçete oluşturulduğunda otomatik porsiyon başı maliyet hesaplanır
+  - Fatura girildiğinde stok otomatik güncellenir ve maliyet fiyatları yansır
+  - 12 dilimlik cheesecake için 1200 TL fatura girilince, dilim başı 100 TL maliyet otomatik hesaplanır
+  - Kar marjı yüzdesi anlık güncellenir
+  - Actionable öneriler, kar marjı artışı tahmini
+
+#### Reçete Yönetimi
+- **İşlevsellik**: Menü öğeleri için detaylı reçete oluşturma, malzeme listesi, porsiyon başı maliyet hesaplama
+- **Amaç**: Her menü öğesinin gerçek maliyetini bilmek ve kar marjını optimize etmek
+- **Tetikleyici**: Yönetici bir menü öğesi için "Reçete Oluştur" butonuna tıklar
+- **Akış**: Menü öğesi seç → Porsiyon sayısı belirle → Malzeme ekle (stoktan seç) → Miktar gir → Otomatik maliyet hesapla → Porsiyon başı maliyet görüntüle → Kar marjı göster → Kaydet
+- **Başarı Kriterleri**: 
+  - Reçetedeki her malzeme için güncel maliyet fiyatı kullanılır
+  - Toplam maliyet ve porsiyon başı maliyet otomatik hesaplanır
+  - Kar marjı yüzdesi anlık güncellenir
+  - Reçete değiştiğinde menü öğesi maliyeti otomatik güncellenir
+
+#### Fatura Girişi ve Otomatik Stok
+- **İşlevsellik**: Satın alma faturası girişi, otomatik stok güncelleme, maliyet fiyatı senkronizasyonu
+- **Amaç**: Stok alımlarını kaydetmek ve maliyetleri güncel tutmak
+- **Tetikleyici**: Yönetici "Fatura Gir" butonuna tıklar
+- **Akış**: 
+  - Tedarikçi bilgileri → Ürün/menü öğesi seç → Adet gir → Birim fiyat gir (KDV dahil/hariç) → Toplam hesapla → Kaydet
+  - **Örnek 1 (Satın Alınan Ürün)**: Cheesecake 12 adet, 1200 TL → Sistem otomatik hesaplar: 100 TL/adet → Stok +12 adet → Maliyet güncelle
+  - **Örnek 2 (Üretilen Ürün)**: Un 50 kg, 2500 TL → Sistem: 50 TL/kg → Stok +50 kg → Reçetelerde otomatik güncelle
+- **Başarı Kriterleri**: 
+  - Fatura kaydedildiğinde seçilen ürünlerin stok miktarı otomatik artar
+  - Birim maliyet fiyatları güncellenir
+  - Menü öğeleri için porsiyon başı maliyet otomatik hesaplanır
+  - Reçetelerde kullanılan malzemelerin maliyeti güncellenir ve menü kar marjı yeniden hesaplanır
+  - KDV tutarı ayrı gösterilir
 
 ### 5. Finans Modülü
 - **İşlevsellik**: Gelir-gider takibi, kar-zarar raporu, bütçe planlama, satış tahmini

@@ -82,3 +82,25 @@ export function getEndOfDay(date: Date = new Date()): Date {
   end.setHours(23, 59, 59, 999);
   return end;
 }
+
+export function generateInvoiceNumber(): string {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `INV-${year}${month}${day}-${random}`;
+}
+
+export function calculateRecipeTotalCost(ingredients: Array<{ quantity: number; costPerUnit: number }>): number {
+  return ingredients.reduce((total, ing) => total + (ing.quantity * ing.costPerUnit), 0);
+}
+
+export function calculateCostPerServing(totalCost: number, servings: number): number {
+  return servings > 0 ? totalCost / servings : 0;
+}
+
+export function calculateProfitMargin(sellingPrice: number, costPrice: number): number {
+  if (sellingPrice === 0) return 0;
+  return ((sellingPrice - costPrice) / sellingPrice) * 100;
+}
