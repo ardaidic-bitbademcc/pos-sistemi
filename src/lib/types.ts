@@ -31,6 +31,8 @@ export interface Category {
   id: string;
   name: string;
   description?: string;
+  showInPOS?: boolean;
+  sortOrder?: number;
 }
 
 export type PaymentMethod = 'cash' | 'card' | 'mobile';

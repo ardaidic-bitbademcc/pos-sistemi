@@ -8,9 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard } from '@phosphor-icons/react';
+import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Product, PaymentMethod } from '@/lib/types';
+import type { Product, PaymentMethod, Category } from '@/lib/types';
 import { formatCurrency, generateId } from '@/lib/helpers';
 
 interface SettingsModuleProps {
@@ -48,6 +48,7 @@ interface StockEntry {
 
 export default function SettingsModule({ onBack }: SettingsModuleProps) {
   const [products, setProducts] = useKV<Product[]>('products', []);
+  const [categories, setCategories] = useKV<Category[]>('categories', []);
   
   const defaultSettings: AppSettings = {
     taxRates: [
@@ -69,10 +70,13 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
 
   const [showStockDialog, setShowStockDialog] = useState(false);
   const [showTaxDialog, setShowTaxDialog] = useState(false);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [stockQuantity, setStockQuantity] = useState(0);
   const [newTaxName, setNewTaxName] = useState('');
   const [newTaxRate, setNewTaxRate] = useState(18);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
 
   const openStockDialog = (product: Product) => {
     setSelectedProduct(product);
@@ -185,6 +189,62 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
     );
   };
 
+  const toggleCategoryPOSVisibility = (categoryId: string) => {
+    setCategories((current) =>
+      (current || []).map((cat) =>
+        cat.id === categoryId
+          ? { ...cat, showInPOS: cat.showInPOS === false ? true : false }
+          : cat
+      )
+    );
+    
+    const category = (categories || []).find(c => c.id === categoryId);
+    if (category) {
+      const newStatus = category.showInPOS === false ? 'gösterilecek' : 'gizlenecek';
+      toast.success(`${category.name} satış ekranında ${newStatus}`);
+    }
+  };
+
+  const addCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Kategori adı gerekli');
+      return;
+    }
+
+    const newCategory: Category = {
+      id: generateId(),
+      name: newCategoryName,
+      description: newCategoryDescription,
+      showInPOS: true,
+      sortOrder: (categories || []).length,
+    };
+
+    setCategories((current) => [...(current || []), newCategory]);
+    toast.success('Yeni kategori eklendi');
+    setShowCategoryDialog(false);
+    setNewCategoryName('');
+    setNewCategoryDescription('');
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    const category = (categories || []).find(c => c.id === categoryId);
+    
+    const productsInCategory = (products || []).filter(
+      p => p.categoryId === categoryId || p.category === category?.name
+    );
+    
+    if (productsInCategory.length > 0) {
+      toast.error(`Bu kategoride ${productsInCategory.length} ürün var. Önce ürünleri taşıyın.`);
+      return;
+    }
+
+    setCategories((current) =>
+      (current || []).filter((c) => c.id !== categoryId)
+    );
+
+    toast.success('Kategori silindi');
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6">
       <header className="flex items-center gap-4">
@@ -200,6 +260,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
       <Tabs defaultValue="stock" className="space-y-4">
         <TabsList>
           <TabsTrigger value="stock">Stok Yönetimi</TabsTrigger>
+          <TabsTrigger value="categories">Kategori Yönetimi</TabsTrigger>
           <TabsTrigger value="tax">KDV Ayarları</TabsTrigger>
           <TabsTrigger value="payment">Ödeme Yöntemleri</TabsTrigger>
           <TabsTrigger value="general">Genel</TabsTrigger>
@@ -254,6 +315,95 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                       </div>
                     </div>
                   ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="categories" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Kategori Yönetimi</CardTitle>
+                  <CardDescription>Kategorileri düzenleyin ve satış ekranında görünürlüklerini kontrol edin</CardDescription>
+                </div>
+                <Button onClick={() => setShowCategoryDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Yeni Kategori
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(categories || []).length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Henüz kategori yok. "Yeni Kategori" butonunu kullanarak kategori ekleyebilirsiniz.
+                  </p>
+                ) : (
+                  (categories || []).map((category) => {
+                    const productCount = (products || []).filter(
+                      p => p.categoryId === category.id || p.category === category.name
+                    ).length;
+                    
+                    return (
+                      <div
+                        key={category.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-3">
+                            <Tag className="h-5 w-5 text-muted-foreground" weight="bold" />
+                            <div>
+                              <p className="font-medium">{category.name}</p>
+                              {category.description && (
+                                <p className="text-sm text-muted-foreground">{category.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground ml-8">
+                            <span>{productCount} ürün</span>
+                            <span className="flex items-center gap-1">
+                              {category.showInPOS !== false ? (
+                                <>
+                                  <Eye className="h-4 w-4" weight="bold" />
+                                  Satış ekranında görünür
+                                </>
+                              ) : (
+                                <>
+                                  <EyeSlash className="h-4 w-4" weight="bold" />
+                                  Satış ekranında gizli
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            category.showInPOS !== false
+                              ? 'bg-accent/10 text-accent'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {category.showInPOS !== false ? 'Görünür' : 'Gizli'}
+                          </div>
+                          <Switch
+                            checked={category.showInPOS !== false}
+                            onCheckedChange={() => toggleCategoryPOSVisibility(category.id)}
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteCategory(category.id)}
+                            disabled={productCount > 0}
+                            title={productCount > 0 ? 'Bu kategoride ürünler var' : 'Kategoriyi sil'}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </CardContent>
@@ -540,6 +690,49 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
             </Button>
             <Button onClick={addTaxRate}>
               Ekle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Yeni Kategori</DialogTitle>
+            <DialogDescription>
+              Yeni bir ürün kategorisi ekleyin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Kategori Adı</Label>
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Örn: Malzemeler, İçecekler, Tatlılar"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Açıklama (Opsiyonel)</Label>
+              <Input
+                value={newCategoryDescription}
+                onChange={(e) => setNewCategoryDescription(e.target.value)}
+                placeholder="Kategori açıklaması..."
+              />
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                ℹ️ Yeni kategoriler varsayılan olarak satış ekranında görünür. Daha sonra gizleyebilirsiniz.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={addCategory}>
+              <Plus className="h-4 w-4 mr-2" />
+              Kategori Ekle
             </Button>
           </DialogFooter>
         </DialogContent>

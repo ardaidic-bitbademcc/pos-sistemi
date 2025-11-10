@@ -85,6 +85,8 @@ export default function POSModule({ onBack }: POSModuleProps) {
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
 
+  const visibleCategories = (categories || []).filter(cat => cat.showInPOS !== false);
+
   const filteredProducts = (products || []).filter((product) => {
     const matchesSearch = product.isActive &&
       (product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,7 +94,12 @@ export default function POSModule({ onBack }: POSModuleProps) {
     
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory || product.categoryId === selectedCategory;
     
-    return matchesSearch && matchesCategory;
+    const productCategory = (categories || []).find(cat => 
+      cat.id === product.categoryId || cat.name === product.category
+    );
+    const isVisibleCategory = !productCategory || productCategory.showInPOS !== false;
+    
+    return matchesSearch && matchesCategory && isVisibleCategory;
   });
 
   const availableTables = (tables || []).filter(t => t.status === 'available' || t.status === 'occupied');
@@ -590,7 +597,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
                     >
                       Tümü
                     </Button>
-                    {(categories || []).map((category) => (
+                    {visibleCategories.map((category) => (
                       <Button
                         key={category.id}
                         size="sm"

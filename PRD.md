@@ -146,6 +146,17 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Akış**: Ödeme listesi → Toggle aktif/pasif → POS ekranında güncellenir
 - **Başarı Kriterleri**: Anlık güncelleme, POS'ta sadece aktif metodlar görünür
 
+#### Kategori Yönetimi
+- **İşlevsellik**: Ürün kategorilerini ekleme, düzenleme, silme ve POS görünürlüğünü kontrol etme
+- **Amaç**: Kategorileri organize etmek ve satış ekranında hangi kategorilerin görüneceğini belirlemek
+- **Tetikleyici**: Yönetici "Kategori Yönetimi" sekmesine girer
+- **Akış**: Kategori listesi → Yeni kategori ekle/düzenle → POS görünürlüğünü toggle et → Otomatik kaydet
+- **Başarı Kriterleri**: 
+  - Kategoriler POS ekranında anlık olarak görünür/gizli olur
+  - "Malzeme" kategorisi varsayılan olarak satış ekranında gizlidir
+  - Kategoride ürün varken silme engellenir
+  - Her kategori için ürün sayısı görüntülenir
+
 ## İstisna Durumları
 
 - **Çevrimdışı Mod**: Offline satış işlemleri kuyruğa alınır, internet geldiğinde senkronize edilir
