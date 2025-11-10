@@ -14,6 +14,26 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 
 ## Temel Özellikler
 
+### 0. Kullanıcı Kimlik Doğrulama Sistemi
+- **İşlevsellik**: 4 haneli PIN kodu ile giriş, role özel dashboard erişimi, güvenli oturum yönetimi
+- **Amaç**: Sisteme güvenli erişim sağlamak, her kullanıcının yetkisine göre modülleri görmesini sağlamak
+- **Tetikleyici**: Uygulama açılışında veya çıkış yapıldığında
+- **Akış**: Login ekranı → 4 haneli PIN gir → Sistem kullanıcıyı doğrular → Rolüne uygun dashboard açılır → Çıkış yap butonu ile oturum sonlanır
+- **Başarı Kriterleri**: 
+  - Hatalı PIN girişlerinde görsel geri bildirim (kırmızı animasyon ve sallama efekti)
+  - Doğru PIN ile 1 saniye içinde dashboard açılır
+  - Her kullanıcı sadece yetkili olduğu modülleri görür
+  - Çıkış yapınca tekrar login ekranına dönülür
+  - Kilit ikonu ile güvenlik hissi veren modern tasarım
+  - Numpad ile hızlı ve kolay PIN girişi
+  - Demo için test kullanıcıları ekranda gösterilir
+
+#### Varsayılan Kullanıcılar
+- **Admin (PIN: 3010)** - Owner rolü, tüm yetkilere sahip
+- **Yönetici (PIN: 1234)** - Manager rolü, kullanıcı yönetimi hariç tüm yetkilere sahip
+- **Kasiyer (PIN: 5678)** - Cashier rolü, kasa görüntüleme ve para ekleme yetkisi var
+- **Garson (PIN: 9999)** - Waiter rolü, sadece POS erişimi, ödeme alamaz
+
 ### 1. POS (Satış Noktası) Modülü
 - **İşlevsellik**: Hızlı ürün satışı, masa yönetimi, ödeme işlemleri
 - **Amaç**: Kasiyer işlemlerini hızlandırmak, masa bazlı sipariş yönetimi sağlamak ve satış verilerini otomatik kaydetmek

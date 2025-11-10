@@ -1,8 +1,6 @@
 import { useKV } from '@github/spark/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import {
   ShoppingCart,
   Users,
@@ -108,14 +106,13 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
   const [employees] = useKV<any[]>('employees', []);
   const [products] = useKV<any[]>('products', []);
   const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
-  const [selectedRole, setSelectedRole] = useKV<UserRole>('currentUserRole', 'owner');
 
   const currentPermissions = useMemo(() => {
-    return (rolePermissions || DEFAULT_ROLE_PERMISSIONS).find(rp => rp.role === selectedRole) || DEFAULT_ROLE_PERMISSIONS[0];
-  }, [rolePermissions, selectedRole]);
+    return (rolePermissions || DEFAULT_ROLE_PERMISSIONS).find(rp => rp.role === currentUserRole) || DEFAULT_ROLE_PERMISSIONS[0];
+  }, [rolePermissions, currentUserRole]);
 
   const hasModuleAccess = (module: ModulePermission): boolean => {
-    if (selectedRole === 'owner') return true;
+    if (currentUserRole === 'owner') return true;
     return currentPermissions.permissions.includes(module);
   };
 
@@ -215,26 +212,13 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as UserRole)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="owner">Sahip</SelectItem>
-                <SelectItem value="manager">Yönetici</SelectItem>
-                <SelectItem value="waiter">Garson</SelectItem>
-                <SelectItem value="cashier">Kasiyer</SelectItem>
-                <SelectItem value="chef">Şef</SelectItem>
-                <SelectItem value="staff">Personel</SelectItem>
-              </SelectContent>
-            </Select>
-            {(selectedRole === 'owner' || currentPermissions.canViewCashRegister) && (
+            {(currentUserRole === 'owner' || currentPermissions.canViewCashRegister) && (
               <Button variant="outline" size="sm" onClick={() => onNavigate('cash')}>
                 <CurrencyCircleDollar className="h-4 w-4 mr-2" weight="fill" />
                 Kasa Durumu
               </Button>
             )}
-            {selectedRole === 'owner' && (
+            {currentUserRole === 'owner' && (
               <Button variant="outline" size="sm" onClick={() => onNavigate('roles')}>
                 <Shield className="h-4 w-4 mr-2" weight="fill" />
                 Yetki Yönetimi
@@ -242,11 +226,6 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
             )}
           </div>
         </div>
-        {selectedRole !== 'owner' && (
-          <Badge variant="outline" className="text-xs">
-            👤 Giriş Yapan: {selectedRole === 'waiter' ? 'Garson' : selectedRole === 'manager' ? 'Yönetici' : selectedRole === 'cashier' ? 'Kasiyer' : selectedRole === 'chef' ? 'Şef' : 'Personel'}
-          </Badge>
-        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

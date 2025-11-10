@@ -371,3 +371,12 @@ export interface CashRegisterStatus {
   closedAt?: string;
   isOpen: boolean;
 }
+
+export interface UserCredential {
+  id: string;
+  name: string;
+  pin: string;
+  role: UserRole;
+  employeeId?: string;
+  isActive: boolean;
+}
