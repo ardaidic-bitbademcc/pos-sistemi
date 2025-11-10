@@ -1,4 +1,42 @@
-export type UserRole = 'owner' | 'manager' | 'cashier' | 'chef' | 'staff';
+export type UserRole = 'owner' | 'manager' | 'cashier' | 'chef' | 'staff' | 'waiter';
+
+export type ModulePermission = 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports';
+
+export interface RolePermissions {
+  role: UserRole;
+  permissions: ModulePermission[];
+  canViewFinancials: boolean;
+  canEditPrices: boolean;
+  canManageUsers: boolean;
+  canApprovePayments: boolean;
+}
+
+export interface BranchComparison {
+  branchId: string;
+  branchName: string;
+  currentWeekSales: number;
+  lastWeekSales: number;
+  percentageChange: number;
+  amountChange: number;
+}
+
+export interface WaiterSalesReport {
+  waiterId: string;
+  waiterName: string;
+  totalSales: number;
+  transactionCount: number;
+  averageTransaction: number;
+  topSellingItem?: string;
+}
+
+export interface ProductSalesReport {
+  productId: string;
+  productName: string;
+  totalSold: number;
+  totalRevenue: number;
+  averagePrice: number;
+  category: string;
+}
 
 export interface Branch {
   id: string;

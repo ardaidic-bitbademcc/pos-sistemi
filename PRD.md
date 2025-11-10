@@ -157,6 +157,76 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Kategoride ürün varken silme engellenir
   - Her kategori için ürün sayısı görüntülenir
 
+### 7. Rol Yönetimi ve Yetkilendirme Modülü
+- **İşlevsellik**: Kullanıcı rollerine modül erişim yetkileri atama, özel yetkileri yönetme
+- **Amaç**: Personelin sadece görevleriyle ilgili modüllere erişmesini sağlamak, veri güvenliğini artırmak
+- **Tetikleyici**: Sistem sahibi "Yetki Yönetimi" butonuna tıklar
+- **Akış**: Rol seç → Modül yetkilerini işaretle/kaldır → Özel yetkileri aç/kapat → Otomatik kaydet → Tüm kullanıcılara yansır
+- **Başarı Kriterleri**: Her rol için ayrı yetki tanımlanabilir, değişiklikler anında uygulanır, garson sadece POS'a erişir
+
+#### Rol Tipleri
+- **Sahip (Owner)**: Tüm modüllere tam erişim, değiştirilemez
+- **Yönetici (Manager)**: POS, Personel, Şube, Menü, Finans, Raporlama - finansal verileri görebilir
+- **Garson (Waiter)**: Sadece POS modülü - finansal verileri göremez, fiyat değiştiremez
+- **Kasiyer (Cashier)**: POS ve Raporlama - sınırlı finansal görünüm
+- **Şef (Chef)**: Menü Mühendisliği - reçete ve malzeme yönetimi
+- **Personel (Staff)**: Sınırlı erişim
+
+#### Özel Yetkiler
+- **Finansal Verileri Görüntüleme**: Ciro, kar-zarar gibi hassas bilgilere erişim
+- **Fiyat Düzenleme**: Ürün fiyatlarını değiştirme yetkisi
+- **Kullanıcı Yönetimi**: Personel ekleme/silme/düzenleme yetkisi
+- **Ödeme Onaylama**: Maaş ve fatura onaylama yetkisi
+
+### 8. Raporlama Modülü
+- **İşlevsellik**: Detaylı satış raporları, şube karşılaştırması, garson performansı, ürün analizi
+- **Amaç**: Veri odaklı karar vermeyi desteklemek, performans takibi yapmak
+- **Tetikleyici**: Yönetici "Raporlama" modülünü açar
+- **Akış**: Rapor türü seç → Tarih aralığı/şube filtrele → Verileri görüntüle → İstatistikleri analiz et
+- **Başarı Kriterleri**: Gerçek zamanlı veriler, karşılaştırmalı analizler, görsel performans göstergeleri
+
+#### Şube Karşılaştırma Raporu
+- **İşlevsellik**: Haftalık şube satış karşılaştırması (geçen hafta - bu hafta)
+- **Gösterimler**:
+  - Bu hafta ciro
+  - Geçen hafta ciro
+  - Tutar farkı (₺)
+  - Yüzde farkı (%)
+  - Performans durumu (Mükemmel/İyi/Dikkat/Düşük)
+- **Başarı Kriterleri**: Şubeler arasında objektif karşılaştırma, trend analizi
+
+#### Garson Satış Raporu
+- **İşlevsellik**: Garsonların bireysel satış performansı
+- **Gösterimler**:
+  - Toplam satış tutarı
+  - İşlem sayısı
+  - Ortalama sepet tutarı
+  - En çok sattığı ürün
+  - Performans sıralaması
+- **Başarı Kriterleri**: Garson motivasyonu için objektif metrikler, adil performans değerlendirmesi
+
+#### Ürün Satış Raporu
+- **İşlevsellik**: En çok satılan ürünler ve satış istatistikleri
+- **Gösterimler**:
+  - Satılan adet
+  - Toplam ciro
+  - Ortalama satış fiyatı
+  - Kategori bilgisi
+  - Popülerlik sıralaması
+- **Başarı Kriterleri**: Stok planlaması için veri, menü optimizasyon kararları
+
+### 9. Demo Veri Sistemi
+- **İşlevsellik**: Otomatik 1-2 haftalık gerçekçi demo veri oluşturma
+- **Amaç**: Sistemi denemek için anlamlı test verileri sağlamak
+- **Kapsam**:
+  - 3 şube (Kadıköy, Beşiktaş, Üsküdar)
+  - 8 çalışan (5 garson dahil)
+  - 15+ ürün (11 satılabilir + 4 malzeme)
+  - 5 kategori (Malzeme kategorisi POS'ta gizli)
+  - 700-1000 satış işlemi (son 14 gün)
+  - Gerçekçi satış dağılımı (günde 50-80 işlem)
+- **Başarı Kriterleri**: Tüm raporlama ve analiz özellikleri demo veriyle test edilebilir
+
 ## İstisna Durumları
 
 - **Çevrimdışı Mod**: Offline satış işlemleri kuyruğa alınır, internet geldiğinde senkronize edilir
