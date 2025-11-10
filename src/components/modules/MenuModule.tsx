@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText } from '@phosphor-icons/react';
+import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
@@ -29,6 +29,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysis, setAnalysis] = useState<MenuAnalysis[]>([]);
+  const [analysisStartDate, setAnalysisStartDate] = useState<string>('');
+  const [analysisEndDate, setAnalysisEndDate] = useState<string>('');
   
   const [showRecipeDialog, setShowRecipeDialog] = useState(false);
   const [showMenuItemDialog, setShowMenuItemDialog] = useState(false);
@@ -80,11 +82,27 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
 
   const runAIAnalysis = () => {
-    const allSales = sales || [];
+    let filteredSales = sales || [];
+    
+    if (analysisStartDate || analysisEndDate) {
+      const startDate = analysisStartDate ? new Date(analysisStartDate) : new Date(0);
+      const endDate = analysisEndDate ? new Date(analysisEndDate) : new Date();
+      endDate.setHours(23, 59, 59, 999);
+      
+      filteredSales = filteredSales.filter(sale => {
+        const saleDate = new Date(sale.saleDate);
+        return saleDate >= startDate && saleDate <= endDate;
+      });
+      
+      if (filteredSales.length === 0) {
+        toast.error('Seçilen tarih aralığında satış bulunamadı');
+        return;
+      }
+    }
     
     const itemSalesMap = new Map<string, { totalSold: number; revenue: number; cost: number }>();
     
-    allSales.forEach(sale => {
+    filteredSales.forEach(sale => {
       sale.items?.forEach((saleItem) => {
         const menuItem = (menuItems || []).find(mi => mi.id === saleItem.productId);
         if (menuItem) {
@@ -135,7 +153,11 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
 
     setAnalysis(newAnalysis);
     setShowAnalysis(true);
-    toast.success('AI analizi tamamlandı');
+    
+    const dateRangeText = analysisStartDate || analysisEndDate
+      ? ` (${analysisStartDate ? new Date(analysisStartDate).toLocaleDateString('tr-TR') : 'Başlangıç'} - ${analysisEndDate ? new Date(analysisEndDate).toLocaleDateString('tr-TR') : 'Bugün'})`
+      : '';
+    toast.success(`AI analizi tamamlandı${dateRangeText}`);
   };
 
   const getCategoryBadge = (category: MenuCategory) => {
@@ -821,18 +843,66 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
         <TabsContent value="analysis" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
                   <CardTitle className="text-lg">AI Menü Analizi</CardTitle>
                   <CardDescription>
                     Menü performansını analiz edin ve optimizasyon önerileri alın
                   </CardDescription>
                 </div>
-                <Button onClick={runAIAnalysis}>
-                  <Sparkle className="h-5 w-5 mr-2" weight="fill" />
-                  Analiz Başlat
-                </Button>
+                <div className="flex items-end gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="analysis-start-date" className="text-xs">Başlangıç Tarihi</Label>
+                    <div className="relative">
+                      <Input
+                        id="analysis-start-date"
+                        type="date"
+                        value={analysisStartDate}
+                        onChange={(e) => setAnalysisStartDate(e.target.value)}
+                        className="w-[160px]"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="analysis-end-date" className="text-xs">Bitiş Tarihi</Label>
+                    <div className="relative">
+                      <Input
+                        id="analysis-end-date"
+                        type="date"
+                        value={analysisEndDate}
+                        onChange={(e) => setAnalysisEndDate(e.target.value)}
+                        className="w-[160px]"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={runAIAnalysis}>
+                    <Sparkle className="h-5 w-5 mr-2" weight="fill" />
+                    Analiz Başlat
+                  </Button>
+                </div>
               </div>
+              {(analysisStartDate || analysisEndDate) && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                  <CalendarBlank className="h-4 w-4" />
+                  <span>
+                    {analysisStartDate ? new Date(analysisStartDate).toLocaleDateString('tr-TR') : 'Başlangıç'} - {analysisEndDate ? new Date(analysisEndDate).toLocaleDateString('tr-TR') : 'Bugün'}
+                  </span>
+                  {(analysisStartDate || analysisEndDate) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 px-2 text-xs"
+                      onClick={() => {
+                        setAnalysisStartDate('');
+                        setAnalysisEndDate('');
+                        setShowAnalysis(false);
+                      }}
+                    >
+                      Temizle
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardHeader>
           </Card>
 

@@ -81,19 +81,21 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Başarı Kriterleri**: Tüm şubeler 5 saniye içinde güncellenir, çakışma yok
 
 ### 4. Menü Mühendisliği Modülü
-- **İşlevsellik**: Reçete yönetimi, fatura girişi, otomatik stok güncelleme, maliyet analizi, AI destekli menü optimizasyonu
+- **İşlevsellik**: Reçete yönetimi, fatura girişi, otomatik stok güncelleme, maliyet analizi, AI destekli menü optimizasyonu (tarih aralığı filtreli)
 - **Amaç**: Karlılığı artırmak, menü performansını optimize etmek ve stok maliyetlerini doğru takip etmek
 - **Tetikleyici**: Aşçıbaşı/müdür reçete oluşturur, fatura girer veya AI analiz başlatır
 - **Akış**: 
   - **Reçete Yönetimi**: Menü öğesi seç → Malzeme ekle → Miktar belirle → Porsiyon sayısı gir → Otomatik maliyet hesaplama → Kar marjı görüntüle → Kaydet
   - **Fatura Girişi**: Fatura Gir → Tedarikçi adı → Ürün/Menü öğesi seç → Adet ve birim fiyat → Otomatik stok güncelle → KDV hesapla → Kaydet
-  - **AI Analizi**: Menü listesi → AI analiz başlat → Satış/maliyet verisi analizi → Yıldız/Köpek kategorileme → Öneriler → Uygula
+  - **AI Analizi**: Menü listesi → Tarih aralığı seç (opsiyonel) → AI analiz başlat → Satış/maliyet verisi analizi → Yıldız/Köpek kategorileme → Öneriler → Uygula
 - **Başarı Kriterleri**: 
   - Reçete oluşturulduğunda otomatik porsiyon başı maliyet hesaplanır
   - Fatura girildiğinde stok otomatik güncellenir ve maliyet fiyatları yansır
   - 12 dilimlik cheesecake için 1200 TL fatura girilince, dilim başı 100 TL maliyet otomatik hesaplanır
   - Kar marjı yüzdesi anlık güncellenir
   - Actionable öneriler, kar marjı artışı tahmini
+  - Seçilen tarih aralığındaki satış verilerine göre analiz yapılır
+  - Tarih aralığı belirtilmezse tüm satış geçmişi kullanılır
 
 #### Reçete Yönetimi
 - **İşlevsellik**: Menü öğeleri için detaylı reçete oluşturma, malzeme listesi, porsiyon başı maliyet hesaplama
@@ -120,6 +122,25 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Menü öğeleri için porsiyon başı maliyet otomatik hesaplanır
   - Reçetelerde kullanılan malzemelerin maliyeti güncellenir ve menü kar marjı yeniden hesaplanır
   - KDV tutarı ayrı gösterilir
+
+#### AI Menü Analizi
+- **İşlevsellik**: Boston Consulting Group (BCG) matris analizi ile menü öğelerini kategorize etme, tarih aralığı bazlı filtreleme
+- **Amaç**: Menü öğelerinin performansını analiz ederek optimizasyon önerileri sunmak
+- **Tetikleyici**: Yönetici "AI Analiz" sekmesinde "Analiz Başlat" butonuna tıklar
+- **Akış**: 
+  - AI Analiz sekmesi → (Opsiyonel) Başlangıç-Bitiş tarihi seç → Analiz Başlat → Satış verilerini filtrele → Popülerlik ve karlılık skorları hesapla → BCG kategorilerine ayır → Sonuçları göster
+- **Kategoriler**:
+  - **⭐ Yıldız**: Yüksek popülerlik + Yüksek kar marjı → Öne çıkar, upselling yap
+  - **🧩 Puzzle**: Düşük popülerlik + Yüksek kar marjı → Fiyat düşür, pazarlamayı artır
+  - **🐴 İş Atı**: Yüksek popülerlik + Düşük kar marjı → Maliyetleri optimize et, fiyat artır
+  - **🐕 Zayıf**: Düşük popülerlik + Düşük kar marjı → Menüden çıkar, yenile
+- **Başarı Kriterleri**: 
+  - Tarih aralığı seçilirse sadece o dönemdeki satışlar analiz edilir
+  - Tarih aralığı seçilmezse tüm satış geçmişi kullanılır
+  - Seçilen tarih aralığında satış yoksa kullanıcı uyarılır
+  - Her ürün için satış adedi, ciro, kar, popülerlik skoru gösterilir
+  - Seçilen tarih aralığı ekranda görünür
+  - "Temizle" butonu ile tarih filtreleri sıfırlanabilir
 
 ### 5. Finans Modülü
 - **İşlevsellik**: Gelir-gider takibi, kar-zarar raporu, bütçe planlama, satış tahmini
