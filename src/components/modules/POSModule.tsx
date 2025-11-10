@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, DotsThree, X } from '@phosphor-icons/react';
+import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
@@ -64,9 +64,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
   const [showCheckout, setShowCheckout] = useState(false);
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
-  const [showDiscountDialog, setShowDiscountDialog] = useState(false);
-  const [showSplitPaymentDialog, setShowSplitPaymentDialog] = useState(false);
-  const [showOrderActionsDialog, setShowOrderActionsDialog] = useState(false);
+  const [showOrderDetailsDialog, setShowOrderDetailsDialog] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [transferTargetTable, setTransferTargetTable] = useState<string>('');
   const [selectedItemsForTransfer, setSelectedItemsForTransfer] = useState<string[]>([]);
@@ -380,7 +378,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
     }
 
     setOrderDiscount(discount);
-    setShowDiscountDialog(false);
+    setDiscountValue('0');
     toast.success(`${formatCurrency(discount)} indirim uygulandı`);
   };
 
@@ -514,21 +512,26 @@ export default function POSModule({ onBack }: POSModuleProps) {
                 <TableIcon className="h-4 w-4 mr-2" weight="bold" />
                 Masa {selectedTable.tableNumber}
               </Badge>
-              <Button variant="outline" size="sm" onClick={() => setShowOrderActionsDialog(true)}>
-                <DotsThree className="h-5 w-5" weight="bold" />
+              {selectedTable.currentSaleId && (
+                <Button variant="outline" size="sm" onClick={() => setShowOrderDetailsDialog(true)}>
+                  Sipariş Detayları
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setShowTransferDialog(true)} disabled={cart.length === 0}>
+                <ArrowsLeftRight className="h-5 w-5" weight="bold" />
               </Button>
             </>
           )}
         </div>
       </header>
 
-      <Tabs defaultValue="products" className="space-y-4">
+      <Tabs defaultValue="quick-sale" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="products">Ürünler</TabsTrigger>
+          <TabsTrigger value="quick-sale">Hızlı Satış</TabsTrigger>
           <TabsTrigger value="tables">Masalar</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="products" className="space-y-0">
+        <TabsContent value="quick-sale" className="space-y-0">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <Card>
@@ -827,63 +830,93 @@ export default function POSModule({ onBack }: POSModuleProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showOrderActionsDialog} onOpenChange={setShowOrderActionsDialog}>
-        <DialogContent>
+      <Dialog open={showOrderDetailsDialog} onOpenChange={setShowOrderDetailsDialog}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Sipariş İşlemleri</DialogTitle>
+            <DialogTitle>Sipariş Detayları - Masa {selectedTable?.tableNumber}</DialogTitle>
             <DialogDescription>
-              Masa {selectedTable?.tableNumber} için işlem seçin
+              Masa siparişi detaylarını görüntüle ve yönet
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3 py-4">
-            <Button
-              variant="outline"
-              className="h-24 flex-col gap-2"
-              onClick={() => {
-                setShowOrderActionsDialog(false);
-                setShowTransferDialog(true);
-              }}
-              disabled={cart.length === 0}
-            >
-              <ArrowsLeftRight className="h-8 w-8" weight="bold" />
-              <span>Ürün Taşı</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-24 flex-col gap-2"
-              onClick={() => {
-                setShowOrderActionsDialog(false);
-                setShowDiscountDialog(true);
-              }}
-              disabled={cart.length === 0}
-            >
-              <Percent className="h-8 w-8" weight="bold" />
-              <span>İndirim Yap</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-24 flex-col gap-2"
-              onClick={() => {
-                setShowOrderActionsDialog(false);
-                setShowSplitPaymentDialog(true);
-              }}
-              disabled={cart.length === 0}
-            >
-              <CreditCard className="h-8 w-8" weight="bold" />
-              <span>Parçalı Ödeme</span>
-            </Button>
-            <Button
-              variant="destructive"
-              className="h-24 flex-col gap-2"
-              onClick={() => {
-                setShowOrderActionsDialog(false);
-                deleteOrder();
-              }}
-              disabled={!selectedTable?.currentSaleId}
-            >
-              <Trash className="h-8 w-8" weight="bold" />
-              <span>Sipariş Sil</span>
-            </Button>
+          <div className="space-y-4 py-4">
+            {cart.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">Sipariş bulunamadı</p>
+            ) : (
+              <>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {cart.map((item) => (
+                    <div key={item.id} className={`p-3 rounded-lg border ${item.isComplimentary ? 'bg-accent/20 border-accent' : 'bg-muted/30'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{item.productName}</p>
+                            {item.isComplimentary && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Gift className="h-3 w-3 mr-1" />
+                                İkram
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground font-tabular-nums">
+                            {item.quantity} adet × {formatCurrency(item.unitPrice)}
+                          </p>
+                        </div>
+                        <span className={`font-semibold font-tabular-nums ${item.isComplimentary ? 'line-through text-muted-foreground' : ''}`}>
+                          {formatCurrency(item.isComplimentary ? item.quantity * item.unitPrice : item.subtotal)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Ara Toplam</span>
+                    <span className="font-tabular-nums">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">KDV</span>
+                    <span className="font-tabular-nums">{formatCurrency(totals.taxAmount)}</span>
+                  </div>
+                  {orderDiscount > 0 && (
+                    <div className="flex items-center justify-between text-sm text-destructive">
+                      <span>İndirim</span>
+                      <span className="font-tabular-nums">-{formatCurrency(orderDiscount)}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Toplam</span>
+                    <span className="text-xl font-bold font-tabular-nums">
+                      {formatCurrency(totals.total)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => {
+                      deleteOrder();
+                      setShowOrderDetailsDialog(false);
+                    }}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Siparişi Sil
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowOrderDetailsDialog(false)}
+                  >
+                    Kapat
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -956,251 +989,238 @@ export default function POSModule({ onBack }: POSModuleProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
-        <DialogContent>
+      <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>İndirim Uygula</DialogTitle>
+            <DialogTitle>Ödeme İşlemleri</DialogTitle>
             <DialogDescription>
-              Sipariş için indirim tutarını belirleyin
+              Ödeme yöntemi, indirim, parçalı ödeme ve ikram işlemlerini yapın
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>İndirim Tipi</Label>
-              <Select value={discountType} onValueChange={(value: 'percentage' | 'amount') => setDiscountType(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percentage">Yüzde (%)</SelectItem>
-                  <SelectItem value="amount">Tutar (₺)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>İndirim {discountType === 'percentage' ? 'Yüzdesi' : 'Tutarı'}</Label>
-              <Input
-                type="number"
-                value={discountValue}
-                onChange={(e) => setDiscountValue(e.target.value)}
-                placeholder={discountType === 'percentage' ? '0' : '0.00'}
-                min="0"
-                max={discountType === 'percentage' ? '100' : totals.total.toString()}
-              />
-            </div>
-            <div className="p-3 bg-muted rounded-lg">
-              <div className="flex items-center justify-between text-sm">
-                <span>Ara Toplam</span>
-                <span className="font-tabular-nums">{formatCurrency(totals.subtotal)}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm mt-1">
-                <span>İndirim Tutarı</span>
-                <span className="font-tabular-nums text-destructive">
-                  -{formatCurrency(
-                    discountType === 'percentage' 
-                      ? (totals.subtotal * (parseFloat(discountValue) || 0)) / 100
-                      : parseFloat(discountValue) || 0
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDiscountDialog(false)}>
-              İptal
-            </Button>
-            <Button onClick={applyDiscount}>
-              <Percent className="h-4 w-4 mr-2" weight="bold" />
-              İndirim Uygula
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Tabs defaultValue="payment" className="py-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="payment">Ödeme</TabsTrigger>
+              <TabsTrigger value="discount">İndirim</TabsTrigger>
+              <TabsTrigger value="split">Parçalı Ödeme</TabsTrigger>
+            </TabsList>
 
-      <Dialog open={showSplitPaymentDialog} onOpenChange={setShowSplitPaymentDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Parçalı Ödeme</DialogTitle>
-            <DialogDescription>
-              Farklı ödeme yöntemleri ile parçalı tahsilat yapın
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="p-4 bg-muted rounded-lg space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Toplam Tutar</span>
-                <span className="font-bold font-tabular-nums text-lg">{formatCurrency(totals.total)}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Ödenen</span>
-                <span className="font-tabular-nums">
-                  {formatCurrency(splitPayments.reduce((sum, p) => sum + p.amount, 0))}
-                </span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="font-semibold">Kalan</span>
-                <span className="font-bold font-tabular-nums text-accent">
-                  {formatCurrency(totals.total - splitPayments.reduce((sum, p) => sum + p.amount, 0))}
-                </span>
-              </div>
-            </div>
-
-            {splitPayments.length > 0 && (
-              <div className="space-y-2">
-                <Label>Eklenen Ödemeler</Label>
-                <div className="space-y-2">
-                  {splitPayments.map((payment, index) => {
-                    const pm = activePaymentMethods.find(p => p.method === payment.method);
+            <TabsContent value="payment" className="space-y-4">
+              <div className="space-y-3">
+                <Label>Ödeme Yöntemi</Label>
+                <div className={`grid gap-3 ${activePaymentMethods.length === 3 ? 'grid-cols-3' : activePaymentMethods.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {activePaymentMethods.map((pm) => {
+                    const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
                     return (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{pm?.displayName}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold font-tabular-nums">{formatCurrency(payment.amount)}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => removeSplitPayment(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      <Button
+                        key={pm.method}
+                        variant={paymentMethod === pm.method ? 'default' : 'outline'}
+                        className="h-24 flex-col gap-2"
+                        onClick={() => setPaymentMethod(pm.method)}
+                      >
+                        <Icon className="h-8 w-8" weight="bold" />
+                        <span>{pm.displayName}</span>
+                      </Button>
                     );
                   })}
                 </div>
               </div>
-            )}
 
-            <Separator />
+              <Separator />
 
-            <div className="space-y-3">
-              <Label>Yeni Ödeme Ekle</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {activePaymentMethods.map((pm) => {
-                  const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
-                  return (
-                    <Button
-                      key={pm.method}
-                      variant={currentSplitMethod === pm.method ? 'default' : 'outline'}
-                      className="h-16 flex-col gap-1"
-                      onClick={() => setCurrentSplitMethod(pm.method)}
-                    >
-                      <Icon className="h-6 w-6" weight="bold" />
-                      <span className="text-xs">{pm.displayName}</span>
-                    </Button>
-                  );
-                })}
+              <div className="space-y-2 p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Ara Toplam</span>
+                  <span className="font-tabular-nums">{formatCurrency(totals.subtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">KDV</span>
+                  <span className="font-tabular-nums">{formatCurrency(totals.taxAmount)}</span>
+                </div>
+                {orderDiscount > 0 && (
+                  <div className="flex items-center justify-between text-destructive">
+                    <span className="text-sm">İndirim</span>
+                    <span className="font-tabular-nums">-{formatCurrency(orderDiscount)}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Ödenecek Tutar</span>
+                  <span className="text-xl font-bold font-tabular-nums text-accent">
+                    {formatCurrency(totals.total)}
+                  </span>
+                </div>
               </div>
-              <div className="flex gap-2">
+            </TabsContent>
+
+            <TabsContent value="discount" className="space-y-4">
+              <div className="space-y-2">
+                <Label>İndirim Tipi</Label>
+                <Select value={discountType} onValueChange={(value: 'percentage' | 'amount') => setDiscountType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Yüzde (%)</SelectItem>
+                    <SelectItem value="amount">Tutar (₺)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>İndirim {discountType === 'percentage' ? 'Yüzdesi' : 'Tutarı'}</Label>
                 <Input
                   type="number"
-                  placeholder="Tutar"
-                  value={currentSplitAmount}
-                  onChange={(e) => setCurrentSplitAmount(e.target.value)}
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  placeholder={discountType === 'percentage' ? '0' : '0.00'}
                   min="0"
-                  step="0.01"
+                  max={discountType === 'percentage' ? '100' : totals.subtotal.toString()}
                 />
-                <Button onClick={addSplitPayment}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ekle
-                </Button>
               </div>
-            </div>
-          </div>
+              <div className="p-3 bg-muted rounded-lg space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Ara Toplam</span>
+                  <span className="font-tabular-nums">{formatCurrency(totals.subtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>İndirim Tutarı</span>
+                  <span className="font-tabular-nums text-destructive">
+                    -{formatCurrency(
+                      discountType === 'percentage' 
+                        ? (totals.subtotal * (parseFloat(discountValue) || 0)) / 100
+                        : parseFloat(discountValue) || 0
+                    )}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between font-semibold">
+                  <span>Yeni Toplam</span>
+                  <span className="font-tabular-nums">
+                    {formatCurrency(
+                      Math.max(0, totals.subtotal + totals.taxAmount - (
+                        discountType === 'percentage' 
+                          ? (totals.subtotal * (parseFloat(discountValue) || 0)) / 100
+                          : parseFloat(discountValue) || 0
+                      ))
+                    )}
+                  </span>
+                </div>
+              </div>
+              <Button 
+                className="w-full" 
+                onClick={() => {
+                  applyDiscount();
+                }}
+              >
+                <Percent className="h-4 w-4 mr-2" weight="bold" />
+                İndirim Uygula
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="split" className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Toplam Tutar</span>
+                  <span className="font-bold font-tabular-nums text-lg">{formatCurrency(totals.total)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Ödenen</span>
+                  <span className="font-tabular-nums">
+                    {formatCurrency(splitPayments.reduce((sum, p) => sum + p.amount, 0))}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Kalan</span>
+                  <span className="font-bold font-tabular-nums text-accent">
+                    {formatCurrency(totals.total - splitPayments.reduce((sum, p) => sum + p.amount, 0))}
+                  </span>
+                </div>
+              </div>
+
+              {splitPayments.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Eklenen Ödemeler</Label>
+                  <div className="space-y-2">
+                    {splitPayments.map((payment, index) => {
+                      const pm = activePaymentMethods.find(p => p.method === payment.method);
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm font-medium">{pm?.displayName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold font-tabular-nums">{formatCurrency(payment.amount)}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => removeSplitPayment(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label>Yeni Ödeme Ekle</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {activePaymentMethods.map((pm) => {
+                    const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
+                    return (
+                      <Button
+                        key={pm.method}
+                        variant={currentSplitMethod === pm.method ? 'default' : 'outline'}
+                        className="h-16 flex-col gap-1"
+                        onClick={() => setCurrentSplitMethod(pm.method)}
+                      >
+                        <Icon className="h-6 w-6" weight="bold" />
+                        <span className="text-xs">{pm.displayName}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Tutar"
+                    value={currentSplitAmount}
+                    onChange={(e) => setCurrentSplitAmount(e.target.value)}
+                    min="0"
+                    step="0.01"
+                  />
+                  <Button onClick={addSplitPayment}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ekle
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
-              setShowSplitPaymentDialog(false);
+              setShowCheckout(false);
               setSplitPayments([]);
             }}>
               İptal
             </Button>
             <Button 
               onClick={() => {
-                setShowSplitPaymentDialog(false);
+                if (splitPayments.length > 0) {
+                  const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+                  if (Math.abs(totalPaid - totals.total) > 0.01) {
+                    toast.error(`Toplam ödeme ${formatCurrency(totalPaid)} - Kalan: ${formatCurrency(totals.total - totalPaid)}`);
+                    return;
+                  }
+                }
                 completeSale();
               }}
-              disabled={Math.abs(splitPayments.reduce((sum, p) => sum + p.amount, 0) - totals.total) > 0.01}
+              disabled={splitPayments.length > 0 && Math.abs(splitPayments.reduce((sum, p) => sum + p.amount, 0) - totals.total) > 0.01}
             >
-              <Check className="h-4 w-4 mr-2" weight="bold" />
-              Ödemeyi Tamamla
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ödeme</DialogTitle>
-            <DialogDescription>
-              Ödeme yöntemini seçin ve satışı tamamlayın
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Ödeme Yöntemi</p>
-              <div className={`grid gap-3 ${activePaymentMethods.length === 3 ? 'grid-cols-3' : activePaymentMethods.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {activePaymentMethods.map((pm) => {
-                  const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
-                  return (
-                    <Button
-                      key={pm.method}
-                      variant={paymentMethod === pm.method ? 'default' : 'outline'}
-                      className="h-24 flex-col gap-2"
-                      onClick={() => setPaymentMethod(pm.method)}
-                    >
-                      <Icon className="h-8 w-8" weight="bold" />
-                      <span>{pm.displayName}</span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setShowCheckout(false);
-                setShowSplitPaymentDialog(true);
-              }}
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Parçalı Ödeme Yap
-            </Button>
-            <Separator />
-            <div className="space-y-2 p-4 bg-muted rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Ara Toplam</span>
-                <span className="font-tabular-nums">{formatCurrency(totals.subtotal)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">KDV</span>
-                <span className="font-tabular-nums">{formatCurrency(totals.taxAmount)}</span>
-              </div>
-              {orderDiscount > 0 && (
-                <div className="flex items-center justify-between text-destructive">
-                  <span className="text-sm">İndirim</span>
-                  <span className="font-tabular-nums">-{formatCurrency(orderDiscount)}</span>
-                </div>
-              )}
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="font-semibold">Ödenecek Tutar</span>
-                <span className="text-xl font-bold font-tabular-nums text-accent">
-                  {formatCurrency(totals.total)}
-                </span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCheckout(false)}>
-              İptal
-            </Button>
-            <Button onClick={completeSale}>
               <Check className="h-4 w-4 mr-2" weight="bold" />
               Satışı Tamamla
             </Button>
