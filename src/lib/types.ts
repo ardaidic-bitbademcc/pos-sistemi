@@ -339,3 +339,31 @@ export interface DashboardStats {
   activeEmployees: number;
   pendingApprovals: number;
 }
+
+export type CashTransactionType = 'in' | 'out' | 'opening' | 'closing';
+
+export interface CashTransaction {
+  id: string;
+  branchId: string;
+  type: CashTransactionType;
+  amount: number;
+  description: string;
+  date: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface CashRegisterStatus {
+  id: string;
+  branchId: string;
+  openingBalance: number;
+  currentBalance: number;
+  expectedBalance: number;
+  totalIn: number;
+  totalOut: number;
+  totalSales: number;
+  transactions: CashTransaction[];
+  openedAt: string;
+  closedAt?: string;
+  isOpen: boolean;
+}

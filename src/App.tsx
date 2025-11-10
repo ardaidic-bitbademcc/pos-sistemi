@@ -10,10 +10,11 @@ import FinanceModule from '@/components/modules/FinanceModule';
 import SettingsModule from '@/components/modules/SettingsModule';
 import ReportsModule from '@/components/modules/ReportsModule';
 import RoleManagementModule from '@/components/modules/RoleManagementModule';
+import CashModule from '@/components/modules/CashModule';
 import { useSeedData } from '@/hooks/use-seed-data';
 import type { UserRole } from '@/lib/types';
 
-export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles';
+export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
@@ -40,6 +41,8 @@ function App() {
         return <ReportsModule onBack={() => setActiveModule('dashboard')} />;
       case 'roles':
         return <RoleManagementModule onBack={() => setActiveModule('dashboard')} />;
+      case 'cash':
+        return <CashModule onBack={() => setActiveModule('dashboard')} />;
       default:
         return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} />;
     }

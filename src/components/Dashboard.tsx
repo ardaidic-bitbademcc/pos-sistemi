@@ -16,6 +16,7 @@ import {
   Gear,
   ChartBar,
   Shield,
+  CurrencyCircleDollar,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
 import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission } from '@/lib/types';
@@ -203,6 +204,10 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
                 <SelectItem value="staff">Personel</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('cash')}>
+              <CurrencyCircleDollar className="h-4 w-4 mr-2" weight="fill" />
+              Kasa Durumu
+            </Button>
             {selectedRole === 'owner' && (
               <Button variant="outline" size="sm" onClick={() => onNavigate('roles')}>
                 <Shield className="h-4 w-4 mr-2" weight="fill" />
