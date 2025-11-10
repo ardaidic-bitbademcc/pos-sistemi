@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem } from '@/lib/types';
+import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
 
 interface MenuModuleProps {
@@ -25,6 +25,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [recipes, setRecipes] = useKV<Recipe[]>('recipes', []);
   const [products, setProducts] = useKV<Product[]>('products', []);
   const [invoices, setInvoices] = useKV<Invoice[]>('invoices', []);
+  const [sales] = useKV<Sale[]>('sales', []);
   
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysis, setAnalysis] = useState<MenuAnalysis[]>([]);
@@ -79,11 +80,39 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
 
   const runAIAnalysis = () => {
-    const mockAnalysis: MenuAnalysis[] = (menuItems || []).map((item) => {
+    const allSales = sales || [];
+    
+    const itemSalesMap = new Map<string, { totalSold: number; revenue: number; cost: number }>();
+    
+    allSales.forEach(sale => {
+      sale.items?.forEach((saleItem) => {
+        const menuItem = (menuItems || []).find(mi => mi.id === saleItem.productId);
+        if (menuItem) {
+          const existing = itemSalesMap.get(menuItem.id) || { totalSold: 0, revenue: 0, cost: 0 };
+          existing.totalSold += saleItem.quantity;
+          existing.revenue += saleItem.subtotal;
+          existing.cost += menuItem.costPrice * saleItem.quantity;
+          itemSalesMap.set(menuItem.id, existing);
+        }
+      });
+    });
+    
+    let maxSales = 0;
+    itemSalesMap.forEach(data => {
+      if (data.totalSold > maxSales) maxSales = data.totalSold;
+    });
+    
+    const newAnalysis: MenuAnalysis[] = (menuItems || []).map((item) => {
+      const salesData = itemSalesMap.get(item.id) || { totalSold: 0, revenue: 0, cost: 0 };
+      const profit = salesData.revenue - salesData.cost;
+      
+      const popularityScore = maxSales > 0 ? salesData.totalSold / maxSales : 0;
+      const profitMarginScore = salesData.revenue > 0 ? profit / salesData.revenue : 0;
+      
       const category: MenuCategory = 
-        item.popularity > 0.6 && item.profitMargin > 0.6 ? 'star' :
-        item.popularity < 0.4 && item.profitMargin > 0.6 ? 'puzzle' :
-        item.popularity > 0.6 && item.profitMargin < 0.4 ? 'plow_horse' : 'dog';
+        popularityScore > 0.6 && profitMarginScore > 0.4 ? 'star' :
+        popularityScore < 0.4 && profitMarginScore > 0.4 ? 'puzzle' :
+        popularityScore > 0.6 && profitMarginScore <= 0.4 ? 'plow_horse' : 'dog';
 
       const recommendations = {
         star: 'Menüde öne çıkarın, upselling yapın. Fiyatı koruyun.',
@@ -95,16 +124,16 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       return {
         menuItemId: item.id,
         category,
-        totalSales: Math.floor(Math.random() * 500),
-        revenue: Math.random() * 50000,
-        cost: Math.random() * 20000,
-        profit: Math.random() * 30000,
-        popularityScore: item.popularity,
+        totalSales: salesData.totalSold,
+        revenue: salesData.revenue,
+        cost: salesData.cost,
+        profit,
+        popularityScore,
         recommendation: recommendations[category],
       };
     });
 
-    setAnalysis(mockAnalysis);
+    setAnalysis(newAnalysis);
     setShowAnalysis(true);
     toast.success('AI analizi tamamlandı');
   };
