@@ -1304,40 +1304,13 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                             <Button
                               className="flex-1"
                               size="lg"
-                              onClick={() => {
-                                if (splitPayments.length > 0) {
-                                  completeSale();
-                                } else {
-                                  setShowCheckout(true);
-                                }
-                              }}
+                              onClick={() => setShowCheckout(true)}
                             >
                               <Check className="h-5 w-5 mr-2" weight="bold" />
                               Ödeme Al
                             </Button>
                           )}
                         </div>
-                        {!isWaiter && cart.length > 0 && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedPaymentItems([]);
-                                setShowPartialPaymentDialog(true);
-                              }}
-                            >
-                              Parçalı Ödeme
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowCartSplitDialog(true)}
-                            >
-                              Sepeti Böl
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </>
                   )}
@@ -1623,63 +1596,98 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           <DialogHeader>
             <DialogTitle>Ödeme İşlemleri</DialogTitle>
             <DialogDescription>
-              Ödeme yöntemi, indirim, parçalı ödeme ve ikram işlemlerini yapın
+              Ödeme türünü seçin veya doğrudan ödeme alın
             </DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="payment" className="py-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="payment">Ödeme</TabsTrigger>
-              <TabsTrigger value="discount">İndirim</TabsTrigger>
-              <TabsTrigger value="split">Parçalı Ödeme</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="payment" className="space-y-4">
-              <div className="space-y-3">
-                <Label>Ödeme Yöntemi</Label>
-                <div className={`grid gap-3 ${activePaymentMethods.length === 3 ? 'grid-cols-3' : activePaymentMethods.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {activePaymentMethods.map((pm) => {
-                    const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
-                    return (
-                      <Button
-                        key={pm.method}
-                        variant={paymentMethod === pm.method ? 'default' : 'outline'}
-                        className="h-24 flex-col gap-2"
-                        onClick={() => setPaymentMethod(pm.method)}
-                      >
-                        <Icon className="h-8 w-8" weight="bold" />
-                        <span>{pm.displayName}</span>
-                      </Button>
-                    );
-                  })}
+          <div className="py-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="h-32 flex-col gap-3"
+                onClick={() => {
+                  setShowCheckout(false);
+                  setSelectedPaymentItems([]);
+                  setShowPartialPaymentDialog(true);
+                }}
+              >
+                <Users className="h-10 w-10" weight="bold" />
+                <div className="text-center">
+                  <div className="font-semibold">Parçalı Ödeme</div>
+                  <div className="text-xs text-muted-foreground">Ürün seçerek ödeme al</div>
                 </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2 p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Ara Toplam</span>
-                  <span className="font-tabular-nums">{formatCurrency(totals.subtotal)}</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-32 flex-col gap-3"
+                onClick={() => {
+                  setShowCheckout(false);
+                  setShowCartSplitDialog(true);
+                }}
+              >
+                <ArrowsLeftRight className="h-10 w-10" weight="bold" />
+                <div className="text-center">
+                  <div className="font-semibold">Sepeti Böl</div>
+                  <div className="text-xs text-muted-foreground">Eşit bölümlere ayır</div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">KDV</span>
-                  <span className="font-tabular-nums">{formatCurrency(totals.taxAmount)}</span>
-                </div>
-                {orderDiscount > 0 && (
-                  <div className="flex items-center justify-between text-destructive">
-                    <span className="text-sm">İndirim</span>
-                    <span className="font-tabular-nums">-{formatCurrency(orderDiscount)}</span>
+              </Button>
+            </div>
+
+            <Separator />
+            
+            <Tabs defaultValue="payment" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="payment">Ödeme</TabsTrigger>
+                <TabsTrigger value="discount">İndirim</TabsTrigger>
+                <TabsTrigger value="split">Çoklu Ödeme</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="payment" className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Ödeme Yöntemi</Label>
+                  <div className={`grid gap-3 ${activePaymentMethods.length === 3 ? 'grid-cols-3' : activePaymentMethods.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    {activePaymentMethods.map((pm) => {
+                      const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
+                      return (
+                        <Button
+                          key={pm.method}
+                          variant={paymentMethod === pm.method ? 'default' : 'outline'}
+                          className="h-24 flex-col gap-2"
+                          onClick={() => setPaymentMethod(pm.method)}
+                        >
+                          <Icon className="h-8 w-8" weight="bold" />
+                          <span>{pm.displayName}</span>
+                        </Button>
+                      );
+                    })}
                   </div>
-                )}
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">Ödenecek Tutar</span>
-                  <span className="text-xl font-bold font-tabular-nums text-accent">
-                    {formatCurrency(totals.total)}
-                  </span>
                 </div>
-              </div>
-            </TabsContent>
+
+                <Separator />
+
+                <div className="space-y-2 p-4 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Ara Toplam</span>
+                    <span className="font-tabular-nums">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">KDV</span>
+                    <span className="font-tabular-nums">{formatCurrency(totals.taxAmount)}</span>
+                  </div>
+                  {orderDiscount > 0 && (
+                    <div className="flex items-center justify-between text-destructive">
+                      <span className="text-sm">İndirim</span>
+                      <span className="font-tabular-nums">-{formatCurrency(orderDiscount)}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Ödenecek Tutar</span>
+                    <span className="text-xl font-bold font-tabular-nums text-accent">
+                      {formatCurrency(totals.total)}
+                    </span>
+                  </div>
+                </div>
+              </TabsContent>
 
             <TabsContent value="discount" className="space-y-4">
               <div className="space-y-2">
@@ -1752,14 +1760,14 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                   <span className="font-bold font-tabular-nums text-lg">{formatCurrency(totals.total)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Ödenen</span>
-                  <span className="font-tabular-nums">
+                  <span className="text-muted-foreground">Alınan Ödeme</span>
+                  <span className="font-tabular-nums text-emerald-600 font-semibold">
                     {formatCurrency(splitPayments.reduce((sum, p) => sum + p.amount, 0))}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold">Kalan</span>
+                  <span className="font-semibold">Kalan Ödeme</span>
                   <span className="font-bold font-tabular-nums text-accent">
                     {formatCurrency(totals.total - splitPayments.reduce((sum, p) => sum + p.amount, 0))}
                   </span>
@@ -1844,6 +1852,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
               </div>
             </TabsContent>
           </Tabs>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowCheckout(false);
@@ -2388,14 +2397,14 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                             <span className="font-tabular-nums">{formatCurrency(calculatePartialTotals().total)}</span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span>Ödenen</span>
-                            <span className="font-tabular-nums">
+                            <span>Alınan Ödeme</span>
+                            <span className="font-tabular-nums text-emerald-600 font-semibold">
                               {formatCurrency(splitPayments.reduce((sum, p) => sum + p.amount, 0))}
                             </span>
                           </div>
                           <Separator />
                           <div className="flex items-center justify-between font-semibold">
-                            <span>Kalan</span>
+                            <span>Kalan Ödeme</span>
                             <span className="font-tabular-nums text-accent">
                               {formatCurrency(calculatePartialTotals().total - splitPayments.reduce((sum, p) => sum + p.amount, 0))}
                             </span>
