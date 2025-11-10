@@ -34,13 +34,15 @@ import {
   ClockClockwise,
   ListBullets,
   CalendarBlank,
+  LockKey,
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { formatCurrency, getStartOfDay } from '@/lib/helpers';
-import type { CashTransaction, CashRegisterStatus, Branch, Sale } from '@/lib/types';
+import type { CashTransaction, CashRegisterStatus, Branch, Sale, UserRole, RolePermissions } from '@/lib/types';
 
 interface CashModuleProps {
   onBack: () => void;
+  currentUserRole?: UserRole;
 }
 
 const QUICK_ACTIONS = [
@@ -50,10 +52,86 @@ const QUICK_ACTIONS = [
   { id: 'expense', label: 'Genel Gider', icon: Minus, type: 'out' as const },
 ];
 
-export default function CashModule({ onBack }: CashModuleProps) {
+const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
+  {
+    role: 'owner',
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'settings', 'reports'],
+    canViewFinancials: true,
+    canEditPrices: true,
+    canManageUsers: true,
+    canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
+  },
+  {
+    role: 'manager',
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'reports'],
+    canViewFinancials: true,
+    canEditPrices: true,
+    canManageUsers: false,
+    canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
+  },
+  {
+    role: 'waiter',
+    permissions: ['pos'],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+  },
+  {
+    role: 'cashier',
+    permissions: ['pos', 'reports'],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+  },
+  {
+    role: 'chef',
+    permissions: ['menu'],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+  },
+  {
+    role: 'staff',
+    permissions: [],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+  },
+];
+
+export default function CashModule({ onBack, currentUserRole = 'owner' }: CashModuleProps) {
   const [branches] = useKV<Branch[]>('branches', []);
   const [sales] = useKV<Sale[]>('sales', []);
   const [cashRegisters, setCashRegisters] = useKV<CashRegisterStatus[]>('cashRegisters', []);
+  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
   const [selectedBranch, setSelectedBranch] = useState<string>('');
 
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
@@ -63,6 +141,15 @@ export default function CashModule({ onBack }: CashModuleProps) {
   const [quickActionPreset, setQuickActionPreset] = useState<string>('');
 
   const activeBranch = (branches || []).find((b) => b.id === selectedBranch) || (branches || [])[0];
+  
+  const currentPermissions = useMemo(() => {
+    return (rolePermissions || DEFAULT_ROLE_PERMISSIONS).find(rp => rp.role === currentUserRole) || DEFAULT_ROLE_PERMISSIONS[0];
+  }, [rolePermissions, currentUserRole]);
+
+  const canViewCash = currentUserRole === 'owner' || currentPermissions.canViewCashRegister;
+  const canAddCash = currentUserRole === 'owner' || currentPermissions.canAddCash;
+  const canWithdrawCash = currentUserRole === 'owner' || currentPermissions.canWithdrawCash;
+  const canCloseCash = currentUserRole === 'owner' || currentPermissions.canCloseCashRegister;
   
   const currentCashRegister = useMemo(() => {
     if (!activeBranch) return null;
@@ -157,6 +244,11 @@ export default function CashModule({ onBack }: CashModuleProps) {
   };
 
   const closeCashRegister = () => {
+    if (!canCloseCash) {
+      toast.error('Kasayı kapatma yetkiniz bulunmamakta');
+      return;
+    }
+
     if (!currentCashRegister) {
       toast.error('Açık kasa bulunamadı');
       return;
@@ -174,6 +266,15 @@ export default function CashModule({ onBack }: CashModuleProps) {
   };
 
   const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
+    if (action.type === 'out' && !canWithdrawCash) {
+      toast.error('Para çıkışı yapma yetkiniz bulunmamakta');
+      return;
+    }
+    if (action.type === 'in' && !canAddCash) {
+      toast.error('Para ekleme yetkiniz bulunmamakta');
+      return;
+    }
+
     setTransactionType(action.type);
     setQuickActionPreset(action.id);
     setTransactionDescription(action.label);
@@ -184,6 +285,16 @@ export default function CashModule({ onBack }: CashModuleProps) {
   const handleAddTransaction = () => {
     if (!currentCashRegister) {
       toast.error('Önce kasayı açmanız gerekiyor');
+      return;
+    }
+
+    if (transactionType === 'out' && !canWithdrawCash) {
+      toast.error('Para çıkışı yapma yetkiniz bulunmamakta');
+      return;
+    }
+
+    if (transactionType === 'in' && !canAddCash) {
+      toast.error('Para ekleme yetkiniz bulunmamakta');
       return;
     }
 
@@ -255,6 +366,37 @@ export default function CashModule({ onBack }: CashModuleProps) {
           <CardContent className="py-8">
             <p className="text-center text-muted-foreground">
               Kasa yönetimi için önce bir şube oluşturmanız gerekiyor.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!canViewCash) {
+    return (
+      <div className="min-h-screen p-6">
+        <header className="mb-6">
+          <Button variant="ghost" size="sm" onClick={onBack} className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Geri Dön
+          </Button>
+          <h1 className="text-3xl font-semibold tracking-tight">Kasa Yönetimi</h1>
+        </header>
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <LockKey className="h-5 w-5" weight="fill" />
+              Yetkisiz Erişim
+            </CardTitle>
+            <CardDescription>
+              Bu modülü görüntüleme yetkiniz bulunmamaktadır
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Kasa yönetimi ekranına erişebilmek için yöneticinizle iletişime geçin. 
+              Sadece yetkili kullanıcılar kasa durumunu görüntüleyebilir.
             </p>
           </CardContent>
         </Card>
@@ -542,6 +684,7 @@ export default function CashModule({ onBack }: CashModuleProps) {
                   <Button
                     variant="outline"
                     className="justify-start h-auto py-3"
+                    disabled={!canAddCash}
                     onClick={() => {
                       setTransactionType('in');
                       setQuickActionPreset('');
@@ -562,6 +705,7 @@ export default function CashModule({ onBack }: CashModuleProps) {
                   <Button
                     variant="outline"
                     className="justify-start h-auto py-3"
+                    disabled={!canWithdrawCash}
                     onClick={() => {
                       setTransactionType('out');
                       setQuickActionPreset('');
@@ -586,12 +730,14 @@ export default function CashModule({ onBack }: CashModuleProps) {
                   <p className="text-sm font-medium mb-3">Kısa Yollar</p>
                   {QUICK_ACTIONS.map((action) => {
                     const Icon = action.icon;
+                    const isDisabled = action.type === 'out' ? !canWithdrawCash : !canAddCash;
                     return (
                       <Button
                         key={action.id}
                         variant="ghost"
                         size="sm"
                         className="w-full justify-start text-sm"
+                        disabled={isDisabled}
                         onClick={() => handleQuickAction(action)}
                       >
                         <Icon className="h-4 w-4 mr-2" weight="bold" />
@@ -607,6 +753,7 @@ export default function CashModule({ onBack }: CashModuleProps) {
                   variant="destructive"
                   size="sm"
                   className="w-full"
+                  disabled={!canCloseCash}
                   onClick={closeCashRegister}
                 >
                   <Wallet className="h-4 w-4 mr-2" weight="fill" />

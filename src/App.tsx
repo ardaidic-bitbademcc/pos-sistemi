@@ -42,7 +42,7 @@ function App() {
       case 'roles':
         return <RoleManagementModule onBack={() => setActiveModule('dashboard')} />;
       case 'cash':
-        return <CashModule onBack={() => setActiveModule('dashboard')} />;
+        return <CashModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} />;
       default:
         return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} />;
     }

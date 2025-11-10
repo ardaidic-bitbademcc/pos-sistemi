@@ -23,6 +23,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: true,
     canManageUsers: true,
     canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
   },
   {
     role: 'manager',
@@ -31,6 +35,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: true,
     canManageUsers: false,
     canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
   },
   {
     role: 'waiter',
@@ -39,6 +47,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
   {
     role: 'cashier',
@@ -47,6 +59,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
   {
     role: 'chef',
@@ -55,6 +71,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
   {
     role: 'staff',
@@ -63,6 +83,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
 ];
 
@@ -229,6 +253,77 @@ export default function RoleManagementModule({ onBack }: RoleManagementModulePro
               <Separator />
 
               <div className="space-y-3">
+                <Label className="text-sm font-medium">Kasa Yönetimi Yetkileri</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Kasa Kontrolü</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kasa durumunu görüntüleyebilir ve işlemleri görebilir
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canViewCashRegister')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canViewCashRegister', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Para Ekleme</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kasaya para girişi yapabilir (bozuk girişi vb.)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canAddCash')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canAddCash', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Para Çıkışı</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kasadan para çekebilir (gün sonu çıkışı vb.)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canWithdrawCash')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canWithdrawCash', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Kasa Kapatma</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Gün sonu kasayı kapatabilir
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canCloseCashRegister')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canCloseCashRegister', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
                 <Label className="text-sm font-medium">Özel Yetkiler</Label>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-2 rounded-lg">
@@ -313,7 +408,13 @@ export default function RoleManagementModule({ onBack }: RoleManagementModulePro
             • <strong>Garson</strong> rolü varsayılan olarak sadece POS ekranına erişebilir
           </p>
           <p>
-            • Her rol için modül erişimi ve özel yetkiler ayrı ayrı yapılandırılabilir
+            • <strong>Kasiyer</strong> rolü varsayılan olarak kasa kontrolü ve para ekleme yetkisine sahiptir, ancak para çıkışı yapamaz
+          </p>
+          <p>
+            • Her rol için modül erişimi, özel yetkiler ve kasa yetkileri ayrı ayrı yapılandırılabilir
+          </p>
+          <p>
+            • Kasa yetkileri sayesinde hassas finansal işlemleri sınırlayabilirsiniz
           </p>
           <p>
             • Değişiklikler anında uygulanır ve tüm kullanıcıları etkiler

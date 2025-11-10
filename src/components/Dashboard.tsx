@@ -36,6 +36,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: true,
     canManageUsers: true,
     canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
   },
   {
     role: 'manager',
@@ -44,6 +48,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: true,
     canManageUsers: false,
     canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
   },
   {
     role: 'waiter',
@@ -52,6 +60,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
   {
     role: 'cashier',
@@ -60,6 +72,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
   {
     role: 'chef',
@@ -68,6 +84,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
   {
     role: 'staff',
@@ -76,6 +96,10 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canEditPrices: false,
     canManageUsers: false,
     canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
   },
 ];
 
@@ -204,10 +228,12 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
                 <SelectItem value="staff">Personel</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={() => onNavigate('cash')}>
-              <CurrencyCircleDollar className="h-4 w-4 mr-2" weight="fill" />
-              Kasa Durumu
-            </Button>
+            {(selectedRole === 'owner' || currentPermissions.canViewCashRegister) && (
+              <Button variant="outline" size="sm" onClick={() => onNavigate('cash')}>
+                <CurrencyCircleDollar className="h-4 w-4 mr-2" weight="fill" />
+                Kasa Durumu
+              </Button>
+            )}
             {selectedRole === 'owner' && (
               <Button variant="outline" size="sm" onClick={() => onNavigate('roles')}>
                 <Shield className="h-4 w-4 mr-2" weight="fill" />

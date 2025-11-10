@@ -9,6 +9,10 @@ export interface RolePermissions {
   canEditPrices: boolean;
   canManageUsers: boolean;
   canApprovePayments: boolean;
+  canViewCashRegister: boolean;
+  canAddCash: boolean;
+  canWithdrawCash: boolean;
+  canCloseCashRegister: boolean;
 }
 
 export interface BranchComparison {
