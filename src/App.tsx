@@ -6,11 +6,13 @@ import PersonnelModule from '@/components/modules/PersonnelModule';
 import BranchModule from '@/components/modules/BranchModule';
 import MenuModule from '@/components/modules/MenuModule';
 import FinanceModule from '@/components/modules/FinanceModule';
+import { useSeedData } from '@/hooks/use-seed-data';
 
 export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
+  useSeedData();
 
   const renderModule = () => {
     switch (activeModule) {

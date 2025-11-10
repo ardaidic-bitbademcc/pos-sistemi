@@ -71,6 +71,8 @@ export interface Employee {
   avatarUrl?: string;
   isActive: boolean;
   hourlyRate: number;
+  employeePin: string;
+  qrCode?: string;
 }
 
 export interface Shift {
@@ -97,8 +99,41 @@ export interface SalaryCalculation {
   bonuses: number;
   deductions: number;
   netSalary: number;
-  status: 'draft' | 'approved' | 'paid';
+  status: 'draft' | 'approved' | 'rejected' | 'paid';
   totalHours: number;
+  rejectionReason?: string;
+  calculationSettings?: SalaryCalculationSettings;
+}
+
+export interface SalaryCalculationSettings {
+  id: string;
+  name: string;
+  standardHoursPerMonth: number;
+  overtimeMultiplier: number;
+  nightShiftMultiplier: number;
+  weekendMultiplier: number;
+  includeBreaksInCalculation: boolean;
+  autoApproveThreshold?: number;
+}
+
+export interface Table {
+  id: string;
+  branchId: string;
+  tableNumber: string;
+  capacity: number;
+  status: 'available' | 'occupied' | 'reserved' | 'cleaning';
+  currentSaleId?: string;
+  section?: string;
+}
+
+export interface TableOrder {
+  id: string;
+  tableId: string;
+  saleId: string;
+  openedAt: string;
+  closedAt?: string;
+  customersCount: number;
+  notes?: string;
 }
 
 export interface MenuItem {

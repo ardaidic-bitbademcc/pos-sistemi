@@ -15,18 +15,53 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 ## Temel Özellikler
 
 ### 1. POS (Satış Noktası) Modülü
-- **İşlevsellik**: Hızlı ürün satışı, stok takibi, fatura oluşturma
-- **Amaç**: Kasiyer işlemlerini hızlandırmak ve satış verilerini otomatik kaydetmek
-- **Tetikleyici**: Kasiyer "Satış Yap" butonuna tıklar veya barkod okutma
-- **Akış**: Ürün ara/seç → Sepete ekle → Miktarı ayarla → Ödeme yöntemini seç → Tamamla → Fatura yazdır
-- **Başarı Kriterleri**: 30 saniye içinde satış tamamlanır, stok otomatik güncellenir, gelir kaydı oluşturulur
+- **İşlevsellik**: Hızlı ürün satışı, masa yönetimi, ödeme işlemleri
+- **Amaç**: Kasiyer işlemlerini hızlandırmak, masa bazlı sipariş yönetimi sağlamak ve satış verilerini otomatik kaydetmek
+- **Tetikleyici**: Kasiyer masa seçer veya doğrudan ürün ekler
+- **Akış**: Masa seç (opsiyonel) → Ürün ara/seç → Sepete ekle → Miktarı ayarla → Ödeme butonlarından birini seç (Nakit/Kart/Mobil) → Tamamla
+- **Başarı Kriterleri**: 30 saniye içinde satış tamamlanır, masa durumu otomatik güncellenir, fatura oluşturulur
+
+#### Masa Yönetimi
+- **İşlevsellik**: Masa durumu takibi (Boş/Dolu/Rezerve), masa kapasitesi görüntüleme
+- **Amaç**: Restoran masalarını verimli yönetmek ve masa bazlı sipariş takibi
+- **Tetikleyici**: Kasiyer masa seçer veya masa durumu değişir
+- **Akış**: Masa listesi görüntüle → Masa seç → Sipariş ekle → Ödeme al → Masa otomatik boşalt
+- **Başarı Kriterleri**: Masa durumları gerçek zamanlı güncellenir, müşteri sayısı görünür
+
+#### Ödeme Yöntemleri
+- **İşlevsellik**: Buton bazlı ödeme yöntemi seçimi (Nakit, Kredi Kartı, Mobil Ödeme)
+- **Amaç**: Hızlı ve kolay ödeme işlemi
+- **Tetikleyici**: Kasiyer ödeme ekranında ilgili butona tıklar
+- **Akış**: Sepeti kontrol et → Ödeme butonlarından birini seç → Tutarı onayla → Satışı tamamla
+- **Başarı Kriterleri**: Tek tıkla ödeme yöntemi seçimi, görsel geri bildirim
 
 ### 2. Personel Yönetimi Modülü
-- **İşlevsellik**: Vardiya planlama, puantaj takibi, maaş hesaplama, izin yönetimi
-- **Amaç**: Personel maliyetlerini optimize etmek ve çalışan takibini otomatikleştirmek
-- **Tetikleyici**: Çalışan vardiya giriş/çıkış yapar, yönetici maaş hesaplama başlatır
-- **Akış**: Vardiya giriş → Çalışma saati takibi → Maaş hesaplama → Onay → Otomatik gider kaydı
-- **Başarı Kriterleri**: Doğru maaş hesaplaması, finans modülü ile otomatik entegrasyon
+- **İşlevsellik**: Vardiya takibi, PIN/QR kod ile giriş-çıkış, özelleştirilebilir maaş hesaplama, maaş onay/red sistemi
+- **Amaç**: Personel maliyetlerini optimize etmek, çalışanların kendi vardiyalarını yönetmelerini sağlamak
+- **Tetikleyici**: Çalışan PIN veya QR kod ile giriş/çıkış yapar, yönetici maaş hesaplama başlatır
+- **Akış**: Personel giriş → PIN/QR kod girişi → Vardiya otomatik başlar/biter → Çalışma saati kaydedilir → Maaş hesaplama → Onay/Red → Finans entegrasyonu
+- **Başarı Kriterleri**: Doğru saat hesaplaması, esnek maaş hesaplama ayarları, red nedeni kayıt altına alınması
+
+#### Personel Giriş/Çıkış Sistemi
+- **İşlevsellik**: PIN kodu veya QR kod ile self-service vardiya başlatma/bitirme
+- **Amaç**: Personelin bağımsız olarak vardiya yönetimi yapabilmesi
+- **Tetikleyici**: Personel "Giriş/Çıkış" butonuna tıklar
+- **Akış**: Giriş/Çıkış ekranı → PIN veya QR kod gir → Sistem personeli tanır → Aktif vardiya varsa bitir, yoksa başlat → Bildirim göster
+- **Başarı Kriterleri**: Hızlı kimlik doğrulama, otomatik vardiya başlat/bitir
+
+#### Maaş Hesaplama Sistemi
+- **İşlevsellik**: Özelleştirilebilir hesaplama parametreleri, onaylama/reddetme, red nedeni kaydetme
+- **Amaç**: Farklı hesaplama yöntemleri ile esnek maaş yönetimi
+- **Tetikleyici**: Yönetici "Yeni Hesaplama" başlatır veya ayarları düzenler
+- **Akış**: Personel seç → Dönem belirle → Ayarlara göre hesapla → Detayları göster → Onayla/Reddet → (Reddedilirse) Nedeni gir → Finans kaydı oluştur
+- **Başarı Kriterleri**: Çoklu çarpan desteği (mesai, gece, hafta sonu), maaş reddetme seçeneği, detaylı hesaplama raporu
+
+#### Maaş Hesaplama Ayarları
+- Standart aylık çalışma saati (varsayılan: 160 saat)
+- Mesai çarpanı (varsayılan: 1.5x)
+- Gece vardiyası çarpanı (varsayılan: 1.25x)
+- Hafta sonu çarpanı (varsayılan: 1.5x)
+- Mola süreleri hesaplamaya dahil edilsin/edilmesin seçeneği
 
 ### 3. Şube Yönetimi Modülü
 - **İşlevsellik**: Çoklu şube senkronizasyonu, merkezi ürün yönetimi, şubeler arası transfer
