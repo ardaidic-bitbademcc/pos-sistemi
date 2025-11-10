@@ -418,6 +418,9 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     const saleId = selectedTable.currentSaleId || generateId();
     const now = new Date().toISOString();
     
+    const currentSale = selectedTable.currentSaleId ? (sales || []).find(s => s.id === selectedTable.currentSaleId) : null;
+    const existingPaidAmount = currentSale?.paidAmount || 0;
+    
     const newSale: Sale = {
       id: saleId,
       branchId: 'branch-1',
@@ -431,6 +434,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       paymentMethod: 'cash',
       paymentStatus: 'pending',
       items: cart,
+      paidAmount: existingPaidAmount,
+      remainingAmount: totals.total,
     };
 
     if (selectedTable.currentSaleId) {
@@ -772,6 +777,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       paymentMethod: finalPaymentMethod,
       paymentStatus: 'completed',
       items: paidItems,
+      paidAmount: partialTotals.total,
+      remainingAmount: 0,
       notes: splitPayments.length > 0 
         ? `Parçalı ödeme: ${splitPayments.map(p => `${p.method}=${formatCurrency(p.amount)}`).join(', ')}`
         : selectedTable 
@@ -814,10 +821,23 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           taxAmount: acc.taxAmount + calculateTax(item.subtotal, item.taxRate),
         }), { subtotal: 0, taxAmount: 0 });
 
+        const currentPaidAmount = (currentSale.paidAmount || 0) + partialTotals.total;
+        const totalTableAmount = totals.subtotal + totals.taxAmount + currentPaidAmount;
+        const remainingTableAmount = Math.max(0, totals.subtotal + totals.taxAmount);
+
         setSales((currentSales) =>
           (currentSales || []).map(s =>
             s.id === selectedTable.currentSaleId
-              ? { ...s, items: remainingItems, subtotal: totals.subtotal, taxAmount: totals.taxAmount, totalAmount: totals.subtotal + totals.taxAmount }
+              ? { 
+                  ...s, 
+                  items: remainingItems, 
+                  subtotal: totals.subtotal, 
+                  taxAmount: totals.taxAmount, 
+                  totalAmount: totals.subtotal + totals.taxAmount,
+                  paidAmount: currentPaidAmount,
+                  remainingAmount: remainingTableAmount,
+                  paymentStatus: remainingTableAmount > 0 ? 'pending' as const : 'completed' as const,
+                }
               : s
           )
         );
@@ -871,6 +891,10 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     const saleId = selectedTable?.currentSaleId || generateId();
     const finalPaymentMethod = splitPayments.length > 0 ? 'card' : paymentMethod;
     
+    const currentSale = selectedTable?.currentSaleId ? (sales || []).find(s => s.id === selectedTable.currentSaleId) : null;
+    const previousPaidAmount = currentSale?.paidAmount || 0;
+    const totalPaidAmount = previousPaidAmount + totals.total;
+    
     const newSale: Sale = {
       id: saleId,
       branchId: 'branch-1',
@@ -884,6 +908,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       paymentMethod: finalPaymentMethod,
       paymentStatus: 'completed',
       items: cart,
+      paidAmount: totalPaidAmount,
+      remainingAmount: 0,
       notes: splitPayments.length > 0 ? `Parçalı ödeme: ${splitPayments.map(p => `${p.method}=${formatCurrency(p.amount)}`).join(', ')}` : undefined,
     };
 
@@ -1279,12 +1305,46 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           </div>
                         )}
                         <Separator />
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">Toplam</span>
-                          <span className="text-xl font-bold font-tabular-nums">
-                            {formatCurrency(totals.total)}
-                          </span>
-                        </div>
+                        {selectedTable?.currentSaleId && (() => {
+                          const currentSale = (sales || []).find(s => s.id === selectedTable.currentSaleId);
+                          const paidAmount = currentSale?.paidAmount || 0;
+                          const remainingAmount = totals.total;
+                          
+                          if (paidAmount > 0) {
+                            return (
+                              <>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-emerald-600 font-medium">Alınan Ödeme</span>
+                                  <span className="font-tabular-nums text-emerald-600 font-semibold">
+                                    {formatCurrency(paidAmount)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-amber-600">Kalan Ödeme</span>
+                                  <span className="text-xl font-bold font-tabular-nums text-amber-600">
+                                    {formatCurrency(remainingAmount)}
+                                  </span>
+                                </div>
+                                <Separator />
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold">Genel Toplam</span>
+                                  <span className="text-xl font-bold font-tabular-nums">
+                                    {formatCurrency(paidAmount + remainingAmount)}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {(!selectedTable?.currentSaleId || !((sales || []).find(s => s.id === selectedTable.currentSaleId)?.paidAmount)) && (
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">Toplam</span>
+                            <span className="text-xl font-bold font-tabular-nums">
+                              {formatCurrency(totals.total)}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1489,12 +1549,46 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                     </div>
                   )}
                   <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Toplam</span>
-                    <span className="text-xl font-bold font-tabular-nums">
-                      {formatCurrency(totals.total)}
-                    </span>
-                  </div>
+                  {selectedTable?.currentSaleId && (() => {
+                    const currentSale = (sales || []).find(s => s.id === selectedTable.currentSaleId);
+                    const paidAmount = currentSale?.paidAmount || 0;
+                    const remainingAmount = totals.total;
+                    
+                    if (paidAmount > 0) {
+                      return (
+                        <>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-emerald-600 font-medium">Alınan Ödeme</span>
+                            <span className="font-tabular-nums text-emerald-600 font-semibold">
+                              {formatCurrency(paidAmount)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-amber-600">Kalan Ödeme</span>
+                            <span className="text-lg font-bold font-tabular-nums text-amber-600">
+                              {formatCurrency(remainingAmount)}
+                            </span>
+                          </div>
+                          <Separator />
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">Genel Toplam</span>
+                            <span className="text-xl font-bold font-tabular-nums">
+                              {formatCurrency(paidAmount + remainingAmount)}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
+                  {(!selectedTable?.currentSaleId || !((sales || []).find(s => s.id === selectedTable.currentSaleId)?.paidAmount)) && (
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">Toplam</span>
+                      <span className="text-xl font-bold font-tabular-nums">
+                        {formatCurrency(totals.total)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -1680,6 +1774,25 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                     </div>
                   )}
                   <Separator />
+                  {selectedTable?.currentSaleId && (() => {
+                    const currentSale = (sales || []).find(s => s.id === selectedTable.currentSaleId);
+                    const paidAmount = currentSale?.paidAmount || 0;
+                    
+                    if (paidAmount > 0) {
+                      return (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-emerald-600 font-medium">Alınan Ödeme</span>
+                            <span className="font-tabular-nums text-emerald-600 font-semibold">
+                              {formatCurrency(paidAmount)}
+                            </span>
+                          </div>
+                          <Separator />
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">Ödenecek Tutar</span>
                     <span className="text-xl font-bold font-tabular-nums text-accent">

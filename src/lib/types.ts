@@ -98,6 +98,8 @@ export interface Sale {
   paymentStatus: PaymentStatus;
   notes?: string;
   items: SaleItem[];
+  paidAmount?: number;
+  remainingAmount?: number;
 }
 
 export interface SaleItem {
