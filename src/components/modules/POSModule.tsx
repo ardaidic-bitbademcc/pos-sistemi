@@ -48,6 +48,11 @@ interface SplitPayment {
   amount: number;
 }
 
+interface SelectedPaymentItem {
+  itemId: string;
+  quantity: number;
+}
+
 export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSModuleProps) {
   const [products] = useKV<Product[]>('products', []);
   const [categories] = useKV<Category[]>('categories', []);
@@ -101,6 +106,14 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [showNumpad, setShowNumpad] = useState(false);
   const [pendingTable, setPendingTable] = useState<Table | null>(null);
   const [guestCount, setGuestCount] = useState('');
+  const [showPartialPaymentDialog, setShowPartialPaymentDialog] = useState(false);
+  const [selectedPaymentItems, setSelectedPaymentItems] = useState<SelectedPaymentItem[]>([]);
+  const [showRemoveQuantityDialog, setShowRemoveQuantityDialog] = useState(false);
+  const [showComplimentaryQuantityDialog, setShowComplimentaryQuantityDialog] = useState(false);
+  const [quantityDialogItem, setQuantityDialogItem] = useState<CartItem | null>(null);
+  const [quantityToProcess, setQuantityToProcess] = useState('');
+  const [showCartSplitDialog, setShowCartSplitDialog] = useState(false);
+  const [cartSplitCount, setCartSplitCount] = useState<number | 'custom'>(2);
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
@@ -284,20 +297,110 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   };
 
   const removeFromCart = (itemId: string) => {
-    setCart(cart.filter((item) => item.id !== itemId));
-    toast.success('Ürün sepetten çıkarıldı');
+    const item = cart.find(i => i.id === itemId);
+    if (!item) return;
+    
+    if (item.quantity > 1) {
+      setQuantityDialogItem(item);
+      setQuantityToProcess('');
+      setShowRemoveQuantityDialog(true);
+    } else {
+      setCart(cart.filter((item) => item.id !== itemId));
+      toast.success('Ürün sepetten çıkarıldı');
+    }
+  };
+
+  const confirmRemoveQuantity = () => {
+    if (!quantityDialogItem) return;
+    
+    const qty = parseInt(quantityToProcess);
+    if (!qty || qty < 1) {
+      toast.error('Geçerli bir miktar girin');
+      return;
+    }
+    
+    if (qty >= quantityDialogItem.quantity) {
+      setCart(cart.filter(item => item.id !== quantityDialogItem.id));
+      toast.success(`${quantityDialogItem.productName} sepetten çıkarıldı`);
+    } else {
+      setCart(cart.map(item => 
+        item.id === quantityDialogItem.id
+          ? { ...item, quantity: item.quantity - qty, subtotal: (item.quantity - qty) * item.unitPrice }
+          : item
+      ));
+      toast.success(`${qty} adet ${quantityDialogItem.productName} sepetten çıkarıldı`);
+    }
+    
+    setShowRemoveQuantityDialog(false);
+    setQuantityDialogItem(null);
+    setQuantityToProcess('');
   };
 
   const makeComplimentary = (itemId: string) => {
-    setCart(cart.map(item => 
-      item.id === itemId 
-        ? { ...item, isComplimentary: !item.isComplimentary, subtotal: !item.isComplimentary ? 0 : item.quantity * item.unitPrice }
-        : item
-    ));
     const item = cart.find(i => i.id === itemId);
-    if (item) {
-      toast.success(item.isComplimentary ? 'İkram iptal edildi' : `${item.productName} ikram edildi`);
+    if (!item) return;
+    
+    if (item.isComplimentary) {
+      setCart(cart.map(i => 
+        i.id === itemId 
+          ? { ...i, isComplimentary: false, subtotal: i.quantity * i.unitPrice }
+          : i
+      ));
+      toast.success('İkram iptal edildi');
+    } else if (item.quantity > 1) {
+      setQuantityDialogItem(item);
+      setQuantityToProcess('');
+      setShowComplimentaryQuantityDialog(true);
+    } else {
+      setCart(cart.map(i => 
+        i.id === itemId 
+          ? { ...i, isComplimentary: true, subtotal: 0 }
+          : i
+      ));
+      toast.success(`${item.productName} ikram edildi`);
     }
+  };
+
+  const confirmComplimentaryQuantity = () => {
+    if (!quantityDialogItem) return;
+    
+    const qty = parseInt(quantityToProcess);
+    if (!qty || qty < 1) {
+      toast.error('Geçerli bir miktar girin');
+      return;
+    }
+    
+    if (qty >= quantityDialogItem.quantity) {
+      setCart(cart.map(item => 
+        item.id === quantityDialogItem.id
+          ? { ...item, isComplimentary: true, subtotal: 0 }
+          : item
+      ));
+      toast.success(`${quantityDialogItem.productName} tamamen ikram edildi`);
+    } else {
+      const remainingQuantity = quantityDialogItem.quantity - qty;
+      const newComplimentaryItem: CartItem = {
+        ...quantityDialogItem,
+        id: generateId(),
+        quantity: qty,
+        isComplimentary: true,
+        subtotal: 0,
+      };
+      
+      setCart([
+        ...cart.map(item => 
+          item.id === quantityDialogItem.id
+            ? { ...item, quantity: remainingQuantity, subtotal: remainingQuantity * item.unitPrice }
+            : item
+        ),
+        newComplimentaryItem
+      ]);
+      toast.success(`${qty} adet ${quantityDialogItem.productName} ikram edildi`);
+    }
+    
+    setShowComplimentaryQuantityDialog(false);
+    setQuantityDialogItem(null);
+    setQuantityToProcess('');
   };
 
   const saveOrder = () => {
@@ -569,6 +672,184 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       discount: orderDiscount,
       total: Math.max(0, subtotal + taxAmount - orderDiscount),
     };
+  };
+
+  const calculatePartialTotals = () => {
+    const selectedItems = cart.filter(item => 
+      selectedPaymentItems.some(si => si.itemId === item.id)
+    );
+    
+    let subtotal = 0;
+    let taxAmount = 0;
+    
+    selectedItems.forEach(item => {
+      const selectedQty = selectedPaymentItems.find(si => si.itemId === item.id)?.quantity || 0;
+      const itemSubtotal = item.unitPrice * selectedQty;
+      subtotal += itemSubtotal;
+      if (!item.isComplimentary) {
+        taxAmount += calculateTax(itemSubtotal, item.taxRate);
+      }
+    });
+    
+    return {
+      subtotal,
+      taxAmount,
+      discount: 0,
+      total: Math.max(0, subtotal + taxAmount),
+    };
+  };
+
+  const toggleItemForPartialPayment = (itemId: string, maxQuantity: number) => {
+    const existing = selectedPaymentItems.find(si => si.itemId === itemId);
+    
+    if (existing) {
+      setSelectedPaymentItems(selectedPaymentItems.filter(si => si.itemId !== itemId));
+    } else {
+      setSelectedPaymentItems([...selectedPaymentItems, { itemId, quantity: maxQuantity }]);
+    }
+  };
+
+  const updatePartialPaymentQuantity = (itemId: string, quantity: number) => {
+    setSelectedPaymentItems(selectedPaymentItems.map(si => 
+      si.itemId === itemId ? { ...si, quantity } : si
+    ));
+  };
+
+  const completePartialPayment = () => {
+    if (selectedPaymentItems.length === 0) {
+      toast.error('Ödeme için ürün seçin');
+      return;
+    }
+
+    const partialTotals = calculatePartialTotals();
+    const finalPaymentMethod = splitPayments.length > 0 ? 'card' : paymentMethod;
+
+    if (splitPayments.length > 0) {
+      const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+      if (Math.abs(totalPaid - partialTotals.total) > 0.01) {
+        toast.error(`Toplam ödeme ${formatCurrency(totalPaid)} - Kalan: ${formatCurrency(partialTotals.total - totalPaid)}`);
+        return;
+      }
+    }
+
+    const paidItems: CartItem[] = [];
+    const remainingItems: CartItem[] = [];
+
+    cart.forEach(item => {
+      const selectedItem = selectedPaymentItems.find(si => si.itemId === item.id);
+      
+      if (selectedItem) {
+        if (selectedItem.quantity >= item.quantity) {
+          paidItems.push(item);
+        } else {
+          paidItems.push({
+            ...item,
+            quantity: selectedItem.quantity,
+            subtotal: item.unitPrice * selectedItem.quantity,
+          });
+          remainingItems.push({
+            ...item,
+            quantity: item.quantity - selectedItem.quantity,
+            subtotal: item.unitPrice * (item.quantity - selectedItem.quantity),
+          });
+        }
+      } else {
+        remainingItems.push(item);
+      }
+    });
+
+    const saleId = generateId();
+    const newSale: Sale = {
+      id: saleId,
+      branchId: 'branch-1',
+      cashierId: 'cashier-1',
+      saleNumber: generateSaleNumber(),
+      saleDate: new Date().toISOString(),
+      subtotal: partialTotals.subtotal,
+      taxAmount: partialTotals.taxAmount,
+      discountAmount: 0,
+      totalAmount: partialTotals.total,
+      paymentMethod: finalPaymentMethod,
+      paymentStatus: 'completed',
+      items: paidItems,
+      notes: splitPayments.length > 0 
+        ? `Parçalı ödeme: ${splitPayments.map(p => `${p.method}=${formatCurrency(p.amount)}`).join(', ')}`
+        : selectedTable 
+          ? `Masa ${selectedTable.tableNumber} - Parçalı ödeme` 
+          : 'Parçalı ödeme',
+    };
+
+    setSales((currentSales) => [...(currentSales || []), newSale]);
+    updateCashRegister(finalPaymentMethod, partialTotals.total, splitPayments);
+
+    setCart(remainingItems);
+
+    if (selectedTable && remainingItems.length === 0) {
+      setTables((current) =>
+        (current || []).map(t =>
+          t.id === selectedTable.id
+            ? { ...t, status: 'available' as const, currentSaleId: undefined, firstOrderTime: undefined, lastOrderTime: undefined }
+            : t
+        )
+      );
+
+      const existingOrder = (tableOrders || []).find(o => o.tableId === selectedTable.id && !o.closedAt);
+      if (existingOrder) {
+        setTableOrders((current) =>
+          (current || []).map(o =>
+            o.id === existingOrder.id
+              ? { ...o, closedAt: new Date().toISOString() }
+              : o
+          )
+        );
+      }
+
+      setSelectedTable(null);
+      setActiveTab('tables');
+    } else if (selectedTable && selectedTable.currentSaleId) {
+      const currentSale = (sales || []).find(s => s.id === selectedTable.currentSaleId);
+      if (currentSale) {
+        const totals = remainingItems.reduce((acc, item) => ({
+          subtotal: acc.subtotal + item.subtotal,
+          taxAmount: acc.taxAmount + calculateTax(item.subtotal, item.taxRate),
+        }), { subtotal: 0, taxAmount: 0 });
+
+        setSales((currentSales) =>
+          (currentSales || []).map(s =>
+            s.id === selectedTable.currentSaleId
+              ? { ...s, items: remainingItems, subtotal: totals.subtotal, taxAmount: totals.taxAmount, totalAmount: totals.subtotal + totals.taxAmount }
+              : s
+          )
+        );
+      }
+    }
+
+    toast.success(`Parçalı ödeme tamamlandı! Fiş No: ${newSale.saleNumber}`);
+    setShowPartialPaymentDialog(false);
+    setSelectedPaymentItems([]);
+    setSplitPayments([]);
+    setPaymentMethod('cash');
+  };
+
+  const splitCartEqually = (parts: number) => {
+    if (parts < 2) {
+      toast.error('En az 2 parçaya bölünebilir');
+      return;
+    }
+
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const itemsPerPart = Math.ceil(totalItems / parts);
+
+    if (itemsPerPart < 1) {
+      toast.error('Yeterli ürün yok');
+      return;
+    }
+
+    const totals = calculateTotals();
+    const amountPerPart = totals.total / parts;
+
+    toast.success(`Sepet ${parts} kişiye bölünecek. Her kişi: ${formatCurrency(amountPerPart)}`);
+    setShowCartSplitDialog(false);
   };
 
   const completeSale = () => {
@@ -1006,33 +1287,56 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
-                        {selectedTable && (
-                          <Button
-                            variant="outline"
-                            size="lg"
-                            className="flex-1"
-                            onClick={saveOrder}
-                          >
-                            <FloppyDisk className="h-5 w-5 mr-2" weight="bold" />
-                            Kaydet
-                          </Button>
-                        )}
-                        {!isWaiter && (
-                          <Button
-                            className="flex-1"
-                            size="lg"
-                            onClick={() => {
-                              if (splitPayments.length > 0) {
-                                completeSale();
-                              } else {
-                                setShowCheckout(true);
-                              }
-                            }}
-                          >
-                            <Check className="h-5 w-5 mr-2" weight="bold" />
-                            Ödeme Al
-                          </Button>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          {selectedTable && (
+                            <Button
+                              variant="outline"
+                              size="lg"
+                              className="flex-1"
+                              onClick={saveOrder}
+                            >
+                              <FloppyDisk className="h-5 w-5 mr-2" weight="bold" />
+                              Kaydet
+                            </Button>
+                          )}
+                          {!isWaiter && (
+                            <Button
+                              className="flex-1"
+                              size="lg"
+                              onClick={() => {
+                                if (splitPayments.length > 0) {
+                                  completeSale();
+                                } else {
+                                  setShowCheckout(true);
+                                }
+                              }}
+                            >
+                              <Check className="h-5 w-5 mr-2" weight="bold" />
+                              Ödeme Al
+                            </Button>
+                          )}
+                        </div>
+                        {!isWaiter && cart.length > 0 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPaymentItems([]);
+                                setShowPartialPaymentDialog(true);
+                              }}
+                            >
+                              Parçalı Ödeme
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowCartSplitDialog(true)}
+                            >
+                              Sepeti Böl
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </>
@@ -1613,6 +1917,514 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
             <Button onClick={confirmGuestCount}>
               <Check className="h-4 w-4 mr-2" weight="bold" />
               Onayla
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRemoveQuantityDialog} onOpenChange={setShowRemoveQuantityDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Çıkarılacak Miktarı Gir</DialogTitle>
+            <DialogDescription>
+              {quantityDialogItem ? `${quantityDialogItem.productName} - Sepette: ${quantityDialogItem.quantity} adet` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Çıkarılacak Miktar</Label>
+              <Input
+                type="number"
+                min="1"
+                max={quantityDialogItem?.quantity}
+                value={quantityToProcess}
+                onChange={(e) => setQuantityToProcess(e.target.value)}
+                placeholder={`1 - ${quantityDialogItem?.quantity}`}
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmRemoveQuantity();
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                {[1, 2, 3, 5].filter(n => (quantityDialogItem?.quantity || 0) >= n).map(num => (
+                  <Button
+                    key={num}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantityToProcess(num.toString())}
+                  >
+                    {num}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuantityToProcess((quantityDialogItem?.quantity || 0).toString())}
+                >
+                  Tümü
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRemoveQuantityDialog(false);
+                setQuantityDialogItem(null);
+                setQuantityToProcess('');
+              }}
+            >
+              İptal
+            </Button>
+            <Button onClick={confirmRemoveQuantity}>
+              <Trash className="h-4 w-4 mr-2" />
+              Çıkar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showComplimentaryQuantityDialog} onOpenChange={setShowComplimentaryQuantityDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>İkram Edilecek Miktarı Gir</DialogTitle>
+            <DialogDescription>
+              {quantityDialogItem ? `${quantityDialogItem.productName} - Sepette: ${quantityDialogItem.quantity} adet` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>İkram Edilecek Miktar</Label>
+              <Input
+                type="number"
+                min="1"
+                max={quantityDialogItem?.quantity}
+                value={quantityToProcess}
+                onChange={(e) => setQuantityToProcess(e.target.value)}
+                placeholder={`1 - ${quantityDialogItem?.quantity}`}
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmComplimentaryQuantity();
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                {[1, 2, 3, 5].filter(n => (quantityDialogItem?.quantity || 0) >= n).map(num => (
+                  <Button
+                    key={num}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantityToProcess(num.toString())}
+                  >
+                    {num}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuantityToProcess((quantityDialogItem?.quantity || 0).toString())}
+                >
+                  Tümü
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowComplimentaryQuantityDialog(false);
+                setQuantityDialogItem(null);
+                setQuantityToProcess('');
+              }}
+            >
+              İptal
+            </Button>
+            <Button onClick={confirmComplimentaryQuantity}>
+              <Gift className="h-4 w-4 mr-2" weight="fill" />
+              İkram Et
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCartSplitDialog} onOpenChange={setShowCartSplitDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sepeti Böl</DialogTitle>
+            <DialogDescription>
+              Sepetteki ürünleri kaç kişiye böleceğinizi seçin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-5 gap-2">
+              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                <Button
+                  key={num}
+                  variant={cartSplitCount === num ? 'default' : 'outline'}
+                  onClick={() => setCartSplitCount(num)}
+                >
+                  {num}
+                </Button>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Label>veya Özel Sayı</Label>
+              <Input
+                type="number"
+                min="2"
+                placeholder="Özel bir sayı girin"
+                onFocus={() => setCartSplitCount('custom')}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (val && val >= 2) {
+                    setCartSplitCount(val);
+                  }
+                }}
+              />
+            </div>
+            {typeof cartSplitCount === 'number' && cartSplitCount >= 2 && (
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="text-sm text-muted-foreground mb-2">
+                  Her kişi ödeyecek:
+                </div>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(calculateTotals().total / cartSplitCount)}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCartSplitDialog(false);
+                setCartSplitCount(2);
+              }}
+            >
+              İptal
+            </Button>
+            <Button 
+              onClick={() => {
+                if (typeof cartSplitCount === 'number') {
+                  splitCartEqually(cartSplitCount);
+                }
+              }}
+              disabled={typeof cartSplitCount !== 'number' || cartSplitCount < 2}
+            >
+              Böl
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPartialPaymentDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowPartialPaymentDialog(false);
+          setSelectedPaymentItems([]);
+          setSplitPayments([]);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Parçalı Ödeme - Ürün Seç</DialogTitle>
+            <DialogDescription>
+              Ödeme alınacak ürünleri seçin ve miktarlarını belirleyin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Sepetteki Ürünler</Label>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {cart.map((item) => {
+                    const selectedItem = selectedPaymentItems.find(si => si.itemId === item.id);
+                    const isSelected = !!selectedItem;
+                    
+                    return (
+                      <Card
+                        key={item.id}
+                        className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
+                        onClick={() => toggleItemForPartialPayment(item.id, item.quantity)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox checked={isSelected} onCheckedChange={() => {}} />
+                                  <div>
+                                    <p className="font-medium">{item.productName}</p>
+                                    {item.isComplimentary && (
+                                      <Badge variant="secondary" className="text-xs mt-1">
+                                        <Gift className="h-3 w-3 mr-1" />
+                                        İkram
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {formatCurrency(item.unitPrice)} × {item.quantity} adet
+                                </p>
+                              </div>
+                              <span className="font-bold font-tabular-nums">
+                                {formatCurrency(item.subtotal)}
+                              </span>
+                            </div>
+                            
+                            {isSelected && item.quantity > 1 && (
+                              <div className="space-y-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                                <Label className="text-xs">Ödeme alınacak miktar</Label>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (selectedItem && selectedItem.quantity > 1) {
+                                        updatePartialPaymentQuantity(item.id, selectedItem.quantity - 1);
+                                      }
+                                    }}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="text-sm font-medium w-12 text-center">
+                                    {selectedItem?.quantity || item.quantity}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (selectedItem && selectedItem.quantity < item.quantity) {
+                                        updatePartialPaymentQuantity(item.id, selectedItem.quantity + 1);
+                                      }
+                                    }}
+                                    disabled={selectedItem?.quantity === item.quantity}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="text-xs text-muted-foreground">
+                                    / {item.quantity}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Ödeme Detayları</Label>
+                
+                {selectedPaymentItems.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                      <Eye className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>Ürün seçin</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    <Card>
+                      <CardContent className="p-4 space-y-3">
+                        <Label className="text-sm font-medium">Seçilen Ürünler</Label>
+                        {selectedPaymentItems.map(si => {
+                          const item = cart.find(i => i.id === si.itemId);
+                          if (!item) return null;
+                          
+                          return (
+                            <div key={si.itemId} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+                              <span>{item.productName} × {si.quantity}</span>
+                              <span className="font-semibold font-tabular-nums">
+                                {formatCurrency(item.unitPrice * si.quantity)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Ara Toplam</span>
+                          <span className="font-tabular-nums">{formatCurrency(calculatePartialTotals().subtotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">KDV</span>
+                          <span className="font-tabular-nums">{formatCurrency(calculatePartialTotals().taxAmount)}</span>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold">Ödenecek Tutar</span>
+                          <span className="text-xl font-bold font-tabular-nums text-accent">
+                            {formatCurrency(calculatePartialTotals().total)}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Tabs defaultValue="payment" className="space-y-3">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="payment">Ödeme</TabsTrigger>
+                        <TabsTrigger value="split">Parçalı</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="payment" className="space-y-3">
+                        <Label>Ödeme Yöntemi</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {activePaymentMethods.map((pm) => {
+                            const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
+                            return (
+                              <Button
+                                key={pm.method}
+                                variant={paymentMethod === pm.method ? 'default' : 'outline'}
+                                className="h-20 flex-col gap-2"
+                                onClick={() => setPaymentMethod(pm.method)}
+                              >
+                                <Icon className="h-6 w-6" weight="bold" />
+                                <span className="text-xs">{pm.displayName}</span>
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="split" className="space-y-3">
+                        {splitPayments.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-xs">Eklenen Ödemeler</Label>
+                            <div className="space-y-1">
+                              {splitPayments.map((payment, index) => {
+                                const pm = activePaymentMethods.find(p => p.method === payment.method);
+                                return (
+                                  <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                                    <span>{pm?.displayName}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold font-tabular-nums">{formatCurrency(payment.amount)}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={() => removeSplitPayment(index)}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Yeni Ödeme</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {activePaymentMethods.map((pm) => {
+                              const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
+                              return (
+                                <Button
+                                  key={pm.method}
+                                  variant={currentSplitMethod === pm.method ? 'default' : 'outline'}
+                                  className="h-16 flex-col gap-1"
+                                  size="sm"
+                                  onClick={() => setCurrentSplitMethod(pm.method)}
+                                >
+                                  <Icon className="h-5 w-5" weight="bold" />
+                                  <span className="text-xs">{pm.displayName}</span>
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Tutar"
+                              value={currentSplitAmount}
+                              onChange={(e) => setCurrentSplitAmount(e.target.value)}
+                              onClick={() => setShowNumpad(true)}
+                              readOnly
+                            />
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                const partialTotals = calculatePartialTotals();
+                                const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+                                const remaining = partialTotals.total - totalPaid;
+                                setCurrentSplitAmount(remaining.toFixed(2));
+                              }}
+                            >
+                              Kalan
+                            </Button>
+                            <Button size="sm" onClick={addSplitPayment}>
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {showNumpad && (
+                            <Numpad
+                              value={currentSplitAmount}
+                              onChange={setCurrentSplitAmount}
+                              onEnter={addSplitPayment}
+                            />
+                          )}
+                        </div>
+
+                        <div className="p-3 bg-muted rounded-lg space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Toplam</span>
+                            <span className="font-tabular-nums">{formatCurrency(calculatePartialTotals().total)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Ödenen</span>
+                            <span className="font-tabular-nums">
+                              {formatCurrency(splitPayments.reduce((sum, p) => sum + p.amount, 0))}
+                            </span>
+                          </div>
+                          <Separator />
+                          <div className="flex items-center justify-between font-semibold">
+                            <span>Kalan</span>
+                            <span className="font-tabular-nums text-accent">
+                              {formatCurrency(calculatePartialTotals().total - splitPayments.reduce((sum, p) => sum + p.amount, 0))}
+                            </span>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPartialPaymentDialog(false);
+                setSelectedPaymentItems([]);
+                setSplitPayments([]);
+              }}
+            >
+              İptal
+            </Button>
+            <Button 
+              onClick={completePartialPayment}
+              disabled={selectedPaymentItems.length === 0}
+            >
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Ödemeyi Tamamla
             </Button>
           </DialogFooter>
         </DialogContent>
