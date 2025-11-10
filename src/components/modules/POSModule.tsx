@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock } from '@phosphor-icons/react';
+import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
 import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole } from '@/lib/types';
@@ -132,6 +132,10 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     
     return matchesSearch && matchesCategory && isVisibleCategory;
   });
+
+  const campaignProducts = (products || []).filter(p => 
+    p.isActive && p.hasActiveCampaign && p.campaignDetails
+  );
 
   const availableTables = (tables || []).filter(t => t.status === 'available' || t.status === 'occupied');
 
@@ -615,6 +619,51 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         <TabsContent value="quick-sale" className="space-y-0">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
+              {campaignProducts.length > 0 && (
+                <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Sparkle className="h-5 w-5 text-accent animate-pulse" weight="fill" />
+                      <CardTitle className="text-lg text-accent">Aktif Kampanyalar - Öncelikli Satış!</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Bu ürünler indirimli fiyata satılıyor - müşterilere öner!
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {campaignProducts.slice(0, 6).map((product) => (
+                        <Card
+                          key={product.id}
+                          className="cursor-pointer hover:shadow-md transition-all border-accent/50 bg-card"
+                          onClick={() => addToCart(product)}
+                        >
+                          <CardContent className="p-3 space-y-2">
+                            <div className="flex items-start justify-between">
+                              <p className="font-semibold text-sm leading-tight">{product.name}</p>
+                              <Gift className="h-4 w-4 text-accent flex-shrink-0" weight="fill" />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground line-through">
+                                  {formatCurrency(product.campaignDetails?.originalPrice || 0)}
+                                </span>
+                                <Badge variant="secondary" className="text-xs">
+                                  %{product.campaignDetails?.discountPercentage}
+                                </Badge>
+                              </div>
+                              <div className="text-lg font-bold text-accent">
+                                {formatCurrency(product.basePrice)}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -656,39 +705,67 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredProducts.map((product) => (
-                  <Card
-                    key={product.id}
-                    className="hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => addToCart(product)}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1 flex-1">
-                          <CardTitle className="text-base leading-tight">
-                            {product.name}
-                          </CardTitle>
-                          <CardDescription className="text-xs">
-                            SKU: {product.sku}
-                          </CardDescription>
+                {filteredProducts.map((product) => {
+                  const hasCampaign = product.hasActiveCampaign && product.campaignDetails;
+                  return (
+                    <Card
+                      key={product.id}
+                      className={`hover:shadow-md transition-shadow cursor-pointer ${hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''}`}
+                      onClick={() => addToCart(product)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-base leading-tight">
+                                {product.name}
+                              </CardTitle>
+                              {hasCampaign && (
+                                <Badge variant="default" className="bg-accent animate-pulse">
+                                  <Gift className="h-3 w-3 mr-1" weight="fill" />
+                                  Kampanya!
+                                </Badge>
+                              )}
+                            </div>
+                            <CardDescription className="text-xs">
+                              SKU: {product.sku}
+                            </CardDescription>
+                          </div>
+                          <Badge variant={product.stock > product.minStockLevel ? 'default' : 'destructive'}>
+                            {product.stock}
+                          </Badge>
                         </div>
-                        <Badge variant={product.stock > product.minStockLevel ? 'default' : 'destructive'}>
-                          {product.stock}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xl font-semibold font-tabular-nums">
-                          {formatCurrency(product.basePrice)}
-                        </span>
-                        <Button size="sm" variant="outline">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        {hasCampaign && product.campaignDetails && (
+                          <div className="pt-2 mt-2 border-t border-accent/20 space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="line-through text-muted-foreground">
+                                {formatCurrency(product.campaignDetails.originalPrice)}
+                              </span>
+                              <Badge variant="secondary" className="text-xs">
+                                %{product.campaignDetails.discountPercentage} İndirim
+                              </Badge>
+                            </div>
+                            {product.campaignDetails.reason && (
+                              <p className="text-xs text-muted-foreground italic">
+                                💡 {product.campaignDetails.reason}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xl font-semibold font-tabular-nums ${hasCampaign ? 'text-accent' : ''}`}>
+                            {formatCurrency(product.basePrice)}
+                          </span>
+                          <Button size="sm" variant={hasCampaign ? 'default' : 'outline'} className={hasCampaign ? 'bg-accent' : ''}>
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 

@@ -63,6 +63,14 @@ export interface Product {
   stock: number;
   minStockLevel: number;
   trackStock?: boolean;
+  hasActiveCampaign?: boolean;
+  campaignDetails?: {
+    originalPrice: number;
+    discountPercentage: number;
+    startDate: string;
+    endDate?: string;
+    reason?: string;
+  };
 }
 
 export interface Category {
@@ -195,6 +203,14 @@ export interface MenuItem {
   recipeId?: string;
   servingSize?: number;
   isProduced?: boolean;
+  hasActiveCampaign?: boolean;
+  campaignDetails?: {
+    originalPrice: number;
+    discountPercentage: number;
+    startDate: string;
+    endDate?: string;
+    reason?: string;
+  };
 }
 
 export type MenuCategory = 'star' | 'puzzle' | 'plow_horse' | 'dog';

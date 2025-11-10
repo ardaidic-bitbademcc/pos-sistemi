@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X } from '@phosphor-icons/react';
+import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
@@ -47,6 +47,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [showDeleteProductDialog, setShowDeleteProductDialog] = useState(false);
   const [showPriceEditDialog, setShowPriceEditDialog] = useState(false);
   const [showPriceProposalDialog, setShowPriceProposalDialog] = useState(false);
+  const [showCampaignDialog, setShowCampaignDialog] = useState(false);
   
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
@@ -54,6 +55,13 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
   const [newPrice, setNewPrice] = useState<string>('');
   const [priceProposal, setPriceProposal] = useState<PriceChangeProposal | null>(null);
+  
+  const [campaignForm, setCampaignForm] = useState({
+    menuItemId: '',
+    discountPercentage: 0,
+    reason: '',
+    duration: 7,
+  });
   
   const [newProduct, setNewProduct] = useState({
     sku: '',
@@ -259,6 +267,131 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     
     setShowPriceProposalDialog(false);
     setPriceProposal(null);
+  };
+
+  const startCampaign = (menuItem: MenuItem, discountPercentage?: number, reason?: string) => {
+    setSelectedMenuItem(menuItem);
+    setCampaignForm({
+      menuItemId: menuItem.id,
+      discountPercentage: discountPercentage || 10,
+      reason: reason || '',
+      duration: 7,
+    });
+    setShowCampaignDialog(true);
+  };
+
+  const applyCampaign = () => {
+    if (!campaignForm.menuItemId || campaignForm.discountPercentage <= 0) {
+      toast.error('Geçerli bir kampanya bilgisi girin');
+      return;
+    }
+
+    const menuItem = (menuItems || []).find(m => m.id === campaignForm.menuItemId);
+    if (!menuItem) return;
+
+    const originalPrice = menuItem.hasActiveCampaign 
+      ? menuItem.campaignDetails?.originalPrice || menuItem.sellingPrice
+      : menuItem.sellingPrice;
+    
+    const discountedPrice = originalPrice * (1 - campaignForm.discountPercentage / 100);
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + campaignForm.duration);
+
+    setMenuItems((current) =>
+      (current || []).map((item) => {
+        if (item.id === campaignForm.menuItemId) {
+          const newProfitMargin = discountedPrice > 0
+            ? ((discountedPrice - item.costPrice) / discountedPrice)
+            : 0;
+          
+          return {
+            ...item,
+            sellingPrice: discountedPrice,
+            profitMargin: newProfitMargin,
+            hasActiveCampaign: true,
+            campaignDetails: {
+              originalPrice,
+              discountPercentage: campaignForm.discountPercentage,
+              startDate: new Date().toISOString(),
+              endDate: endDate.toISOString(),
+              reason: campaignForm.reason,
+            },
+          };
+        }
+        return item;
+      })
+    );
+
+    setProducts((current) =>
+      (current || []).map((product) => {
+        if (product.id === campaignForm.menuItemId) {
+          return {
+            ...product,
+            basePrice: discountedPrice,
+            hasActiveCampaign: true,
+            campaignDetails: {
+              originalPrice,
+              discountPercentage: campaignForm.discountPercentage,
+              startDate: new Date().toISOString(),
+              endDate: endDate.toISOString(),
+              reason: campaignForm.reason,
+            },
+          };
+        }
+        return product;
+      })
+    );
+
+    toast.success(`🎉 ${menuItem.name} için %${campaignForm.discountPercentage} kampanya başlatıldı!`);
+    setShowCampaignDialog(false);
+    setCampaignForm({
+      menuItemId: '',
+      discountPercentage: 0,
+      reason: '',
+      duration: 7,
+    });
+  };
+
+  const endCampaign = (menuItemId: string) => {
+    const menuItem = (menuItems || []).find(m => m.id === menuItemId);
+    if (!menuItem || !menuItem.hasActiveCampaign) return;
+
+    const originalPrice = menuItem.campaignDetails?.originalPrice || menuItem.sellingPrice;
+
+    setMenuItems((current) =>
+      (current || []).map((item) => {
+        if (item.id === menuItemId) {
+          const newProfitMargin = originalPrice > 0
+            ? ((originalPrice - item.costPrice) / originalPrice)
+            : 0;
+          
+          return {
+            ...item,
+            sellingPrice: originalPrice,
+            profitMargin: newProfitMargin,
+            hasActiveCampaign: false,
+            campaignDetails: undefined,
+          };
+        }
+        return item;
+      })
+    );
+
+    setProducts((current) =>
+      (current || []).map((product) => {
+        if (product.id === menuItemId) {
+          return {
+            ...product,
+            basePrice: originalPrice,
+            hasActiveCampaign: false,
+            campaignDetails: undefined,
+          };
+        }
+        return product;
+      })
+    );
+
+    toast.success(`${menuItem.name} kampanyası sonlandırıldı`);
   };
 
   const openPriceEditDialog = (menuItem: MenuItem) => {
@@ -733,11 +866,19 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
               const recipe = (recipes || []).find(r => r.menuItemId === item.id);
               
               return (
-                <Card key={item.id} className="hover:shadow-md transition-shadow">
+                <Card key={item.id} className={`hover:shadow-md transition-shadow ${item.hasActiveCampaign ? 'ring-2 ring-accent' : ''}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="space-y-1 flex-1">
-                        <CardTitle className="text-base">{item.name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base">{item.name}</CardTitle>
+                          {item.hasActiveCampaign && (
+                            <Badge variant="default" className="bg-accent">
+                              <Sparkle className="h-3 w-3 mr-1" weight="fill" />
+                              Kampanyalı
+                            </Badge>
+                          )}
+                        </div>
                         <CardDescription className="text-xs capitalize">
                           {item.category}
                           {item.servingSize && ` • ${item.servingSize} porsiyon`}
@@ -756,10 +897,34 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {item.hasActiveCampaign && item.campaignDetails && (
+                      <div className="p-2 bg-accent/10 rounded-lg space-y-1 border border-accent/20">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Eski Fiyat</span>
+                          <span className="line-through font-tabular-nums">
+                            {formatCurrency(item.campaignDetails.originalPrice)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">İndirim</span>
+                          <Badge variant="secondary" className="text-xs">
+                            %{item.campaignDetails.discountPercentage}
+                          </Badge>
+                        </div>
+                        {item.campaignDetails.endDate && (
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-accent/20">
+                            <span className="text-muted-foreground">Bitiş</span>
+                            <span className="font-tabular-nums">
+                              {new Date(item.campaignDetails.endDate).toLocaleDateString('tr-TR')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Satış Fiyatı</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold font-tabular-nums">
+                        <span className={`text-lg font-semibold font-tabular-nums ${item.hasActiveCampaign ? 'text-accent' : ''}`}>
                           {formatCurrency(item.sellingPrice)}
                         </span>
                         <Button
@@ -809,6 +974,23 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                       >
                         {recipe ? 'Reçeteyi Düzenle' : 'Reçete Oluştur'}
                       </Button>
+                      {item.hasActiveCampaign ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => endCampaign(item.id)}
+                        >
+                          Kampanyayı Bitir
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => startCampaign(item)}
+                        >
+                          <Sparkle className="h-4 w-4" weight="fill" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1088,6 +1270,94 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             </CardHeader>
           </Card>
 
+          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkle className="h-5 w-5 text-primary" weight="fill" />
+                Analiz Kategorileri Rehberi
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-card border-2 border-accent rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default">⭐ Yıldız</Badge>
+                    <span className="text-xs text-muted-foreground">(Yüksek Popülerlik + Yüksek Kar)</span>
+                  </div>
+                  <p className="text-sm leading-relaxed">
+                    <strong>Ne Anlama Geliyor:</strong> Çok satılan ve yüksek kar getiren ürünler.
+                  </p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    <strong>Strateji:</strong> Bu ürünleri menüde öne çıkarın, garsonlarınıza öncelikli satışını teşvik edin. 
+                    Küçük fiyat artışları yapabilir veya upselling için kullanabilirsiniz.
+                  </p>
+                  <div className="pt-2 border-t text-xs text-muted-foreground">
+                    <strong>Belirleme:</strong> Popülerlik skoru {">"} %60 ve Kar marjı {">"} %40
+                  </div>
+                </div>
+
+                <div className="p-4 bg-card border-2 border-secondary rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">🧩 Puzzle (Bilmece)</Badge>
+                    <span className="text-xs text-muted-foreground">(Düşük Popülerlik + Yüksek Kar)</span>
+                  </div>
+                  <p className="text-sm leading-relaxed">
+                    <strong>Ne Anlama Geliyor:</strong> Kar marjı yüksek ama az satılan ürünler.
+                  </p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    <strong>Strateji:</strong> Fiyatı biraz düşürerek daha fazla müşteri çekmeyi deneyin. 
+                    Pazarlamayı artırın, görünürlüğünü iyileştirin veya porsiyonu küçültüp fiyatı ayarlayın.
+                  </p>
+                  <div className="pt-2 border-t text-xs text-muted-foreground">
+                    <strong>Belirleme:</strong> Popülerlik skoru {"<"} %40 ve Kar marjı {">"} %40
+                  </div>
+                </div>
+
+                <div className="p-4 bg-card border-2 border-border rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">🐴 İş Atı</Badge>
+                    <span className="text-xs text-muted-foreground">(Yüksek Popülerlik + Düşük Kar)</span>
+                  </div>
+                  <p className="text-sm leading-relaxed">
+                    <strong>Ne Anlama Geliyor:</strong> Çok satılan ama kar marjı düşük ürünler.
+                  </p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    <strong>Strateji:</strong> Maliyetleri düşürmeye çalışın (tedarikçi değişimi, reçete optimizasyonu). 
+                    Ya da fiyatı nazikçe artırın - müşteriler bu ürünlere alışkın olduğundan küçük artışlar kabul edilebilir.
+                  </p>
+                  <div className="pt-2 border-t text-xs text-muted-foreground">
+                    <strong>Belirleme:</strong> Popülerlik skoru {">"} %60 ve Kar marjı {"<="} %40
+                  </div>
+                </div>
+
+                <div className="p-4 bg-card border-2 border-destructive rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive">🐕 Zayıf</Badge>
+                    <span className="text-xs text-muted-foreground">(Düşük Popülerlik + Düşük Kar)</span>
+                  </div>
+                  <p className="text-sm leading-relaxed">
+                    <strong>Ne Anlama Geliyor:</strong> Az satılan ve kar marjı da düşük ürünler.
+                  </p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    <strong>Strateji:</strong> Bu ürünleri menüden çıkarmayı ciddi şekilde düşünün. 
+                    Eğer tutmak istiyorsanız tamamen yeniden tasarlayın - reçeteyi, fiyatı ve sunumu değiştirin.
+                  </p>
+                  <div className="pt-2 border-t text-xs text-muted-foreground">
+                    <strong>Belirleme:</strong> Popülerlik skoru {"<"} %40 ve Kar marjı {"<="} %40
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  <strong>💡 İpucu:</strong> Bu analiz, satış verilerinize ve kar marjlarınıza dayanarak otomatik olarak yapılır. 
+                  Her kategorinin altında size özel aksiyon önerileri bulunur. Sistem, fiyat değişikliği önerilerini 
+                  gerçek verilerinizi kullanarak hesaplar.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {showAnalysis && (
             <div className="space-y-4">
               <Card>
@@ -1166,15 +1436,63 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                           </div>
                           
                           {(item.category === 'plow_horse' || item.category === 'puzzle' || item.category === 'star') && item.totalSales > 0 && (
-                            <Button
-                              size="sm"
-                              variant={item.category === 'puzzle' ? 'secondary' : 'default'}
-                              className="w-full"
-                              onClick={() => generatePriceProposal(menuItem, item)}
-                            >
-                              <Sparkle className="h-4 w-4 mr-2" weight="fill" />
-                              {item.category === 'puzzle' ? 'Fiyat Düşür' : 'Fiyat Arttır'}
-                            </Button>
+                            <div className="flex gap-2">
+                              {item.category === 'puzzle' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="flex-1"
+                                    onClick={() => generatePriceProposal(menuItem, item)}
+                                  >
+                                    <TrendDown className="h-4 w-4 mr-2" weight="bold" />
+                                    Fiyat Düşür
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="flex-1"
+                                    onClick={() => startCampaign(menuItem, 15, 'Düşük satış, kampanya ile görünürlük artırımı')}
+                                  >
+                                    <Sparkle className="h-4 w-4 mr-2" weight="fill" />
+                                    Kampanya Başlat
+                                  </Button>
+                                </>
+                              )}
+                              {item.category === 'plow_horse' && (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  className="w-full"
+                                  onClick={() => generatePriceProposal(menuItem, item)}
+                                >
+                                  <TrendUp className="h-4 w-4 mr-2" weight="bold" />
+                                  Fiyat Arttır
+                                </Button>
+                              )}
+                              {item.category === 'star' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="flex-1"
+                                    onClick={() => generatePriceProposal(menuItem, item)}
+                                  >
+                                    <TrendUp className="h-4 w-4 mr-2" weight="bold" />
+                                    Fiyat Arttır
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => startCampaign(menuItem, 10, 'Yıldız ürün, satışları daha da artırmak için kısa süreli kampanya')}
+                                  >
+                                    <Sparkle className="h-4 w-4 mr-2" weight="fill" />
+                                    Kampanya
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -1852,6 +2170,132 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             <Button onClick={applyPriceProposal} variant="default">
               <Check className="h-4 w-4 mr-2" weight="bold" />
               Onayla ve Uygula
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCampaignDialog} onOpenChange={setShowCampaignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Kampanya Başlat</DialogTitle>
+            <DialogDescription>
+              {selectedMenuItem?.name} için indirim kampanyası başlatın
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-gradient-to-br from-accent/10 to-primary/10 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Mevcut Fiyat</span>
+                <span className="text-2xl font-bold font-tabular-nums">
+                  {formatCurrency(selectedMenuItem?.hasActiveCampaign 
+                    ? selectedMenuItem.campaignDetails?.originalPrice || selectedMenuItem.sellingPrice
+                    : selectedMenuItem?.sellingPrice || 0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Kampanya Fiyatı</span>
+                <span className="text-2xl font-bold font-tabular-nums text-accent">
+                  {formatCurrency((selectedMenuItem?.hasActiveCampaign 
+                    ? selectedMenuItem.campaignDetails?.originalPrice || selectedMenuItem.sellingPrice
+                    : selectedMenuItem?.sellingPrice || 0) * (1 - campaignForm.discountPercentage / 100))}
+                </span>
+              </div>
+              <div className="flex items-center justify-center gap-2 pt-2 border-t">
+                <Badge variant="secondary" className="text-base">
+                  <Percent className="h-4 w-4 mr-1" />
+                  {campaignForm.discountPercentage}% İndirim
+                </Badge>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>İndirim Oranı (%)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={campaignForm.discountPercentage}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, discountPercentage: Number(e.target.value) })}
+                  className="flex-1"
+                />
+                <div className="flex gap-1">
+                  {[10, 15, 20, 25].map(percent => (
+                    <Button
+                      key={percent}
+                      size="sm"
+                      variant={campaignForm.discountPercentage === percent ? 'default' : 'outline'}
+                      onClick={() => setCampaignForm({ ...campaignForm, discountPercentage: percent })}
+                    >
+                      {percent}%
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Kampanya Süresi (Gün)</Label>
+              <Select 
+                value={campaignForm.duration.toString()} 
+                onValueChange={(value) => setCampaignForm({ ...campaignForm, duration: Number(value) })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 Gün</SelectItem>
+                  <SelectItem value="3">3 Gün</SelectItem>
+                  <SelectItem value="7">1 Hafta</SelectItem>
+                  <SelectItem value="14">2 Hafta</SelectItem>
+                  <SelectItem value="30">1 Ay</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Kampanya Nedeni (Opsiyonel)</Label>
+              <Textarea
+                value={campaignForm.reason}
+                onChange={(e) => setCampaignForm({ ...campaignForm, reason: e.target.value })}
+                placeholder="Örn: Düşük satışları artırmak için, Yeni ürün tanıtımı, vs."
+                rows={3}
+              />
+            </div>
+
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Bitiş Tarihi</span>
+                <span className="font-semibold">
+                  {new Date(Date.now() + campaignForm.duration * 24 * 60 * 60 * 1000).toLocaleDateString('tr-TR')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Beklenen Tasarruf</span>
+                <span className="font-semibold text-destructive">
+                  -{formatCurrency((selectedMenuItem?.hasActiveCampaign 
+                    ? selectedMenuItem.campaignDetails?.originalPrice || selectedMenuItem.sellingPrice
+                    : selectedMenuItem?.sellingPrice || 0) * (campaignForm.discountPercentage / 100))}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-accent/10 border border-accent/20 rounded-lg">
+              <p className="text-xs leading-relaxed">
+                🎉 <strong>Kampanyalı ürünler POS ekranında özel olarak işaretlenir</strong> ve 
+                garsonlar bu ürünleri öncelikli olarak görebilir ve satmaya teşvik edilir.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCampaignDialog(false)}>
+              <X className="h-4 w-4 mr-2" />
+              İptal
+            </Button>
+            <Button onClick={applyCampaign} variant="default">
+              <Sparkle className="h-4 w-4 mr-2" weight="fill" />
+              Kampanyayı Başlat
             </Button>
           </DialogFooter>
         </DialogContent>
