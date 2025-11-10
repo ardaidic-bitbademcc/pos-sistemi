@@ -1,17 +1,49 @@
 import { useEffect, useState } from 'react';
 import { useKV } from '@github/spark/hooks';
-import type { Employee, Product, Table, MenuItem } from '@/lib/types';
+import type { Employee, Product, Table, MenuItem, Category } from '@/lib/types';
 import { generateId } from '@/lib/helpers';
 
 export function useSeedData() {
   const [employees, setEmployees] = useKV<Employee[]>('employees', []);
   const [products, setProducts] = useKV<Product[]>('products', []);
+  const [categories, setCategories] = useKV<Category[]>('categories', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
   const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
     if (seeded) return;
+    
+    if (!categories || categories.length === 0) {
+      const sampleCategories: Category[] = [
+        {
+          id: 'beverages',
+          name: 'İçecek',
+          description: 'Sıcak ve soğuk içecekler',
+        },
+        {
+          id: 'food',
+          name: 'Yiyecek',
+          description: 'Ana yemekler ve atıştırmalıklar',
+        },
+        {
+          id: 'dessert',
+          name: 'Tatlı',
+          description: 'Tatlılar ve unlu mamuller',
+        },
+        {
+          id: 'coffee',
+          name: 'Kahve',
+          description: 'Kahve çeşitleri',
+        },
+        {
+          id: 'ingredients',
+          name: 'Malzeme',
+          description: 'Ham maddeler ve malzemeler',
+        },
+      ];
+      setCategories(sampleCategories);
+    }
     
     if (!employees || employees.length === 0) {
       const sampleEmployees: Employee[] = [
@@ -62,6 +94,7 @@ export function useSeedData() {
           sku: 'PRD001',
           name: 'Çay',
           categoryId: 'beverages',
+          category: 'İçecek',
           basePrice: 15,
           costPrice: 5,
           taxRate: 18,
@@ -74,7 +107,8 @@ export function useSeedData() {
           id: generateId(),
           sku: 'PRD002',
           name: 'Türk Kahvesi',
-          categoryId: 'beverages',
+          categoryId: 'coffee',
+          category: 'Kahve',
           basePrice: 45,
           costPrice: 15,
           taxRate: 18,
@@ -88,6 +122,7 @@ export function useSeedData() {
           sku: 'PRD003',
           name: 'Su',
           categoryId: 'beverages',
+          category: 'İçecek',
           basePrice: 10,
           costPrice: 3,
           taxRate: 18,
@@ -101,6 +136,7 @@ export function useSeedData() {
           sku: 'PRD004',
           name: 'Hamburger',
           categoryId: 'food',
+          category: 'Yiyecek',
           basePrice: 120,
           costPrice: 45,
           taxRate: 18,
@@ -114,6 +150,7 @@ export function useSeedData() {
           sku: 'PRD005',
           name: 'Pizza',
           categoryId: 'food',
+          category: 'Yiyecek',
           basePrice: 180,
           costPrice: 65,
           taxRate: 18,
@@ -127,6 +164,7 @@ export function useSeedData() {
           sku: 'PRD006',
           name: 'Salata',
           categoryId: 'food',
+          category: 'Yiyecek',
           basePrice: 75,
           costPrice: 25,
           taxRate: 18,
@@ -137,9 +175,80 @@ export function useSeedData() {
         },
         {
           id: generateId(),
+          sku: 'PRD016',
+          name: 'Baklava',
+          categoryId: 'dessert',
+          category: 'Tatlı',
+          basePrice: 85,
+          costPrice: 30,
+          taxRate: 18,
+          unit: 'adet',
+          isActive: true,
+          stock: 60,
+          minStockLevel: 15,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD017',
+          name: 'Sütlaç',
+          categoryId: 'dessert',
+          category: 'Tatlı',
+          basePrice: 50,
+          costPrice: 18,
+          taxRate: 18,
+          unit: 'adet',
+          isActive: true,
+          stock: 70,
+          minStockLevel: 20,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD018',
+          name: 'Latte',
+          categoryId: 'coffee',
+          category: 'Kahve',
+          basePrice: 55,
+          costPrice: 20,
+          taxRate: 18,
+          unit: 'adet',
+          isActive: true,
+          stock: 180,
+          minStockLevel: 40,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD019',
+          name: 'Cappuccino',
+          categoryId: 'coffee',
+          category: 'Kahve',
+          basePrice: 50,
+          costPrice: 18,
+          taxRate: 18,
+          unit: 'adet',
+          isActive: true,
+          stock: 180,
+          minStockLevel: 40,
+        },
+        {
+          id: generateId(),
+          sku: 'PRD020',
+          name: 'Kola',
+          categoryId: 'beverages',
+          category: 'İçecek',
+          basePrice: 25,
+          costPrice: 8,
+          taxRate: 18,
+          unit: 'adet',
+          isActive: true,
+          stock: 250,
+          minStockLevel: 80,
+        },
+        {
+          id: generateId(),
           sku: 'PRD007',
           name: 'Labne Peyniri',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 80,
           taxRate: 18,
@@ -153,6 +262,7 @@ export function useSeedData() {
           sku: 'PRD008',
           name: 'Krema',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 45,
           taxRate: 18,
@@ -166,6 +276,7 @@ export function useSeedData() {
           sku: 'PRD009',
           name: 'Un',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 20,
           taxRate: 18,
@@ -179,6 +290,7 @@ export function useSeedData() {
           sku: 'PRD010',
           name: 'Şeker',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 25,
           taxRate: 18,
@@ -192,6 +304,7 @@ export function useSeedData() {
           sku: 'PRD011',
           name: 'Yumurta',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 5,
           taxRate: 18,
@@ -205,6 +318,7 @@ export function useSeedData() {
           sku: 'PRD012',
           name: 'Tereyağı',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 180,
           taxRate: 18,
@@ -218,6 +332,7 @@ export function useSeedData() {
           sku: 'PRD013',
           name: 'Vanilya',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 150,
           taxRate: 18,
@@ -231,6 +346,7 @@ export function useSeedData() {
           sku: 'PRD014',
           name: 'Limon Suyu',
           categoryId: 'ingredients',
+          category: 'Malzeme',
           basePrice: 0,
           costPrice: 15,
           taxRate: 18,
@@ -318,7 +434,7 @@ export function useSeedData() {
     }
 
     setSeeded(true);
-  }, [employees, products, tables, menuItems, setEmployees, setProducts, setTables, setMenuItems, seeded]);
+  }, [employees, products, categories, tables, menuItems, setEmployees, setProducts, setCategories, setTables, setMenuItems, seeded]);
 
   return { seeded };
 }

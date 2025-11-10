@@ -15,6 +15,7 @@ export interface Product {
   name: string;
   description?: string;
   categoryId: string;
+  category?: string;
   basePrice: number;
   costPrice: number;
   taxRate: number;

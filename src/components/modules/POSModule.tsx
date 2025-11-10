@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder } from '@/lib/types';
+import Numpad from '@/components/Numpad';
+import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 
 interface POSModuleProps {
@@ -29,6 +30,7 @@ interface AppSettings {
   paymentMethods: PaymentMethodSetting[];
   stockAlerts: boolean;
   autoCalculateSalary: boolean;
+  pricesIncludeVAT: boolean;
 }
 
 interface PaymentMethodSetting {
@@ -45,6 +47,7 @@ interface SplitPayment {
 
 export default function POSModule({ onBack }: POSModuleProps) {
   const [products] = useKV<Product[]>('products', []);
+  const [categories] = useKV<Category[]>('categories', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
   const [tableOrders, setTableOrders] = useKV<TableOrder[]>('tableOrders', []);
@@ -57,10 +60,13 @@ export default function POSModule({ onBack }: POSModuleProps) {
     ],
     stockAlerts: true,
     autoCalculateSalary: false,
+    pricesIncludeVAT: false,
   });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'quick-sale' | 'tables'>('quick-sale');
   const [showCheckout, setShowCheckout] = useState(false);
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
@@ -74,14 +80,20 @@ export default function POSModule({ onBack }: POSModuleProps) {
   const [splitPayments, setSplitPayments] = useState<SplitPayment[]>([]);
   const [currentSplitMethod, setCurrentSplitMethod] = useState<PaymentMethod>('cash');
   const [currentSplitAmount, setCurrentSplitAmount] = useState('');
+  const [showNumpad, setShowNumpad] = useState(false);
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
+  const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
 
-  const filteredProducts = (products || []).filter((product) =>
-    product.isActive &&
-    (product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredProducts = (products || []).filter((product) => {
+    const matchesSearch = product.isActive &&
+      (product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory || product.categoryId === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   const availableTables = (tables || []).filter(t => t.status === 'available' || t.status === 'occupied');
 
@@ -104,6 +116,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
   const selectTable = (table: Table) => {
     setSelectedTable(table);
     setShowTableSelect(false);
+    setActiveTab('quick-sale');
     
     if (table.currentSaleId) {
       const existingOrder = (tableOrders || []).find(o => o.saleId === table.currentSaleId);
@@ -122,6 +135,14 @@ export default function POSModule({ onBack }: POSModuleProps) {
   const addToCart = (product: Product) => {
     const existingItem = cart.find((item) => item.productId === product.id && !item.isComplimentary);
 
+    let unitPrice = product.basePrice;
+    let subtotal = unitPrice;
+
+    if (pricesIncludeVAT) {
+      unitPrice = product.basePrice / (1 + product.taxRate / 100);
+      subtotal = unitPrice;
+    }
+
     if (existingItem) {
       setCart(
         cart.map((item) =>
@@ -136,10 +157,10 @@ export default function POSModule({ onBack }: POSModuleProps) {
         productId: product.id,
         productName: product.name,
         quantity: 1,
-        unitPrice: product.basePrice,
+        unitPrice: unitPrice,
         taxRate: product.taxRate,
         discountAmount: 0,
-        subtotal: product.basePrice,
+        subtotal: subtotal,
         isComplimentary: false,
       };
       setCart([...cart, newItem]);
@@ -391,15 +412,24 @@ export default function POSModule({ onBack }: POSModuleProps) {
 
     const totals = calculateTotals();
     const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+    const remaining = totals.total - totalPaid;
     
-    if (totalPaid + amount > totals.total) {
-      toast.error('Ödeme tutarı kalan tutardan fazla olamaz');
+    if (amount > remaining + 0.01) {
+      toast.error(`Ödeme tutarı kalan tutardan fazla olamaz (Kalan: ${formatCurrency(remaining)})`);
       return;
     }
 
     setSplitPayments([...splitPayments, { method: currentSplitMethod, amount }]);
     setCurrentSplitAmount('');
+    setShowNumpad(false);
     toast.success('Ödeme eklendi');
+  };
+
+  const fillRemainingAmount = () => {
+    const totals = calculateTotals();
+    const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+    const remaining = totals.total - totalPaid;
+    setCurrentSplitAmount(remaining.toFixed(2));
   };
 
   const removeSplitPayment = (index: number) => {
@@ -525,7 +555,7 @@ export default function POSModule({ onBack }: POSModuleProps) {
         </div>
       </header>
 
-      <Tabs defaultValue="quick-sale" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'quick-sale' | 'tables')} className="space-y-4">
         <TabsList>
           <TabsTrigger value="quick-sale">Hızlı Satış</TabsTrigger>
           <TabsTrigger value="tables">Masalar</TabsTrigger>
@@ -546,12 +576,31 @@ export default function POSModule({ onBack }: POSModuleProps) {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                   <Input
                     placeholder="Ürün adı veya SKU ile ara..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                      onClick={() => setSelectedCategory('all')}
+                    >
+                      Tümü
+                    </Button>
+                    {(categories || []).map((category) => (
+                      <Button
+                        key={category.id}
+                        size="sm"
+                        variant={selectedCategory === category.id || selectedCategory === category.name ? 'default' : 'outline'}
+                        onClick={() => setSelectedCategory(category.name)}
+                      >
+                        {category.name}
+                      </Button>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1184,19 +1233,33 @@ export default function POSModule({ onBack }: POSModuleProps) {
                     );
                   })}
                 </div>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Tutar"
-                    value={currentSplitAmount}
-                    onChange={(e) => setCurrentSplitAmount(e.target.value)}
-                    min="0"
-                    step="0.01"
-                  />
-                  <Button onClick={addSplitPayment}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ekle
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Tutar"
+                      value={currentSplitAmount}
+                      onChange={(e) => setCurrentSplitAmount(e.target.value)}
+                      onClick={() => setShowNumpad(true)}
+                      readOnly
+                      min="0"
+                      step="0.01"
+                    />
+                    <Button variant="outline" onClick={fillRemainingAmount}>
+                      Kalan
+                    </Button>
+                    <Button onClick={addSplitPayment}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ekle
+                    </Button>
+                  </div>
+                  {showNumpad && (
+                    <Numpad
+                      value={currentSplitAmount}
+                      onChange={setCurrentSplitAmount}
+                      onEnter={addSplitPayment}
+                    />
+                  )}
                 </div>
               </div>
             </TabsContent>

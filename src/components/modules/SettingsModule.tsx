@@ -22,6 +22,7 @@ interface AppSettings {
   paymentMethods: PaymentMethodSetting[];
   stockAlerts: boolean;
   autoCalculateSalary: boolean;
+  pricesIncludeVAT: boolean;
 }
 
 interface TaxRate {
@@ -61,6 +62,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
     ],
     stockAlerts: true,
     autoCalculateSalary: false,
+    pricesIncludeVAT: false,
   };
   
   const [settings, setSettings] = useKV<AppSettings>('appSettings', defaultSettings);
@@ -433,6 +435,25 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                       return { ...curr, autoCalculateSalary: checked };
                     });
                     toast.success(`Otomatik maaş hesaplama ${checked ? 'açıldı' : 'kapatıldı'}`);
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <p className="font-medium">Fiyatlar KDV Dahil</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ürün fiyatları KDV dahil mi hesaplansın?
+                  </p>
+                </div>
+                <Switch
+                  checked={(settings || defaultSettings).pricesIncludeVAT}
+                  onCheckedChange={(checked) => {
+                    setSettings((current) => {
+                      const curr = current || defaultSettings;
+                      return { ...curr, pricesIncludeVAT: checked };
+                    });
+                    toast.success(`Fiyatlar KDV ${checked ? 'dahil' : 'hariç'} olarak ayarlandı`);
                   }}
                 />
               </div>
