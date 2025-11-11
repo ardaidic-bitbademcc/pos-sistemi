@@ -42,7 +42,7 @@ export default function Login({ onLogin }: LoginProps) {
   }, [employees, setUsers]);
 
   useEffect(() => {
-    if (pin.length === 4 || pin.length === 6) {
+    if (pin.length === 4) {
       const user = users?.find(u => u.pin === pin && u.isActive);
       if (user) {
         setError(false);
@@ -60,7 +60,7 @@ export default function Login({ onLogin }: LoginProps) {
   }, [pin, users, onLogin]);
 
   const handleNumberClick = (num: string) => {
-    if (pin.length < 6) {
+    if (pin.length < 4) {
       setPin(prev => prev + num);
     }
   };
@@ -75,15 +75,15 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   const getPinDisplay = () => {
-    return Array(6).fill(null).map((_, i) => (
+    return Array(4).fill(null).map((_, i) => (
       <motion.div
         key={i}
         initial={false}
         animate={{
-          scale: i === pin.length && pin.length < 6 ? [1, 1.2, 1] : 1,
+          scale: i === pin.length && pin.length < 4 ? [1, 1.2, 1] : 1,
         }}
         transition={{ duration: 0.2 }}
-        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center ${
+        className={`w-12 h-12 rounded-lg border-2 flex items-center justify-center ${
           error 
             ? 'border-destructive bg-destructive/10' 
             : i < pin.length 
@@ -96,7 +96,7 @@ export default function Login({ onLogin }: LoginProps) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.2 }}
-            className={`w-2.5 h-2.5 rounded-full ${error ? 'bg-destructive' : 'bg-primary'}`}
+            className={`w-3 h-3 rounded-full ${error ? 'bg-destructive' : 'bg-primary'}`}
           />
         )}
       </motion.div>
@@ -155,7 +155,7 @@ export default function Login({ onLogin }: LoginProps) {
                     variant="outline"
                     className="w-full h-16 text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
                     onClick={() => handleNumberClick(num.toString())}
-                    disabled={pin.length >= 6}
+                    disabled={pin.length >= 4}
                   >
                     {num}
                   </Button>
@@ -180,7 +180,7 @@ export default function Login({ onLogin }: LoginProps) {
                   variant="outline"
                   className="w-full h-16 text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
                   onClick={() => handleNumberClick('0')}
-                  disabled={pin.length >= 6}
+                  disabled={pin.length >= 4}
                 >
                   0
                 </Button>

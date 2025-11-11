@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole } from '@/lib/types';
 import { formatCurrency, formatDateTime, calculateHoursWorked, generateId } from '@/lib/helpers';
@@ -30,8 +30,10 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showAddEmployeeDialog, setShowAddEmployeeDialog] = useState(false);
+  const [showEditEmployeeDialog, setShowEditEmployeeDialog] = useState(false);
   const [showDeleteEmployeeDialog, setShowDeleteEmployeeDialog] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [selectedSalary, setSelectedSalary] = useState<SalaryCalculation | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [loginPin, setLoginPin] = useState('');
@@ -257,6 +259,25 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
     setEmployeeToDelete(null);
   };
 
+  const updateEmployee = () => {
+    if (!employeeToEdit) return;
+
+    if (!employeeToEdit.fullName || !employeeToEdit.email || !employeeToEdit.employeePin) {
+      toast.error('Lütfen gerekli alanları doldurun');
+      return;
+    }
+
+    setEmployees((current) =>
+      (current || []).map(e =>
+        e.id === employeeToEdit.id ? employeeToEdit : e
+      )
+    );
+
+    toast.success(`${employeeToEdit.fullName} bilgileri güncellendi`);
+    setShowEditEmployeeDialog(false);
+    setEmployeeToEdit(null);
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6">
       <header className="flex items-center justify-between">
@@ -390,12 +411,21 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
                         disabled={hasActiveShift}
                         onClick={() => clockIn(employee.id)}
                       >
                         <ClockClockwise className="h-4 w-4 mr-2" />
                         Vardiya Başlat
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEmployeeToEdit(employee);
+                          setShowEditEmployeeDialog(true);
+                        }}
+                      >
+                        <PencilSimple className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="destructive"
@@ -535,10 +565,10 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
               <Label>PIN Kodu</Label>
               <Input
                 type="password"
-                placeholder="PIN kodunuzu girin (6 haneli)"
+                placeholder="PIN kodunuzu girin (4 haneli)"
                 value={loginPin}
                 onChange={(e) => setLoginPin(e.target.value)}
-                maxLength={6}
+                maxLength={4}
                 autoFocus
               />
             </div>
@@ -783,6 +813,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                     <SelectItem value="cashier">Kasiyer</SelectItem>
                     <SelectItem value="chef">Aşçı</SelectItem>
                     <SelectItem value="manager">Müdür</SelectItem>
+                    <SelectItem value="waiter">Garson</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -798,13 +829,13 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>PIN Kodu (6 haneli) *</Label>
+                <Label>PIN Kodu (4 haneli) *</Label>
                 <Input
                   type="text"
                   value={newEmployee.employeePin}
                   onChange={(e) => setNewEmployee({...newEmployee, employeePin: e.target.value})}
-                  placeholder="123456"
-                  maxLength={6}
+                  placeholder="1234"
+                  maxLength={4}
                 />
               </div>
             </div>
@@ -841,6 +872,94 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
             <Button variant="destructive" onClick={deleteEmployee}>
               <Trash className="h-4 w-4 mr-2" />
               Personel Çıkar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditEmployeeDialog} onOpenChange={setShowEditEmployeeDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Personel Bilgilerini Düzenle</DialogTitle>
+            <DialogDescription>
+              Personel bilgilerini güncelleyin
+            </DialogDescription>
+          </DialogHeader>
+          {employeeToEdit && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Ad Soyad *</Label>
+                  <Input
+                    value={employeeToEdit.fullName}
+                    onChange={(e) => setEmployeeToEdit({...employeeToEdit, fullName: e.target.value})}
+                    placeholder="Ahmet Yılmaz"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-posta *</Label>
+                  <Input
+                    type="email"
+                    value={employeeToEdit.email}
+                    onChange={(e) => setEmployeeToEdit({...employeeToEdit, email: e.target.value})}
+                    placeholder="ahmet@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefon</Label>
+                  <Input
+                    type="tel"
+                    value={employeeToEdit.phone}
+                    onChange={(e) => setEmployeeToEdit({...employeeToEdit, phone: e.target.value})}
+                    placeholder="0555 123 45 67"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Pozisyon</Label>
+                  <Select value={employeeToEdit.role} onValueChange={(value: UserRole) => setEmployeeToEdit({...employeeToEdit, role: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Personel</SelectItem>
+                      <SelectItem value="cashier">Kasiyer</SelectItem>
+                      <SelectItem value="chef">Aşçı</SelectItem>
+                      <SelectItem value="manager">Müdür</SelectItem>
+                      <SelectItem value="waiter">Garson</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Saatlik Ücret (₺)</Label>
+                  <Input
+                    type="number"
+                    value={employeeToEdit.hourlyRate}
+                    onChange={(e) => setEmployeeToEdit({...employeeToEdit, hourlyRate: Number(e.target.value)})}
+                    placeholder="0"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>PIN Kodu (4 haneli) *</Label>
+                  <Input
+                    type="text"
+                    value={employeeToEdit.employeePin}
+                    onChange={(e) => setEmployeeToEdit({...employeeToEdit, employeePin: e.target.value})}
+                    placeholder="1234"
+                    maxLength={4}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditEmployeeDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={updateEmployee}>
+              <PencilSimple className="h-4 w-4 mr-2" />
+              Güncelle
             </Button>
           </DialogFooter>
         </DialogContent>
