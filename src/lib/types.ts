@@ -478,3 +478,123 @@ export interface TaskComment {
   comment: string;
   createdAt: string;
 }
+
+export type B2BUserType = 'supplier' | 'customer';
+export type OrderStatus = 'pending' | 'approved' | 'cancelled' | 'preparing' | 'shipped' | 'delivered';
+export type SampleRequestStatus = 'pending' | 'approved' | 'rejected' | 'sent';
+export type ShippingMethod = 'free' | 'buyer_pays';
+
+export interface B2BSupplier {
+  id: string;
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  address: string;
+  taxNumber?: string;
+  rating?: number;
+  totalProducts: number;
+  isActive: boolean;
+  createdAt: string;
+  logo?: string;
+}
+
+export interface B2BProduct {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  name: string;
+  description: string;
+  category: string;
+  unitPrice: number;
+  minOrderQuantity: number;
+  unit: string;
+  imageUrl?: string;
+  canProvideSample: boolean;
+  requiresDesign: boolean;
+  shippingMethod: ShippingMethod;
+  shippingDetails?: string;
+  stock: number;
+  isActive: boolean;
+  createdAt: string;
+  specifications?: Record<string, string>;
+}
+
+export interface SampleRequest {
+  id: string;
+  productId: string;
+  productName: string;
+  customerId: string;
+  customerName: string;
+  supplierId: string;
+  supplierName: string;
+  deliveryAddress: string;
+  status: SampleRequestStatus;
+  requestDate: string;
+  responseDate?: string;
+  rejectionReason?: string;
+  notes?: string;
+}
+
+export interface B2BOrder {
+  id: string;
+  orderNumber: string;
+  supplierId: string;
+  supplierName: string;
+  customerId: string;
+  customerName: string;
+  items: B2BOrderItem[];
+  subtotal: number;
+  shippingCost: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: OrderStatus;
+  designFiles?: DesignFile[];
+  mockupUrl?: string;
+  mockupGeneratedAt?: string;
+  shippingTrackingNumber?: string;
+  shippingCompany?: string;
+  deliveryAddress: string;
+  orderDate: string;
+  approvedDate?: string;
+  shippedDate?: string;
+  deliveredDate?: string;
+  cancelledDate?: string;
+  cancellationReason?: string;
+  notes?: string;
+  statusHistory: OrderStatusHistory[];
+}
+
+export interface B2BOrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  requiresDesign: boolean;
+}
+
+export interface DesignFile {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  fileUrl: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface OrderStatusHistory {
+  status: OrderStatus;
+  timestamp: string;
+  updatedBy: string;
+  notes?: string;
+}
+
+export interface MockupGenerationRequest {
+  orderId: string;
+  productId: string;
+  designFileUrl: string;
+  productImageUrl: string;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useKV } from '@github/spark/hooks';
-import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem } from '@/lib/types';
+import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem, B2BSupplier, B2BProduct } from '@/lib/types';
 import { generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 
 export function useSeedData() {
@@ -11,10 +11,144 @@ export function useSeedData() {
   const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const [branches, setBranches] = useKV<Branch[]>('branches', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
+  const [b2bSuppliers, setB2BSuppliers] = useKV<B2BSupplier[]>('b2b-suppliers', []);
+  const [b2bProducts, setB2BProducts] = useKV<B2BProduct[]>('b2b-products', []);
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
     if (seeded) return;
+    
+    if (!b2bSuppliers || b2bSuppliers.length === 0) {
+      const sampleSuppliers: B2BSupplier[] = [
+        {
+          id: 'supplier-1',
+          companyName: 'Anadolu Tekstil A.Ş.',
+          contactName: 'Ahmet Yılmaz',
+          email: 'info@anadolutekstil.com',
+          phone: '0216 555 1000',
+          address: 'Organize Sanayi Bölgesi, İstanbul',
+          taxNumber: '1234567890',
+          rating: 4.5,
+          totalProducts: 5,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'supplier-2',
+          companyName: 'Bayrak Promosyon Ltd.',
+          contactName: 'Mehmet Kaya',
+          email: 'info@bayrakpromosyon.com',
+          phone: '0212 555 2000',
+          address: 'Bayrampaşa, İstanbul',
+          rating: 4.8,
+          totalProducts: 3,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'supplier-3',
+          companyName: 'Çamlıca Ambalaj San.',
+          contactName: 'Ayşe Demir',
+          email: 'info@camlicaambalaj.com',
+          phone: '0216 555 3000',
+          address: 'Çamlıca, İstanbul',
+          rating: 4.2,
+          totalProducts: 4,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      setB2BSuppliers(sampleSuppliers);
+
+      const sampleB2BProducts: B2BProduct[] = [
+        {
+          id: 'b2b-prod-1',
+          supplierId: 'supplier-1',
+          supplierName: 'Anadolu Tekstil A.Ş.',
+          name: 'Baskılı Tişört',
+          description: 'Pamuklu, yüksek kaliteli baskılı tişört',
+          category: 'Tekstil',
+          unitPrice: 45,
+          minOrderQuantity: 100,
+          unit: 'adet',
+          canProvideSample: true,
+          requiresDesign: true,
+          shippingMethod: 'buyer_pays',
+          stock: 5000,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'b2b-prod-2',
+          supplierId: 'supplier-1',
+          supplierName: 'Anadolu Tekstil A.Ş.',
+          name: 'Nakışlı Polar',
+          description: 'Özel nakış işlemeli polar',
+          category: 'Tekstil',
+          unitPrice: 85,
+          minOrderQuantity: 50,
+          unit: 'adet',
+          canProvideSample: true,
+          requiresDesign: true,
+          shippingMethod: 'free',
+          stock: 2000,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'b2b-prod-3',
+          supplierId: 'supplier-2',
+          supplierName: 'Bayrak Promosyon Ltd.',
+          name: 'USB Bellek (Logo Baskılı)',
+          description: '16GB USB bellek, logo baskı dahil',
+          category: 'Elektronik',
+          unitPrice: 35,
+          minOrderQuantity: 200,
+          unit: 'adet',
+          canProvideSample: true,
+          requiresDesign: true,
+          shippingMethod: 'buyer_pays',
+          stock: 10000,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'b2b-prod-4',
+          supplierId: 'supplier-2',
+          supplierName: 'Bayrak Promosyon Ltd.',
+          name: 'Kalem Seti',
+          description: 'Lüks kutuda metal kalem seti',
+          category: 'Kırtasiye',
+          unitPrice: 55,
+          minOrderQuantity: 50,
+          unit: 'set',
+          canProvideSample: true,
+          requiresDesign: false,
+          shippingMethod: 'free',
+          stock: 3000,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'b2b-prod-5',
+          supplierId: 'supplier-3',
+          supplierName: 'Çamlıca Ambalaj San.',
+          name: 'Karton Kutu (Özel Baskı)',
+          description: 'Ofset baskılı karton kutu',
+          category: 'Ambalaj',
+          unitPrice: 8,
+          minOrderQuantity: 1000,
+          unit: 'adet',
+          canProvideSample: true,
+          requiresDesign: true,
+          shippingMethod: 'buyer_pays',
+          stock: 50000,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      setB2BProducts(sampleB2BProducts);
+    }
     
     if (!branches || branches.length === 0) {
       const sampleBranches: Branch[] = [

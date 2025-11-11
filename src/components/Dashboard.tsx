@@ -17,6 +17,7 @@ import {
   CurrencyCircleDollar,
   QrCode,
   ListChecks,
+  Handshake,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
 import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission } from '@/lib/types';
@@ -191,6 +192,15 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
       bgColor: 'bg-blue-500/10',
     },
     {
+      id: 'b2b' as any,
+      moduleId: 'b2b' as Module,
+      title: 'B2B Platform',
+      description: 'Tedarikçi ve müşteri yönetimi',
+      icon: Handshake,
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10',
+    },
+    {
       id: 'finance' as const,
       moduleId: 'finance' as Module,
       title: 'Finans Yönetimi',
@@ -220,7 +230,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
   ];
 
   const moduleCards = allModuleCards.filter(card => {
-    if (card.id === 'qrmenu' || card.id === 'tasks') return hasModuleAccess('tasks');
+    if (card.id === 'qrmenu' || card.id === 'tasks' || card.id === 'b2b') return hasModuleAccess('tasks');
     return hasModuleAccess(card.id);
   });
 

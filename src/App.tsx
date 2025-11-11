@@ -17,10 +17,11 @@ import RoleManagementModule from '@/components/modules/RoleManagementModule';
 import CashModule from '@/components/modules/CashModule';
 import QRMenuModule from '@/components/modules/QRMenuModule';
 import TaskManagementModule from '@/components/modules/TaskManagementModule';
+import B2BModule from '@/components/modules/B2BModule';
 import { useSeedData } from '@/hooks/use-seed-data';
 import type { UserRole } from '@/lib/types';
 
-export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks';
+export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
@@ -68,6 +69,8 @@ function App() {
         return <QRMenuModule onBack={() => setActiveModule('dashboard')} />;
       case 'tasks':
         return <TaskManagementModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} currentUserId="user-1" currentUserName={currentUserName} />;
+      case 'b2b':
+        return <B2BModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole || 'owner'} currentUserName={currentUserName} />;
       default:
         return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} />;
     }

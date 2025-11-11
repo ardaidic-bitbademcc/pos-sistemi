@@ -394,6 +394,114 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Gerçekçi satış dağılımı (günde 50-80 işlem)
 - **Başarı Kriterleri**: Tüm raporlama ve analiz özellikleri demo veriyle test edilebilir
 
+### 10. B2B Marketplace Modülü
+- **İşlevsellik**: Tedarikçi-müşteri entegrasyon platformu, ürün katalog yönetimi, numune talep sistemi, tasarım dosyası yönetimi, otomatik mockup oluşturma, sipariş akış yönetimi, kargo entegrasyonu
+- **Amaç**: Tedarikçileri ve müşterileri tek platformda buluşturarak B2B ticareti kolaylaştırmak, sipariş sürecini dijitalleştirmek
+- **Tetikleyici**: Tedarikçi ürün ekler veya müşteri tedarikçi kataloğuna göz atar
+- **Akış**: 
+  - **Tedarikçi**: Ürün ekle → Min. sipariş adedi, fiyat, numune durumu belirle → Kargo koşulları ayarla → Yayınla → Müşteri talebi gelir → Talep onayla/reddet → Tasarım varsa mockup oluştur → Sipariş durumunu güncelle → Kargo takibi → Teslimat
+  - **Müşteri**: Tedarikçileri listele (A-B-C sıralama) → Ürünlere göz at → Numune talep et → Tasarım yükle (baskılı ürünlerde) → Sipariş oluştur → Mockup onayı → Ödeme → Takip → Teslim alındı onayla
+- **Başarı Kriterleri**:
+  - Tedarikçiler ürünlerini tüm detaylarıyla ekleyebilir
+  - Müşteriler A-B-C formatında tedarikçi listesi görür
+  - Numune talepleri otomatik iletilir
+  - Baskılı ürünlerde tasarım dosyası yüklenir ve tedarikçiye gider
+  - Tedarikçi onayında sistem otomatik mockup üretir
+  - Her iki taraf da mockup'ı mail ile alır
+  - Sipariş durumu e-ticaret akışında güncellenir (onaylandı/iptal/hazırlanıyor/kargoda/teslim edildi)
+  - Kargo entegrasyonu ile sevkiyat yönetimi yapılır
+  - Teslim alındığında stoklar otomatik güncellenir
+  - Reçetelerdeki alış fiyatları senkronize edilir
+
+#### B2B Kullanıcı Rolleri
+- **Tedarikçi (Supplier)**: Ürün ekler, numune taleplerini yönetir, siparişleri işler, kargo düzenler
+- **Müşteri (Customer)**: Tedarikçileri görür, numune talep eder, sipariş verir, tasarım yükler
+
+#### Tedarikçi Ürün Yönetimi
+- **İşlevsellik**: Ürün katalog oluşturma, min. sipariş adedi, fiyat, numune durumu belirleme
+- **Amaç**: Tedarikçilerin ürünlerini detaylı şekilde sunması
+- **Tetikleyici**: Tedarikçi "Yeni Ürün Ekle" butonuna tıklar
+- **Akış**: Ürün bilgileri gir → Görsel yükle → Min. sipariş adedi belirle → Birim fiyat gir → "Numune Verilebilir" toggle → Baskılı ürün ise işaretle → Kargo koşulları belirle → Kaydet
+- **Başarı Kriterleri**:
+  - Tüm ürün bilgileri doğru kaydedilir
+  - Numune durumu açıkça belirtilir
+  - Baskılı/tasarım gerektiren ürünler işaretlenir
+  - Kargo koşulları (ücretsiz/alıcı ödemeli) seçilebilir
+
+#### Müşteri Tedarikçi Görüntüleme
+- **İşlevsellik**: Tedarikçileri A-B-C formatında listeleme, ürün katalogları görüntüleme
+- **Amaç**: Müşterilerin tedarikçileri kolayca keşfetmesi
+- **Tetikleyici**: Müşteri B2B modülünü açar
+- **Akış**: Tedarikçi listesi yükle → A-B-C alfabetik gruplandırma → Tedarikçi seç → Katalog görüntüle → Ürün filtrele/ara
+- **Başarı Kriterleri**:
+  - Tedarikçiler alfabetik gruplarda gösterilir
+  - Her tedarikçinin ürün sayısı görünür
+  - Katalog hızlı yüklenir
+
+#### Numune Talep Sistemi
+- **İşlevsellik**: "Numune İstiyorum" butonu ile talep oluşturma, tedarikçiye bildirim
+- **Amaç**: Müşterilerin ürünleri test etmesi için numune süreci başlatma
+- **Tetikleyici**: Müşteri ürün detayında "Numune İstiyorum" butonuna tıklar
+- **Akış**: Numune talep et → Teslimat adresi gir → Onay → Tedarikçiye bildirim git → Tedarikçi onayla/reddet → Müşteriye bildirim
+- **Başarı Kriterleri**:
+  - Sadece "numune verilebilir" ürünlerde buton görünür
+  - Talep tedarikçiye anında iletilir
+  - Onay/red durumu müşteriye bildirilir
+
+#### Tasarım Dosyası Yönetimi
+- **İşlevsellik**: Baskılı ürünlerde logo/tasarım dosyası yükleme, tedarikçiye iletim
+- **Amaç**: Özel baskılı siparişler için tasarım transferi
+- **Tetikleyici**: Müşteri baskılı ürün sipariş ederken
+- **Akış**: Sipariş oluştur → Sistem tasarım dosyası iste → Logo/tasarım yükle → Tedarikçiye ilet → Tedarikçi incele ve onayla
+- **Başarı Kriterleri**:
+  - Dosya yükleme arayüzü kullanıcı dostu
+  - Desteklenen formatlar: PNG, JPG, PDF, AI, SVG
+  - Dosya tedarikçi panelinde görünür
+  - Tasarım onay/red mekanizması çalışır
+
+#### Otomatik Mockup Oluşturma
+- **İşlevsellik**: Tedarikçi onayında sistem otomatik mockup üretir ve mail atar
+- **Amaç**: Her iki tarafa görsel önizleme sunma
+- **Tetikleyici**: Tedarikçi tasarımı onaylar
+- **Akış**: Tedarikçi onayla → Sistem mockup oluştur → Mockup'ı müşteri ve tedarikçiye mail at → Her iki taraf da önizle
+- **Başarı Kriterleri**:
+  - Mockup otomatik oluşturulur
+  - E-posta her iki tarafa da gönderilir
+  - Mockup kaliteli ve profesyonel görünür
+
+#### Sipariş Akış Yönetimi
+- **İşlevsellik**: E-ticaret mantığında sipariş durumu takibi
+- **Amaç**: Siparişin her aşamasını şeffaf şekilde göstermek
+- **Durumlar**: Onaylandı → Hazırlanıyor → Kargoda → Teslim Edildi / İptal Edildi
+- **Tetikleyici**: Tedarikçi durum güncellemesi yapar
+- **Akış**: Sipariş oluştur → Tedarikçi onayla → Hazırlanıyor durumuna al → Kargoya ver → Kargoda olarak işaretle → Müşteri teslim aldı butonuna bas → Teslim edildi
+- **Başarı Kriterleri**:
+  - Her durum değişikliği otomatik bildirim gönderir
+  - Müşteri ve tedarikçi aynı durumu görür
+  - Zaman damgaları kaydedilir
+  - İptal durumunda sebep belirtilir
+
+#### Kargo Entegrasyonu
+- **İşlevsellik**: Tedarikçi kargo firması ve koşulları belirler
+- **Amaç**: Sevkiyat yönetimini kolaylaştırma
+- **Tetikleyici**: Tedarikçi ürün eklerken veya sipariş kargoya verilirken
+- **Akış**: Kargo koşulu seç (ücretsiz/alıcı ödemeli) → Kargo firması belirle → Takip numarası gir → Müşteriye ilet
+- **Başarı Kriterleri**:
+  - Kargo koşulları ürün bazında ayarlanabilir
+  - Takip numarası müşteri ile paylaşılır
+  - Kargo durumu izlenebilir
+
+#### Stok ve Reçete Senkronizasyonu
+- **İşlevsellik**: Teslim alındığında otomatik stok ve maliyet güncelleme
+- **Amaç**: Menü mühendisliği ile entegrasyon, otomatik maliyet takibi
+- **Tetikleyici**: Müşteri "Teslim Alındı" butonuna basar
+- **Akış**: Teslim alındı → Sistem sipariş detaylarını al → Stok güncelle → Reçetelerdeki alış fiyatını güncelle → Kar marjını yeniden hesapla
+- **Başarı Kriterleri**:
+  - Stok miktarı otomatik artar
+  - Alış fiyatı sipariş fiyatına göre güncellenir
+  - Reçetelerdeki maliyetler otomatik hesaplanır
+  - Menü öğelerinin kar marjı güncellenir
+
 ## İstisna Durumları
 
 - **Çevrimdışı Mod**: Offline satış işlemleri kuyruğa alınır, internet geldiğinde senkronize edilir
