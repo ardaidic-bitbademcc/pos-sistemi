@@ -10,11 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette, Money, DeviceMobile, Bank, Ticket, PencilSimple } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Product, PaymentMethod, Category, AppTheme } from '@/lib/types';
+import type { Product, PaymentMethod, Category, AppTheme, AuthSession } from '@/lib/types';
 import { formatCurrency, generateId } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface SettingsModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
 interface AppSettings {

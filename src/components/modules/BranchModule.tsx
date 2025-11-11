@@ -8,12 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Buildings, TrendUp, Package, ArrowsLeftRight, Check } from '@phosphor-icons/react';
-import type { Branch, Product } from '@/lib/types';
+import type { Branch, Product, AuthSession } from '@/lib/types';
 import { formatNumber } from '@/lib/helpers';
 import { toast } from 'sonner';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface BranchModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
 interface StockTransfer {
@@ -26,7 +28,7 @@ interface StockTransfer {
   status: 'pending' | 'completed';
 }
 
-export default function BranchModule({ onBack }: BranchModuleProps) {
+export default function BranchModule({ onBack, authSession }: BranchModuleProps) {
   const [branches] = useKV<Branch[]>('branches', []);
   const [products] = useKV<Product[]>('products', []);
   const [stockTransfers, setStockTransfers] = useKV<StockTransfer[]>('stockTransfers', []);

@@ -13,15 +13,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash, Power, Pause, AirplaneTilt, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus } from '@/lib/types';
+import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus, AuthSession } from '@/lib/types';
 
 interface B2BModuleProps {
   onBack: () => void;
   currentUserRole: UserRole;
   currentUserName: string;
+  authSession?: AuthSession | null;
 }
 
-export default function B2BModule({ onBack, currentUserRole, currentUserName }: B2BModuleProps) {
+export default function B2BModule({ onBack, currentUserRole, currentUserName, authSession }: B2BModuleProps) {
   const [isSupplierMode, setIsSupplierMode] = useKV<boolean>('b2b-is-supplier-mode', false);
   const [products, setProducts] = useKV<B2BProduct[]>('b2b-products', []);
   const [orders, setOrders] = useKV<B2BOrder[]>('b2b-orders', []);

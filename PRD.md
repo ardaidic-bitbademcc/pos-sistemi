@@ -40,6 +40,24 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Her modül sadece ilgili admin'in ve şubenin verilerini gösterir
   - Çoklu şube desteği için merkezi veri yönetimi
   - Şubeler arası transfer ve senkronizasyon hazırlığı
+  - `useBranchFilter` hook'u ile otomatik filtreleme
+  - Tüm modüller `authSession` prop'unu alır ve branch bazlı filtreleme yapar
+
+#### Şube İzolasyon Sistemi
+- **Merkezi Filtreleme**: 
+  - `lib/branch-filter.ts` - Tüm filtreleme mantığını içeren merkezi kütüphane
+  - `hooks/use-branch-filter.ts` - React bileşenleri için kolay kullanım hook'u
+  - Her veri okuma işleminde otomatik branch bazlı filtreleme
+- **Filtreleme Kuralları**:
+  - Veri, mevcut admin'e ait olmalı (`adminId === session.adminId`)
+  - Veri, mevcut şubeye ait olmalı (`branchId === session.branchId`)
+  - adminId/branchId olmayan eski veriler geriye uyumluluk için gösterilir
+- **Veri Ekleme**:
+  - Tüm yeni veriler otomatik olarak mevcut `adminId` ve `branchId` ile etiketlenir
+  - `addItem` fonksiyonu ile branch bilgisi otomatik eklenir
+- **Güncelleme ve Silme**:
+  - Sadece mevcut admin ve şubeye ait veriler güncellenebilir/silinebilir
+  - İzinsiz erişim engellenmiştir
 
 #### Varsayılan Kullanıcılar (Demo Giriş)
 - **Admin (PIN: 3010)** - Owner rolü, tüm yetkilere sahip

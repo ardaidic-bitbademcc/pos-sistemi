@@ -14,12 +14,14 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent, MagnifyingGlass, SquaresFour, List, Image } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category, ProductOption } from '@/lib/types';
+import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category, ProductOption, AuthSession } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
 import ProductOptionsEditor from '@/components/ProductOptionsEditor';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface MenuModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
 interface PriceChangeProposal {
@@ -30,7 +32,7 @@ interface PriceChangeProposal {
   expectedProfitMargin: number;
 }
 
-export default function MenuModule({ onBack }: MenuModuleProps) {
+export default function MenuModule({ onBack, authSession }: MenuModuleProps) {
   const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const [recipes, setRecipes] = useKV<Recipe[]>('recipes', []);
   const [products, setProducts] = useKV<Product[]>('products', []);

@@ -20,13 +20,15 @@ import {
   Handshake,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
-import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission } from '@/lib/types';
+import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission, AuthSession } from '@/lib/types';
 import { formatCurrency, formatNumber, getStartOfDay } from '@/lib/helpers';
 import { useMemo } from 'react';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface DashboardProps {
   onNavigate: (module: Module) => void;
   currentUserRole?: UserRole;
+  authSession?: AuthSession | null;
 }
 
 const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
@@ -104,11 +106,15 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   },
 ];
 
-export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: DashboardProps) {
+export default function Dashboard({ onNavigate, currentUserRole = 'owner', authSession }: DashboardProps) {
   const [sales] = useKV<Sale[]>('sales', []);
   const [employees] = useKV<any[]>('employees', []);
   const [products] = useKV<any[]>('products', []);
   const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
+
+  const { filteredItems: filteredSales } = useBranchFilter(sales, authSession);
+  const { filteredItems: filteredEmployees } = useBranchFilter(employees, authSession);
+  const { filteredItems: filteredProducts } = useBranchFilter(products, authSession);
 
   const currentPermissions = useMemo(() => {
     return (rolePermissions || DEFAULT_ROLE_PERMISSIONS).find(rp => rp.role === currentUserRole) || DEFAULT_ROLE_PERMISSIONS[0];
@@ -121,7 +127,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
 
   const stats: DashboardStats = useMemo(() => {
     const today = getStartOfDay();
-    const todaySales = (sales || []).filter(
+    const todaySales = filteredSales.filter(
       (sale) => new Date(sale.saleDate) >= today
     );
 
@@ -130,11 +136,11 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
         ? todaySales.reduce((sum, sale) => sum + sale.totalAmount, 0)
         : 0,
       todayTransactions: todaySales.length,
-      lowStockItems: (products || []).filter((p: any) => p.stock <= p.minStockLevel).length,
-      activeEmployees: (employees || []).filter((e: any) => e.isActive).length,
+      lowStockItems: filteredProducts.filter((p: any) => p.stock <= p.minStockLevel).length,
+      activeEmployees: filteredEmployees.filter((e: any) => e.isActive).length,
       pendingApprovals: 0,
     };
-  }, [sales, employees, products, currentPermissions]);
+  }, [filteredSales, filteredEmployees, filteredProducts, currentPermissions]);
 
   const allModuleCards = [
     {

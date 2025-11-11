@@ -9,10 +9,11 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Shield, Check, X } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { RolePermissions, UserRole, ModulePermission } from '@/lib/types';
+import type { RolePermissions, UserRole, ModulePermission, AuthSession } from '@/lib/types';
 
 interface RoleManagementModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
 const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [

@@ -14,14 +14,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { CustomerAccount, CustomerTransaction, Employee } from '@/lib/types';
+import type { CustomerAccount, CustomerTransaction, Employee, AuthSession } from '@/lib/types';
 import { formatCurrency, formatDateTime, generateId, generateAccountNumber } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface CustomerAccountModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
-export default function CustomerAccountModule({ onBack }: CustomerAccountModuleProps) {
+export default function CustomerAccountModule({ onBack, authSession }: CustomerAccountModuleProps) {
   const [accounts, setAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
   const [transactions, setTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
   const [employees] = useKV<Employee[]>('employees', []);

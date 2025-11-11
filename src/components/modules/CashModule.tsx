@@ -38,11 +38,13 @@ import {
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { formatCurrency, getStartOfDay } from '@/lib/helpers';
-import type { CashTransaction, CashRegisterStatus, Branch, Sale, UserRole, RolePermissions } from '@/lib/types';
+import type { CashTransaction, CashRegisterStatus, Branch, Sale, UserRole, RolePermissions, AuthSession } from '@/lib/types';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface CashModuleProps {
   onBack: () => void;
   currentUserRole?: UserRole;
+  authSession?: AuthSession | null;
 }
 
 const QUICK_ACTIONS = [

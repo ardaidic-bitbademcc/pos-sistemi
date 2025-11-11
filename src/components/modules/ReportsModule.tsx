@@ -7,14 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ChartLine, TrendUp, TrendDown, Users, Package, Calendar, Buildings, CreditCard, Money, DeviceMobile, Bank, Ticket } from '@phosphor-icons/react';
-import type { Sale, Employee, Product, Branch, BranchComparison, WaiterSalesReport, ProductSalesReport } from '@/lib/types';
+import type { Sale, Employee, Product, Branch, BranchComparison, WaiterSalesReport, ProductSalesReport, AuthSession } from '@/lib/types';
 import { formatCurrency, formatNumber } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface ReportsModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
-export default function ReportsModule({ onBack }: ReportsModuleProps) {
+export default function ReportsModule({ onBack, authSession }: ReportsModuleProps) {
   const [sales] = useKV<Sale[]>('sales', []);
   const [employees] = useKV<Employee[]>('employees', []);
   const [products] = useKV<Product[]>('products', []);

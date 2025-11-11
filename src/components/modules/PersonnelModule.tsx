@@ -13,14 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple, Receipt, Money, CreditCard, Bank, DeviceMobile, Ticket } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole, CustomerAccount, CustomerTransaction } from '@/lib/types';
+import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole, CustomerAccount, CustomerTransaction, AuthSession } from '@/lib/types';
 import { formatCurrency, formatDateTime, calculateHoursWorked, generateId, formatDate } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface PersonnelModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
-export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
+export default function PersonnelModule({ onBack, authSession }: PersonnelModuleProps) {
   const [employees, setEmployees] = useKV<Employee[]>('employees', []);
   const [shifts, setShifts] = useKV<Shift[]>('shifts', []);
   const [salaries, setSalaries] = useKV<SalaryCalculation[]>('salaries', []);

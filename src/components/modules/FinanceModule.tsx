@@ -4,14 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, TrendUp, TrendDown, CurrencyCircleDollar, Receipt, Wallet, CreditCard, DeviceMobile } from '@phosphor-icons/react';
-import type { Sale, Expense, FinancialSummary, CashRegister } from '@/lib/types';
+import type { Sale, Expense, FinancialSummary, CashRegister, AuthSession } from '@/lib/types';
 import { formatCurrency, getStartOfDay } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface FinanceModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
-export default function FinanceModule({ onBack }: FinanceModuleProps) {
+export default function FinanceModule({ onBack, authSession }: FinanceModuleProps) {
   const [sales] = useKV<Sale[]>('sales', []);
   const [expenses] = useKV<Expense[]>('expenses', []);
   const [cashRegister] = useKV<CashRegister | null>('cashRegister', null);

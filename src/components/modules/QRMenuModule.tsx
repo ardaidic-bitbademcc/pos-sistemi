@@ -9,14 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, QrCode, ForkKnife, Sparkle, MagnifyingGlass, X, Download, Eye, Image } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, Product, QRMenuTheme } from '@/lib/types';
+import type { MenuItem, Product, QRMenuTheme, AuthSession } from '@/lib/types';
 import { formatCurrency } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface QRMenuModuleProps {
   onBack: () => void;
+  authSession?: AuthSession | null;
 }
 
-export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
+export default function QRMenuModule({ onBack, authSession }: QRMenuModuleProps) {
   const [menuItems] = useKV<MenuItem[]>('menuItems', []);
   const [products] = useKV<Product[]>('products', []);
   const [searchQuery, setSearchQuery] = useState('');

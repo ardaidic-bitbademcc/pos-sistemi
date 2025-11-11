@@ -14,12 +14,14 @@ import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon,
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
 import ProductOptionsSelector from '@/components/ProductOptionsSelector';
-import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem, CustomerAccount, CustomerTransaction } from '@/lib/types';
+import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem, CustomerAccount, CustomerTransaction, AuthSession } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface POSModuleProps {
   onBack: () => void;
   currentUserRole?: UserRole;
+  authSession?: AuthSession | null;
 }
 
 interface CartItem extends SaleItem {

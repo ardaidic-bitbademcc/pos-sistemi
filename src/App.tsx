@@ -61,35 +61,35 @@ function App() {
   const renderModule = () => {
     switch (activeModule) {
       case 'dashboard':
-        return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} />;
+        return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} authSession={authSession} />;
       case 'pos':
-        return <POSModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} />;
+        return <POSModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} authSession={authSession} />;
       case 'personnel':
-        return <PersonnelModule onBack={() => setActiveModule('dashboard')} />;
+        return <PersonnelModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'branch':
-        return <BranchModule onBack={() => setActiveModule('dashboard')} />;
+        return <BranchModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'menu':
-        return <MenuModule onBack={() => setActiveModule('dashboard')} />;
+        return <MenuModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'finance':
-        return <FinanceModule onBack={() => setActiveModule('dashboard')} />;
+        return <FinanceModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'settings':
-        return <SettingsModule onBack={() => setActiveModule('dashboard')} />;
+        return <SettingsModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'reports':
-        return <ReportsModule onBack={() => setActiveModule('dashboard')} />;
+        return <ReportsModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'roles':
-        return <RoleManagementModule onBack={() => setActiveModule('dashboard')} />;
+        return <RoleManagementModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'cash':
-        return <CashModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} />;
+        return <CashModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} authSession={authSession} />;
       case 'qrmenu':
-        return <QRMenuModule onBack={() => setActiveModule('dashboard')} />;
+        return <QRMenuModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'tasks':
-        return <TaskManagementModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} currentUserId="user-1" currentUserName={currentUserName} />;
+        return <TaskManagementModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} currentUserId="user-1" currentUserName={currentUserName} authSession={authSession} />;
       case 'b2b':
-        return <B2BModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole || 'owner'} currentUserName={currentUserName} />;
+        return <B2BModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole || 'owner'} currentUserName={currentUserName} authSession={authSession} />;
       case 'customers':
-        return <CustomerAccountModule onBack={() => setActiveModule('dashboard')} />;
+        return <CustomerAccountModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       default:
-        return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} />;
+        return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} authSession={authSession} />;
     }
   };
 

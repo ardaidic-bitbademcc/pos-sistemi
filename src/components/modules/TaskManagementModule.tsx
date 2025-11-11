@@ -29,14 +29,16 @@ import {
   ChatCircle
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Task, TaskPriority, TaskStatus, TaskRecurrence, Employee, UserRole } from '@/lib/types';
+import type { Task, TaskPriority, TaskStatus, TaskRecurrence, Employee, UserRole, AuthSession } from '@/lib/types';
 import { generateId } from '@/lib/helpers';
+import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface TaskManagementModuleProps {
   onBack: () => void;
   currentUserRole?: UserRole;
-  currentUserId?: string;
-  currentUserName?: string;
+  currentUserId: string;
+  currentUserName: string;
+  authSession?: AuthSession | null;
 }
 
 export default function TaskManagementModule({ 
