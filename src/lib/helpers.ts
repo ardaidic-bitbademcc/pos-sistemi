@@ -104,3 +104,11 @@ export function calculateProfitMargin(sellingPrice: number, costPrice: number): 
   if (sellingPrice === 0) return 0;
   return ((sellingPrice - costPrice) / sellingPrice) * 100;
 }
+
+export function generateAccountNumber(): string {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+  return `CA-${year}${month}-${random}`;
+}

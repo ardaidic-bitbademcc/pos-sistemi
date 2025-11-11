@@ -14,7 +14,7 @@ import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon,
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
 import ProductOptionsSelector from '@/components/ProductOptionsSelector';
-import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem } from '@/lib/types';
+import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem, CustomerAccount, CustomerTransaction } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 
 interface POSModuleProps {
@@ -118,6 +118,10 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [cartSplitCount, setCartSplitCount] = useState<number | 'custom'>(2);
   const [showOptionsSelector, setShowOptionsSelector] = useState(false);
   const [selectedProductForOptions, setSelectedProductForOptions] = useState<Product | null>(null);
+  const [showCustomerAccountDialog, setShowCustomerAccountDialog] = useState(false);
+  const [selectedCustomerAccount, setSelectedCustomerAccount] = useState<string>('');
+  const [customerAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
+  const [customerTransactions, setCustomerTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
@@ -1032,6 +1036,135 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     setActiveTab('tables');
   };
 
+  const completeCustomerAccountSale = () => {
+    if (!selectedCustomerAccount) {
+      toast.error('Lütfen bir cari hesap seçin');
+      return;
+    }
+
+    const account = (customerAccounts || []).find(a => a.id === selectedCustomerAccount);
+    if (!account) {
+      toast.error('Seçili hesap bulunamadı');
+      return;
+    }
+
+    if (account.status !== 'active') {
+      toast.error('Bu hesap aktif değil');
+      return;
+    }
+
+    const totals = calculateTotals();
+
+    if (account.currentBalance + totals.total > account.creditLimit) {
+      toast.error(`Kredi limiti aşılıyor! Mevcut: ${formatCurrency(account.currentBalance)}, Limit: ${formatCurrency(account.creditLimit)}`);
+      return;
+    }
+
+    if (cart.length === 0) {
+      toast.error('Sepette ürün yok');
+      return;
+    }
+
+    const saleId = selectedTable?.currentSaleId || generateId();
+    
+    const currentSale = selectedTable?.currentSaleId ? (sales || []).find(s => s.id === selectedTable.currentSaleId) : null;
+    const previousPaidAmount = currentSale?.paidAmount || 0;
+    const totalPaidAmount = previousPaidAmount + totals.total;
+    
+    const newSale: Sale = {
+      id: saleId,
+      branchId: 'branch-1',
+      cashierId: 'cashier-1',
+      saleNumber: generateSaleNumber(),
+      saleDate: new Date().toISOString(),
+      subtotal: totals.subtotal,
+      taxAmount: totals.taxAmount,
+      discountAmount: orderDiscount,
+      totalAmount: totals.total,
+      paymentMethod: 'card',
+      paymentStatus: 'completed',
+      items: cart,
+      paidAmount: totalPaidAmount,
+      remainingAmount: 0,
+      notes: `Cari Hesap: ${account.customerName} (${account.accountNumber})`,
+    };
+
+    if (selectedTable?.currentSaleId) {
+      setSales((currentSales) => 
+        (currentSales || []).map(s => s.id === saleId ? newSale : s)
+      );
+    } else {
+      setSales((currentSales) => [...(currentSales || []), newSale]);
+    }
+
+    const balanceBefore = account.currentBalance;
+    const balanceAfter = balanceBefore + totals.total;
+
+    const transaction: CustomerTransaction = {
+      id: generateId(),
+      customerAccountId: account.id,
+      type: 'debit',
+      amount: totals.total,
+      description: 'Satış',
+      saleId: saleId,
+      saleNumber: newSale.saleNumber,
+      date: new Date().toISOString(),
+      createdBy: 'current-user',
+      createdByName: 'Kullanıcı',
+      balanceBefore: balanceBefore,
+      balanceAfter: balanceAfter,
+      notes: selectedTable ? `Masa ${selectedTable.tableNumber}` : undefined,
+    };
+
+    setCustomerTransactions((current) => [...(current || []), transaction]);
+
+    const accountsToUpdate = customerAccounts || [];
+    const updatedAccounts = accountsToUpdate.map((acc) =>
+      acc.id === account.id
+        ? {
+            ...acc,
+            currentBalance: balanceAfter,
+            totalDebt: acc.totalDebt + totals.total,
+          }
+        : acc
+    );
+
+    (window as any).spark.kv.set('customerAccounts', updatedAccounts);
+
+    deductStock(cart);
+
+    if (selectedTable) {
+      setTables((current) =>
+        (current || []).map(t =>
+          t.id === selectedTable.id
+            ? { ...t, status: 'available' as const, currentSaleId: undefined, firstOrderTime: undefined, lastOrderTime: undefined }
+            : t
+        )
+      );
+
+      const existingOrder = (tableOrders || []).find(o => o.tableId === selectedTable.id && !o.closedAt);
+      if (existingOrder) {
+        setTableOrders((current) =>
+          (current || []).map(o =>
+            o.id === existingOrder.id
+              ? { ...o, closedAt: new Date().toISOString() }
+              : o
+          )
+        );
+      }
+
+      setSelectedTable(null);
+      setActiveTab('tables');
+    }
+
+    toast.success(`Satış tamamlandı! Fiş No: ${newSale.saleNumber}. Müşteri borcu: ${formatCurrency(balanceAfter)}`);
+    setCart([]);
+    setOrderDiscount(0);
+    setPaymentMethod('cash');
+    setShowCustomerAccountDialog(false);
+    setSelectedCustomerAccount('');
+  };
+
   const deductStock = (items: CartItem[]) => {
     items.forEach(item => {
       if (!item.isComplimentary) {
@@ -1876,6 +2009,17 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                       );
                     })}
                   </div>
+                  <Button
+                    variant="outline"
+                    className="w-full h-20 flex-col gap-2"
+                    onClick={() => {
+                      setShowCheckout(false);
+                      setShowCustomerAccountDialog(true);
+                    }}
+                  >
+                    <Users className="h-8 w-8" weight="bold" />
+                    <span>Cari Hesap (Açık Hesap)</span>
+                  </Button>
                 </div>
 
                 <Separator />
@@ -2697,6 +2841,134 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           onConfirm={(selectedOptions) => addToCartWithOptions(selectedProductForOptions, selectedOptions)}
         />
       )}
+
+      <Dialog open={showCustomerAccountDialog} onOpenChange={setShowCustomerAccountDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cari Hesap Seçimi</DialogTitle>
+            <DialogDescription>
+              Müşteriye açık hesap tanımlayarak ödeme alın
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">Ödenecek Tutar</span>
+                <span className="text-2xl font-bold font-tabular-nums text-accent">
+                  {formatCurrency(calculateTotals().total)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Müşteri Hesabı Seçin</Label>
+              <Select value={selectedCustomerAccount} onValueChange={setSelectedCustomerAccount}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Cari hesap seçin..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(customerAccounts || [])
+                    .filter(acc => acc.status === 'active')
+                    .map((account) => {
+                      const availableCredit = account.creditLimit - account.currentBalance;
+                      const canAfford = availableCredit >= calculateTotals().total;
+                      return (
+                        <SelectItem key={account.id} value={account.id} disabled={!canAfford}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{account.customerName} ({account.accountNumber})</span>
+                            <span className={`text-xs ml-4 ${!canAfford ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {formatCurrency(availableCredit)} kullanılabilir
+                            </span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+              {(customerAccounts || []).filter(acc => acc.status === 'active').length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Aktif cari hesap bulunamadı. Lütfen önce bir müşteri hesabı oluşturun.
+                </p>
+              )}
+            </div>
+
+            {selectedCustomerAccount && (() => {
+              const account = (customerAccounts || []).find(a => a.id === selectedCustomerAccount);
+              if (!account) return null;
+              
+              const totals = calculateTotals();
+              const newBalance = account.currentBalance + totals.total;
+              const remainingCredit = account.creditLimit - newBalance;
+              
+              return (
+                <div className="space-y-3">
+                  <Separator />
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Mevcut Borç</span>
+                      <span className="font-tabular-nums font-semibold">{formatCurrency(account.currentBalance)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Eklenecek Tutar</span>
+                      <span className="font-tabular-nums font-semibold text-accent">{formatCurrency(totals.total)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">Yeni Borç</span>
+                      <span className="text-lg font-bold font-tabular-nums text-destructive">
+                        {formatCurrency(newBalance)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Kredi Limiti</span>
+                      <span className="font-tabular-nums">{formatCurrency(account.creditLimit)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Kalan Kredi</span>
+                      <span className={`font-tabular-nums font-semibold ${remainingCredit < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                        {formatCurrency(remainingCredit)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {remainingCredit < 0 && (
+                    <div className="p-3 bg-destructive/10 border border-destructive rounded-lg flex items-start gap-2">
+                      <Warning className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" weight="bold" />
+                      <div className="text-sm text-destructive">
+                        <p className="font-semibold">Kredi limiti aşılıyor!</p>
+                        <p>Bu işlem gerçekleştirilemez.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowCustomerAccountDialog(false);
+                setSelectedCustomerAccount('');
+              }}
+            >
+              İptal
+            </Button>
+            <Button 
+              onClick={completeCustomerAccountSale}
+              disabled={!selectedCustomerAccount || (() => {
+                const account = (customerAccounts || []).find(a => a.id === selectedCustomerAccount);
+                if (!account) return true;
+                const totals = calculateTotals();
+                return account.currentBalance + totals.total > account.creditLimit;
+              })()}
+            >
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Ödemeyi Tamamla
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

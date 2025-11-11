@@ -173,14 +173,132 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Seçilen tarih aralığı ekranda görünür
   - "Temizle" butonu ile tarih filtreleri sıfırlanabilir
 
-### 5. Finans Modülü
+### 5. Cari Hesaplar Modülü
+- **İşlevsellik**: Müşteri açık hesapları (cari hesap) yönetimi, kredi limiti kontrolü, hesap ekstreleri, personel otomatik hesap oluşturma
+- **Amaç**: Müşterilerin ve personelin veresiye (açık hesap) alışveriş yapmalarını sağlamak, borç/alacak takibi yapmak
+- **Tetikleyici**: Kullanıcı cari hesaplar modülünü açar veya POS'ta "Cari Hesap" ödeme yöntemini seçer
+- **Akış**: Cari Hesaplar → Yeni hesap ekle → Kredi limiti belirle → POS'ta ödeme al → Hesaba borç ekle → Ödeme al → Borcu azalt
+- **Başarı Kriterleri**: 
+  - Her müşteri için kredi limiti tanımlanabilir (varsayılan 5000₺)
+  - Kredi limiti aşıldığında satış engellenir
+  - Tüm işlemler hesap ekstresinde görünür
+  - Hesap detaylarında toplam borç, toplam ödeme, mevcut bakiye gösterilir
+  - Yeni personel eklendiğinde otomatik cari hesap oluşturulur
+  - Mevcut tüm personeller için otomatik cari hesap oluşturulur
+
+#### Hesap Türleri ve Bilgiler
+- **İşlevsellik**: Şahıs ve tüzel kişi hesap tanımlama, TC kimlik/vergi numarası ekleme (opsiyonel)
+- **Amaç**: Müşteri tipine göre doğru bilgileri toplamak
+- **Hesap Tipleri**:
+  - **Şahıs**: Bireysel müşteriler için, TC kimlik numarası opsiyonel
+  - **Tüzel**: Kurumsal müşteriler için, vergi numarası opsiyonel
+- **Zorunlu Alanlar**: Müşteri adı, telefon, kredi limiti
+- **Opsiyonel Alanlar**: E-posta, adres, TC kimlik no / vergi no, notlar
+- **Başarı Kriterleri**: 
+  - Vergi numarası ve TC kimlik numarası zorunlu değil
+  - Form geçerli olmadan kayıt yapılamaz
+  - Telefon numarası benzersiz olmalı
+
+#### Kredi Limiti Yönetimi
+- **İşlevsellik**: Müşteri bazında kredi limiti belirleme, limit kullanım takibi, limit aşım uyarıları
+- **Amaç**: Müşteri risk yönetimi ve borç kontrolü
+- **Tetikleyici**: Hesap oluşturma/düzenleme veya satış işlemi
+- **Akış**: Hesap oluştur/düzenle → Kredi limiti gir → Satış yap → Sistem limit kontrol eder → Limit aşımında işlem reddedilir
+- **Başarı Kriterleri**:
+  - Varsayılan limit 5000₺
+  - Limit düzenlenebilir (0₺ ve üzeri)
+  - Mevcut borç limitten fazla olamaz
+  - Satış anında anlık limit kontrolü
+  - Kullanılabilir kredi miktarı görünür
+  - Limit aşım durumunda net uyarı
+
+#### Hesap Ekstreleri
+- **İşlevsellik**: Tüm işlemlerin tarihsel kayıtları, borç/alacak hareketleri, satış detayları
+- **Amaç**: Müşteri hesap geçmişini detaylı görmek
+- **İşlem Tipleri**:
+  - **Borç (Debit)**: Satış işlemleri - bakiyeyi artırır
+  - **Alacak (Credit)**: Ödeme işlemleri - bakiyeyi azaltır
+- **Görünen Bilgiler**: İşlem açıklaması, tutar, tarih, fiş numarası, ödeme yöntemi, önceki/sonraki bakiye, notlar
+- **Başarı Kriterleri**:
+  - İşlemler tarih sırasına göre listelenir (en yeni üstte)
+  - Her işlem için bakiye değişimi görünür
+  - Satış işlemlerinde fiş numarası gösterilir
+  - Ödeme işlemlerinde ödeme yöntemi belirtilir
+  - Boş durum mesajı gösterilir
+
+#### POS Entegrasyonu
+- **İşlevsellik**: POS ödeme ekranında "Cari Hesap" ödeme yöntemi
+- **Amaç**: Kasada hızlı açık hesap satışı yapmak
+- **Tetikleyici**: Kasiyer ödeme ekranında "Cari Hesap" butonuna tıklar
+- **Akış**: Sepet doldur → Ödeme Al → Cari Hesap seç → Müşteri seç → Limit kontrol → Satış tamamla → Hesaba borç ekle
+- **Başarı Kriterleri**:
+  - Sadece aktif hesaplar listelenir
+  - Her müşteri için kullanılabilir kredi görünür
+  - Limit yetersiz müşteriler seçilemez
+  - Satış sonrası hesap bakiyesi güncellenir
+  - Fiş notu ile müşteri bilgisi kaydedilir
+  - Başarılı satış sonrası yeni borç miktarı gösterilir
+
+#### Personel Otomatik Hesapları
+- **İşlevsellik**: Yeni personel eklendiğinde otomatik cari hesap oluşturma, mevcut personeller için toplu hesap oluşturma
+- **Amaç**: Personelin işletmeden veresiye alışveriş yapabilmesini sağlamak
+- **Tetikleyici**: Yeni personel eklendiğinde veya uygulama yüklendiğinde
+- **Akış**: Personel ekle → Sistem otomatik cari hesap oluşturur → Personel POS'tan alışveriş yapabilir
+- **Başarı Kriterleri**:
+  - Her aktif personel için cari hesap oluşturulur
+  - Personel bilgileri (ad, telefon, e-posta) hesaba aktarılır
+  - Varsayılan 5000₺ kredi limiti atanır
+  - Hesap tipi "Şahıs" olarak belirlenir
+  - Hesap notunda personel rolü belirtilir
+  - Personel hesapları düzenlenemez/silinemez
+  - İşlem otomatik ve arka planda çalışır
+
+#### Ödeme Alma İşlemleri
+- **İşlevsellik**: Müşteri borcunu ödeme alma, kısmi/tam ödeme, ödeme yöntemi seçimi
+- **Amaç**: Müşteri borçlarını tahsil etmek
+- **Tetikleyici**: Hesap detaylarında "Ödeme Al" butonuna tıklanır
+- **Akış**: Hesap aç → Ödeme Al → Tutar gir → Ödeme yöntemi seç → Onayla → Bakiye güncellenir
+- **Başarı Kriterleri**:
+  - Ödeme tutarı mevcut borçtan fazla olamaz
+  - Nakit, kart, mobil ödeme seçenekleri
+  - Ödeme notu eklenebilir
+  - İşlem ekstrede görünür
+  - Başarılı ödeme sonrası bildirim
+
+#### Hesap Durumları
+- **İşlevsellik**: Hesap aktif etme, askıya alma, kapatma
+- **Amaç**: Sorunlu hesapları yönetmek
+- **Durumlar**:
+  - **Aktif**: Normal işlem yapılabilir
+  - **Askıda**: Yeni satış yapılamaz, ödeme alınabilir
+  - **Kapalı**: Hiçbir işlem yapılamaz
+- **Başarı Kriterleri**:
+  - Borcu olan hesap kapatılamaz
+  - Personel hesapları askıya alınamaz/kapatılamaz
+  - Durum değişiklikleri anlık yansır
+  - POS'ta sadece aktif hesaplar görünür
+
+#### Dashboard ve Raporlama
+- **İşlevsellik**: Toplam kredi limiti, toplam borç, kullanılabilir kredi, aktif hesap sayısı göstergeleri
+- **Amaç**: Cari hesapları genel durumunu özetlemek
+- **Göstergeler**:
+  - Toplam Kredi Limiti: Tüm aktif hesapların limitleri toplamı
+  - Toplam Borç: Tüm hesapların mevcut borcu
+  - Kullanılabilir Kredi: Kullanılmayan kredi miktarı
+  - Aktif Hesaplar: Aktif durumdaki hesap sayısı
+- **Başarı Kriterleri**:
+  - Göstergeler gerçek zamanlı güncellenir
+  - Sadece aktif hesaplar hesaplamaya dahil edilir
+  - Görsel ve okunabilir tasarım
+
+### 6. Finans Modülü
 - **İşlevsellik**: Gelir-gider takibi, kar-zarar raporu, bütçe planlama, satış tahmini
 - **Amaç**: Finansal sağlığı görünür kılmak ve öngörülebilir planlama sağlamak
 - **Tetikleyici**: Satış tamamlanır (otomatik gelir), maaş onaylanır (otomatik gider)
 - **Akış**: Dashboard → Dönem seç → Gelir/gider raporu görüntüle → Trend analizi → Export
 - **Başarı Kriterleri**: Gerçek zamanlı güncellemeler, doğru kar/zarar hesaplaması
 
-### 6. Ayarlar Modülü
+### 7. Ayarlar Modülü
 - **İşlevsellik**: Stok girişi, KDV oranları düzenleme, ödeme yöntemi yönetimi, genel sistem ayarları, tembel masa uyarı süresi özelleştirme
 - **Amaç**: Sistem parametrelerini özelleştirmek ve işletme ihtiyaçlarına göre yapılandırmak
 - **Tetikleyici**: Yönetici ayarlar modülüne girer

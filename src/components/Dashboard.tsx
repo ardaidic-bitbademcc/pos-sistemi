@@ -201,6 +201,15 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
       bgColor: 'bg-green-500/10',
     },
     {
+      id: 'customers' as any,
+      moduleId: 'customers' as Module,
+      title: 'Cari Hesaplar',
+      description: 'Açık hesap ve müşteri borç yönetimi',
+      icon: CurrencyCircleDollar,
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/10',
+    },
+    {
       id: 'finance' as const,
       moduleId: 'finance' as Module,
       title: 'Finans Yönetimi',
@@ -230,7 +239,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
   ];
 
   const moduleCards = allModuleCards.filter(card => {
-    if (card.id === 'qrmenu' || card.id === 'tasks' || card.id === 'b2b') return hasModuleAccess('tasks');
+    if (card.id === 'qrmenu' || card.id === 'tasks' || card.id === 'b2b' || card.id === 'customers') return hasModuleAccess('tasks');
     return hasModuleAccess(card.id);
   });
 

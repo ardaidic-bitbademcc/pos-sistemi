@@ -617,3 +617,44 @@ export interface MockupGenerationRequest {
   designFileUrl: string;
   productImageUrl: string;
 }
+
+export type CustomerAccountType = 'individual' | 'corporate';
+export type CustomerAccountStatus = 'active' | 'suspended' | 'closed';
+
+export interface CustomerAccount {
+  id: string;
+  accountNumber: string;
+  customerName: string;
+  accountType: CustomerAccountType;
+  taxNumber?: string;
+  identityNumber?: string;
+  email?: string;
+  phone: string;
+  address?: string;
+  creditLimit: number;
+  currentBalance: number;
+  totalDebt: number;
+  totalPaid: number;
+  status: CustomerAccountStatus;
+  createdAt: string;
+  isEmployee?: boolean;
+  employeeId?: string;
+  notes?: string;
+}
+
+export interface CustomerTransaction {
+  id: string;
+  customerAccountId: string;
+  type: 'debit' | 'credit';
+  amount: number;
+  description: string;
+  saleId?: string;
+  saleNumber?: string;
+  paymentMethod?: PaymentMethod;
+  date: string;
+  createdBy: string;
+  createdByName: string;
+  balanceBefore: number;
+  balanceAfter: number;
+  notes?: string;
+}

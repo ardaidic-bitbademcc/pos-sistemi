@@ -18,10 +18,12 @@ import CashModule from '@/components/modules/CashModule';
 import QRMenuModule from '@/components/modules/QRMenuModule';
 import TaskManagementModule from '@/components/modules/TaskManagementModule';
 import B2BModule from '@/components/modules/B2BModule';
+import CustomerAccountModule from '@/components/modules/CustomerAccountModule';
 import { useSeedData } from '@/hooks/use-seed-data';
+import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
 import type { UserRole } from '@/lib/types';
 
-export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b';
+export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
@@ -29,6 +31,7 @@ function App() {
   const [currentUserRole, setCurrentUserRole] = useKV<UserRole>('currentUserRole', 'owner');
   const [currentUserName, setCurrentUserName] = useState('');
   useSeedData();
+  useAutoEmployeeAccounts();
 
   const handleLogin = (role: UserRole, userName: string) => {
     setCurrentUserRole(role);
@@ -71,6 +74,8 @@ function App() {
         return <TaskManagementModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} currentUserId="user-1" currentUserName={currentUserName} />;
       case 'b2b':
         return <B2BModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole || 'owner'} currentUserName={currentUserName} />;
+      case 'customers':
+        return <CustomerAccountModule onBack={() => setActiveModule('dashboard')} />;
       default:
         return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} />;
     }
