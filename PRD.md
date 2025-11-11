@@ -94,10 +94,21 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - Mola süreleri hesaplamaya dahil edilsin/edilmesin seçeneği
 
 ### 3. Şube Yönetimi Modülü
-- **İşlevsellik**: Çoklu şube senkronizasyonu, merkezi ürün yönetimi, şubeler arası transfer
+- **İşlevsellik**: Çoklu şube senkronizasyonu, merkezi ürün yönetimi, şubeler arası stok transferi
 - **Amaç**: Çok şubeli işletmelerde tutarlılığı sağlamak ve merkezi kontrolü güçlendirmek
-- **Tetikleyici**: Merkezi yönetici ürün güncellemesi yapar
+- **Tetikleyici**: Merkezi yönetici ürün güncellemesi yapar veya stok transferi başlatır
 - **Akış**: Merkezi panel → Ürün seç → Şubeleri seç → Fiyat/stok güncelle → Onayla → Tüm şubelere yayınla
+
+#### Stok Transfer Sistemi
+- **İşlevsellik**: Şubeler arası ürün stoğu transferi, transfer geçmişi takibi
+- **Amaç**: Şubeler arasında stok dengeleme ve verimli stok yönetimi
+- **Tetikleyici**: Yönetici "Stok Transferi" butonuna tıklar
+- **Akış**: Stok Transferi dialog aç → Gönderen şube seç → Alıcı şube seç → Ürün seç → Transfer miktarı gir → Transfer Et → Başarı bildirimi göster → Transfer geçmişine kaydet
+- **Başarı Kriterleri**: 
+  - Aynı şubeye transfer engellenmiş olmalı
+  - Transfer geçmişi son 5 işlem olarak görüntülenir
+  - Her transfer tarih, miktar ve durum bilgisi içerir
+  - Transfer edilen ürün ve şube isimleri açıkça gösterilir
 - **Başarı Kriterleri**: Tüm şubeler 5 saniye içinde güncellenir, çakışma yok
 
 ### 4. Menü Mühendisliği Modülü
