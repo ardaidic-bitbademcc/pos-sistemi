@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SignOut, CurrencyCircleDollar, Shield } from '@phosphor-icons/react';
 import Login from '@/components/Login';
+import RegisterLogin from '@/components/RegisterLogin';
 import Dashboard from '@/components/Dashboard';
 import POSModule from '@/components/modules/POSModule';
 import PersonnelModule from '@/components/modules/PersonnelModule';
@@ -21,17 +22,27 @@ import B2BModule from '@/components/modules/B2BModule';
 import CustomerAccountModule from '@/components/modules/CustomerAccountModule';
 import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
-import type { UserRole } from '@/lib/types';
+import type { UserRole, AuthSession } from '@/lib/types';
 
 export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authSession, setAuthSession] = useKV<AuthSession | null>('authSession', null);
   const [currentUserRole, setCurrentUserRole] = useKV<UserRole>('currentUserRole', 'owner');
   const [currentUserName, setCurrentUserName] = useState('');
+  const [useOldAuth, setUseOldAuth] = useState(false);
   useSeedData();
   useAutoEmployeeAccounts();
+
+  const handleAuthSuccess = (session: AuthSession) => {
+    setAuthSession(session);
+    setCurrentUserRole(session.userRole);
+    setCurrentUserName(session.userName);
+    setIsAuthenticated(true);
+    setActiveModule('dashboard');
+  };
 
   const handleLogin = (role: UserRole, userName: string) => {
     setCurrentUserRole(role);
@@ -42,6 +53,7 @@ function App() {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setAuthSession(null);
     setActiveModule('dashboard');
     setCurrentUserName('');
   };
@@ -82,7 +94,19 @@ function App() {
   };
 
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    if (useOldAuth) {
+      return <Login onLogin={handleLogin} />;
+    }
+    return (
+      <div>
+        <RegisterLogin onSuccess={handleAuthSuccess} />
+        <div className="fixed bottom-4 left-4 z-50">
+          <Button variant="outline" size="sm" onClick={() => setUseOldAuth(true)}>
+            Demo Giriş
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

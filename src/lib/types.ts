@@ -49,6 +49,8 @@ export interface Branch {
   address: string;
   phone: string;
   isActive: boolean;
+  adminId?: string;
+  createdAt?: string;
 }
 
 export interface ProductOption {
@@ -91,6 +93,8 @@ export interface Product {
   };
   hasOptions?: boolean;
   options?: ProductOption[];
+  branchId?: string;
+  adminId?: string;
 }
 
 export interface Category {
@@ -99,6 +103,8 @@ export interface Category {
   description?: string;
   showInPOS?: boolean;
   sortOrder?: number;
+  branchId?: string;
+  adminId?: string;
 }
 
 export type PaymentMethod = 'cash' | 'card' | 'mobile' | 'transfer' | 'multinet';
@@ -150,6 +156,7 @@ export interface Employee {
   hourlyRate: number;
   employeePin: string;
   qrCode?: string;
+  adminId?: string;
 }
 
 export interface Shift {
@@ -184,6 +191,8 @@ export interface SalaryCalculation {
   mealAllowance?: number;
   standardHours?: number;
   overtimeHours?: number;
+  branchId?: string;
+  adminId?: string;
 }
 
 export interface SalaryCalculationSettings {
@@ -261,6 +270,8 @@ export interface MenuItem {
   };
   hasOptions?: boolean;
   options?: ProductOption[];
+  branchId?: string;
+  adminId?: string;
 }
 
 export interface AppTheme {
@@ -659,4 +670,22 @@ export interface CustomerTransaction {
   balanceBefore: number;
   balanceAfter: number;
   notes?: string;
+}
+
+export interface Admin {
+  id: string;
+  email: string;
+  password: string;
+  businessName: string;
+  phone: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface AuthSession {
+  adminId: string;
+  branchId: string;
+  userRole: UserRole;
+  userName: string;
+  loginTime: string;
 }

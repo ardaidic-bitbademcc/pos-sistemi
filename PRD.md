@@ -14,21 +14,34 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 
 ## Temel Özellikler
 
-### 0. Kullanıcı Kimlik Doğrulama Sistemi
-- **İşlevsellik**: 4 haneli PIN kodu ile giriş, role özel dashboard erişimi, güvenli oturum yönetimi
-- **Amaç**: Sisteme güvenli erişim sağlamak, her kullanıcının yetkisine göre modülleri görmesini sağlamak
+### 0. Kullanıcı Kimlik Doğrulama ve Admin Sistemi
+- **İşlevsellik**: E-posta/şifre ile kayıt ve giriş, admin hesabı yönetimi, branch (şube) bağlantısı, rol tabanlı erişim
+- **Amaç**: Her admin'in kendi işletmesini bağımsız yönetebilmesini ve birden fazla şube oluşturabilmesini sağlamak
 - **Tetikleyici**: Uygulama açılışında veya çıkış yapıldığında
-- **Akış**: Login ekranı → 4 haneli PIN gir → Sistem kullanıcıyı doğrular → Rolüne uygun dashboard açılır → Çıkış yap butonu ile oturum sonlanır
+- **Akış**: 
+  - **Kayıt**: RegisterLogin ekranı → Kayıt Ol sekmesi → E-posta, şifre, işletme adı, telefon gir → İlk şube bilgileri gir → Kayıt Ol → Otomatik giriş
+  - **Giriş**: RegisterLogin ekranı → Giriş Yap sekmesi → E-posta ve şifre gir → Giriş Yap → Şube seçimi (ilk şube otomatik) → Dashboard
+  - **Demo Giriş**: "Demo Giriş" butonu ile eski PIN sistemi (test için)
 - **Başarı Kriterleri**: 
-  - Hatalı PIN girişlerinde görsel geri bildirim (kırmızı animasyon ve sallama efekti)
-  - Doğru PIN ile 1 saniye içinde dashboard açılır
-  - Her kullanıcı sadece yetkili olduğu modülleri görür
-  - Çıkış yapınca tekrar login ekranına dönülür
-  - Kilit ikonu ile güvenlik hissi veren modern tasarım
-  - Numpad ile hızlı ve kolay PIN girişi
-  - Demo için test kullanıcıları ekranda gösterilir
+  - E-posta benzersizliği kontrol edilir
+  - Şifre en az 6 karakter olmalı
+  - Kayıt sırasında ilk şube otomatik oluşturulur
+  - Admin ID ve Branch ID tüm verilere eklenir (opsiyonel, geriye uyumlu)
+  - Aynı admin farklı şubeler oluşturabilir
+  - Her admin sadece kendi verilerini görür
+  - Modern, profesyonel UI/UX (gradient background, icon'lu input'lar)
 
-#### Varsayılan Kullanıcılar
+#### Admin ve Branch ID Sistemi
+- **Veri Yapısı Güncellemesi**: 
+  - Tüm ana veri tipleri (`Product`, `MenuItem`, `Employee`, `Category`, `Branch`, `SalaryCalculation`) artık `adminId` ve `branchId` (opsiyonel) içerir
+  - Geriye uyumluluk için mevcut veriler çalışmaya devam eder
+  - Yeni eklenen veriler otomatik olarak mevcut admin ve branch ID'si ile etiketlenir
+- **Data Filtreleme**: 
+  - Her modül sadece ilgili admin'in ve şubenin verilerini gösterir
+  - Çoklu şube desteği için merkezi veri yönetimi
+  - Şubeler arası transfer ve senkronizasyon hazırlığı
+
+#### Varsayılan Kullanıcılar (Demo Giriş)
 - **Admin (PIN: 3010)** - Owner rolü, tüm yetkilere sahip
 - **Yönetici (PIN: 1234)** - Manager rolü, kullanıcı yönetimi hariç tüm yetkilere sahip
 - **Kasiyer (PIN: 5678)** - Cashier rolü, kasa görüntüleme ve para ekleme yetkisi var
