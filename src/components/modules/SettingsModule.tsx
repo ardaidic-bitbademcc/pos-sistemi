@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette } from '@phosphor-icons/react';
+import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette, Money, DeviceMobile, Bank, Ticket, PencilSimple } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Product, PaymentMethod, Category, AppTheme } from '@/lib/types';
 import { formatCurrency, generateId } from '@/lib/helpers';
@@ -76,10 +76,14 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
 
   const [showTaxDialog, setShowTaxDialog] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [newTaxName, setNewTaxName] = useState('');
   const [newTaxRate, setNewTaxRate] = useState(18);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [editingPayment, setEditingPayment] = useState<PaymentMethodSetting | null>(null);
+  const [paymentDisplayName, setPaymentDisplayName] = useState('');
+  const [paymentIcon, setPaymentIcon] = useState('');
 
   const togglePaymentMethod = (method: PaymentMethod) => {
     setSettings((current) => {
@@ -95,6 +99,55 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
     const methodSetting = (settings || defaultSettings).paymentMethods.find(pm => pm.method === method);
     if (methodSetting) {
       toast.success(`${methodSetting.displayName} ${!methodSetting.isActive ? 'aktif' : 'pasif'} edildi`);
+    }
+  };
+
+  const openEditPaymentDialog = (pm: PaymentMethodSetting) => {
+    setEditingPayment(pm);
+    setPaymentDisplayName(pm.displayName);
+    setPaymentIcon(pm.icon);
+    setShowPaymentDialog(true);
+  };
+
+  const updatePaymentMethod = () => {
+    if (!editingPayment) return;
+    
+    setSettings((current) => {
+      const curr = current || defaultSettings;
+      return {
+        ...curr,
+        paymentMethods: curr.paymentMethods.map((pm) =>
+          pm.method === editingPayment.method
+            ? { ...pm, displayName: paymentDisplayName, icon: paymentIcon }
+            : pm
+        ),
+      };
+    });
+
+    toast.success('Ödeme yöntemi güncellendi');
+    setShowPaymentDialog(false);
+    setEditingPayment(null);
+    setPaymentDisplayName('');
+    setPaymentIcon('');
+  };
+
+  const getPaymentIcon = (iconName: string, isActive: boolean) => {
+    const className = `h-6 w-6 ${isActive ? 'text-primary' : 'text-muted-foreground'}`;
+    const weight = 'bold';
+    
+    switch (iconName) {
+      case 'Money':
+        return <Money className={className} weight={weight} />;
+      case 'CreditCard':
+        return <CreditCard className={className} weight={weight} />;
+      case 'DeviceMobile':
+        return <DeviceMobile className={className} weight={weight} />;
+      case 'Bank':
+        return <Bank className={className} weight={weight} />;
+      case 'Ticket':
+        return <Ticket className={className} weight={weight} />;
+      default:
+        return <CreditCard className={className} weight={weight} />;
     }
   };
 
@@ -207,7 +260,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
     const category = (categories || []).find(c => c.id === categoryId);
     
     const productsInCategory = (products || []).filter(
-      p => p.categoryId === categoryId || p.category === category?.name
+      p => p.categoryId === categoryId
     );
     
     if (productsInCategory.length > 0) {
@@ -266,7 +319,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                 ) : (
                   (categories || []).map((category) => {
                     const productCount = (products || []).filter(
-                      p => p.categoryId === category.id || p.category === category.name
+                      p => p.categoryId === category.id
                     ).length;
                     
                     return (
@@ -426,7 +479,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Ödeme Yöntemleri</CardTitle>
-              <CardDescription>Ödeme yöntemlerini aktif/pasif yapın</CardDescription>
+              <CardDescription>Ödeme yöntemlerini aktif/pasif yapın ve düzenleyin</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -437,7 +490,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                   >
                     <div className="flex items-center gap-3">
                       <div className={`p-3 rounded-lg ${pm.isActive ? 'bg-primary/10' : 'bg-muted'}`}>
-                        <CreditCard className={`h-6 w-6 ${pm.isActive ? 'text-primary' : 'text-muted-foreground'}`} weight="bold" />
+                        {getPaymentIcon(pm.icon, pm.isActive)}
                       </div>
                       <div className="space-y-1">
                         <p className="font-medium">{pm.displayName}</p>
@@ -446,7 +499,14 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditPaymentDialog(pm)}
+                      >
+                        <PencilSimple className="h-4 w-4" />
+                      </Button>
                       <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                         pm.isActive
                           ? 'bg-accent/10 text-accent'
@@ -833,6 +893,59 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
             <Button onClick={addCategory}>
               <Plus className="h-4 w-4 mr-2" />
               Kategori Ekle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ödeme Yöntemini Düzenle</DialogTitle>
+            <DialogDescription>
+              Ödeme yöntemi görünen adını ve ikonunu düzenleyin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Görünen Ad</Label>
+              <Input
+                value={paymentDisplayName}
+                onChange={(e) => setPaymentDisplayName(e.target.value)}
+                placeholder="Örn: Nakit, Kredi Kartı"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>İkon</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { name: 'Money', component: Money },
+                  { name: 'CreditCard', component: CreditCard },
+                  { name: 'DeviceMobile', component: DeviceMobile },
+                  { name: 'Bank', component: Bank },
+                  { name: 'Ticket', component: Ticket },
+                ].map((icon) => (
+                  <Button
+                    key={icon.name}
+                    type="button"
+                    variant={paymentIcon === icon.name ? 'default' : 'outline'}
+                    className="h-16"
+                    onClick={() => setPaymentIcon(icon.name)}
+                  >
+                    <icon.component className="h-6 w-6" weight="bold" />
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Seçilen: {paymentIcon}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={updatePaymentMethod}>
+              <PencilSimple className="h-4 w-4 mr-2" />
+              Güncelle
             </Button>
           </DialogFooter>
         </DialogContent>
