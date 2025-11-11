@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useKV } from '@github/spark/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent } from '@phosphor-icons/react';
+import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent, MagnifyingGlass, SquaresFour, List } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
@@ -61,6 +61,10 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [countedStock, setCountedStock] = useState<string>('');
   const [newPrice, setNewPrice] = useState<string>('');
   const [priceProposal, setPriceProposal] = useState<PriceChangeProposal | null>(null);
+  
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   const [campaignForm, setCampaignForm] = useState({
     menuItemId: '',
@@ -783,6 +787,60 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     return getInvoiceSubtotal() + getInvoiceTaxAmount();
   };
 
+  const filteredMenuItems = useMemo(() => {
+    let filtered = menuItems || [];
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
+    
+    return filtered;
+  }, [menuItems, searchQuery, selectedCategory]);
+
+  const menuCategories = useMemo(() => {
+    const cats = new Set<string>();
+    (menuItems || []).forEach(item => {
+      if (item.category) cats.add(item.category);
+    });
+    return Array.from(cats).sort();
+  }, [menuItems]);
+
+  const filteredProducts = useMemo(() => {
+    let filtered = (products || []).filter(p => p.isActive);
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        p.sku.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(p => p.category === selectedCategory || p.categoryId === selectedCategory);
+    }
+    
+    return filtered;
+  }, [products, searchQuery, selectedCategory]);
+
+  const productCategories = useMemo(() => {
+    const cats = new Set<string>();
+    (products || []).filter(p => p.isActive).forEach(p => {
+      if (p.category) cats.add(p.category);
+    });
+    return Array.from(cats).sort();
+  }, [products]);
+
   const addProduct = () => {
     if (!newProduct.name.trim() || !newProduct.sku.trim()) {
       toast.error('Ürün adı ve SKU gerekli');
@@ -964,7 +1022,10 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
         </div>
       </header>
 
-      <Tabs defaultValue="menu" className="space-y-4">
+      <Tabs defaultValue="menu" className="space-y-4" onValueChange={() => {
+        setSearchQuery('');
+        setSelectedCategory('all');
+      }}>
         <TabsList>
           <TabsTrigger value="menu">Menü Öğeleri</TabsTrigger>
           <TabsTrigger value="products">Ürünler</TabsTrigger>
@@ -975,149 +1036,306 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
         </TabsList>
 
         <TabsContent value="menu" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(menuItems || []).map((item) => {
-              const recipe = (recipes || []).find(r => r.menuItemId === item.id);
-              
-              return (
-                <Card key={item.id} className={`hover:shadow-md transition-shadow ${item.hasActiveCampaign ? 'ring-2 ring-accent' : ''}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-base">{item.name}</CardTitle>
-                          {item.hasActiveCampaign && (
-                            <Badge variant="default" className="bg-accent">
-                              <Sparkle className="h-3 w-3 mr-1" weight="fill" />
-                              Kampanyalı
-                            </Badge>
-                          )}
-                        </div>
-                        <CardDescription className="text-xs capitalize">
-                          {item.category}
-                          {item.servingSize && ` • ${item.servingSize} porsiyon`}
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-2">
-                        {recipe && (
-                          <div className="p-2 rounded-lg bg-accent/10">
-                            <FileText className="h-4 w-4 text-accent" weight="bold" />
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="relative flex-1 max-w-md">
+                    <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Menü öğesi ara..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                      {menuCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <SquaresFour className="h-4 w-4" weight="bold" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" weight="bold" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {filteredMenuItems.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  {searchQuery || selectedCategory !== 'all' 
+                    ? 'Arama kriterlerine uygun menü öğesi bulunamadı' 
+                    : 'Henüz menü öğesi yok'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredMenuItems.map((item) => {
+                const recipe = (recipes || []).find(r => r.menuItemId === item.id);
+                
+                return (
+                  <Card key={item.id} className={`hover:shadow-md transition-shadow ${item.hasActiveCampaign ? 'ring-2 ring-accent' : ''}`}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base">{item.name}</CardTitle>
+                            {item.hasActiveCampaign && (
+                              <Badge variant="default" className="bg-accent">
+                                <Sparkle className="h-3 w-3 mr-1" weight="fill" />
+                                Kampanyalı
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <ForkKnife className="h-4 w-4 text-primary" weight="bold" />
+                          <CardDescription className="text-xs capitalize">
+                            {item.category}
+                            {item.servingSize && ` • ${item.servingSize} porsiyon`}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          {recipe && (
+                            <div className="p-2 rounded-lg bg-accent/10">
+                              <FileText className="h-4 w-4 text-accent" weight="bold" />
+                            </div>
+                          )}
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <ForkKnife className="h-4 w-4 text-primary" weight="bold" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {item.hasActiveCampaign && item.campaignDetails && (
-                      <div className="p-2 bg-accent/10 rounded-lg space-y-1 border border-accent/20">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Eski Fiyat</span>
-                          <span className="line-through font-tabular-nums">
-                            {formatCurrency(item.campaignDetails.originalPrice)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">İndirim</span>
-                          <Badge variant="secondary" className="text-xs">
-                            %{item.campaignDetails.discountPercentage}
-                          </Badge>
-                        </div>
-                        {item.campaignDetails.endDate && (
-                          <div className="flex items-center justify-between text-xs pt-1 border-t border-accent/20">
-                            <span className="text-muted-foreground">Bitiş</span>
-                            <span className="font-tabular-nums">
-                              {new Date(item.campaignDetails.endDate).toLocaleDateString('tr-TR')}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {item.hasActiveCampaign && item.campaignDetails && (
+                        <div className="p-2 bg-accent/10 rounded-lg space-y-1 border border-accent/20">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Eski Fiyat</span>
+                            <span className="line-through font-tabular-nums">
+                              {formatCurrency(item.campaignDetails.originalPrice)}
                             </span>
                           </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Satış Fiyatı</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-lg font-semibold font-tabular-nums ${item.hasActiveCampaign ? 'text-accent' : ''}`}>
-                          {formatCurrency(item.sellingPrice)}
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          onClick={() => openPriceEditDialog(item)}
-                        >
-                          <PencilSimple className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Maliyet/Porsiyon</span>
-                      <span className="text-sm font-tabular-nums">
-                        {formatCurrency(item.costPrice)}
-                      </span>
-                    </div>
-                    {recipe && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Malzeme</span>
-                        <span className="text-sm font-tabular-nums">
-                          {recipe.ingredients.length} çeşit
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Kar Marjı</span>
-                      <div className="flex items-center gap-1">
-                        {item.profitMargin > 0.5 ? (
-                          <TrendUp className="h-4 w-4 text-accent" weight="bold" />
-                        ) : (
-                          <TrendDown className="h-4 w-4 text-destructive" weight="bold" />
-                        )}
-                        <span className="text-sm font-semibold font-tabular-nums">
-                          {(item.profitMargin * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                    <Separator />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => openCreateRecipeDialog(item)}
-                      >
-                        {recipe ? 'Reçeteyi Düzenle' : 'Reçete Oluştur'}
-                      </Button>
-                      {item.hasActiveCampaign ? (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => endCampaign(item.id)}
-                        >
-                          Kampanyayı Bitir
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => startCampaign(item)}
-                        >
-                          <Sparkle className="h-4 w-4" weight="fill" />
-                        </Button>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">İndirim</span>
+                            <Badge variant="secondary" className="text-xs">
+                              %{item.campaignDetails.discountPercentage}
+                            </Badge>
+                          </div>
+                          {item.campaignDetails.endDate && (
+                            <div className="flex items-center justify-between text-xs pt-1 border-t border-accent/20">
+                              <span className="text-muted-foreground">Bitiş</span>
+                              <span className="font-tabular-nums">
+                                {new Date(item.campaignDetails.endDate).toLocaleDateString('tr-TR')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Satış Fiyatı</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-lg font-semibold font-tabular-nums ${item.hasActiveCampaign ? 'text-accent' : ''}`}>
+                            {formatCurrency(item.sellingPrice)}
+                          </span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => openPriceEditDialog(item)}
+                          >
+                            <PencilSimple className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Maliyet/Porsiyon</span>
+                        <span className="text-sm font-tabular-nums">
+                          {formatCurrency(item.costPrice)}
+                        </span>
+                      </div>
+                      {recipe && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Malzeme</span>
+                          <span className="text-sm font-tabular-nums">
+                            {recipe.ingredients.length} çeşit
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Kar Marjı</span>
+                        <div className="flex items-center gap-1">
+                          {item.profitMargin > 0.5 ? (
+                            <TrendUp className="h-4 w-4 text-accent" weight="bold" />
+                          ) : (
+                            <TrendDown className="h-4 w-4 text-destructive" weight="bold" />
+                          )}
+                          <span className="text-sm font-semibold font-tabular-nums">
+                            {(item.profitMargin * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => openCreateRecipeDialog(item)}
+                        >
+                          {recipe ? 'Reçeteyi Düzenle' : 'Reçete Oluştur'}
+                        </Button>
+                        {item.hasActiveCampaign ? (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => endCampaign(item.id)}
+                          >
+                            Kampanyayı Bitir
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => startCampaign(item)}
+                          >
+                            <Sparkle className="h-4 w-4" weight="fill" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {filteredMenuItems.map((item) => {
+                    const recipe = (recipes || []).find(r => r.menuItemId === item.id);
+                    
+                    return (
+                      <div key={item.id} className={`p-4 hover:bg-muted/50 transition-colors ${item.hasActiveCampaign ? 'bg-accent/5' : ''}`}>
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold truncate">{item.name}</h3>
+                              {item.hasActiveCampaign && (
+                                <Badge variant="default" className="bg-accent shrink-0">
+                                  <Sparkle className="h-3 w-3 mr-1" weight="fill" />
+                                  Kampanyalı
+                                </Badge>
+                              )}
+                              {recipe && (
+                                <Badge variant="outline" className="shrink-0">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Reçete
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground capitalize">{item.category}</p>
+                          </div>
+                          
+                          <div className="flex items-center gap-6 shrink-0">
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Satış Fiyatı</p>
+                              <p className={`text-lg font-semibold font-tabular-nums ${item.hasActiveCampaign ? 'text-accent' : ''}`}>
+                                {formatCurrency(item.sellingPrice)}
+                              </p>
+                            </div>
+                            
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Maliyet</p>
+                              <p className="text-lg font-semibold font-tabular-nums">
+                                {formatCurrency(item.costPrice)}
+                              </p>
+                            </div>
+                            
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Kar Marjı</p>
+                              <div className="flex items-center gap-1 justify-end">
+                                {item.profitMargin > 0.5 ? (
+                                  <TrendUp className="h-4 w-4 text-accent" weight="bold" />
+                                ) : (
+                                  <TrendDown className="h-4 w-4 text-destructive" weight="bold" />
+                                )}
+                                <span className="text-lg font-semibold font-tabular-nums">
+                                  {(item.profitMargin * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openPriceEditDialog(item)}
+                              >
+                                <PencilSimple className="h-4 w-4 mr-1" />
+                                Fiyat
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openCreateRecipeDialog(item)}
+                              >
+                                {recipe ? 'Reçeteyi Düzenle' : 'Reçete Oluştur'}
+                              </Button>
+                              {item.hasActiveCampaign ? (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => endCampaign(item.id)}
+                                >
+                                  Kampanyayı Bitir
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => startCampaign(item)}
+                                >
+                                  <Sparkle className="h-4 w-4" weight="fill" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="products" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
                   <CardTitle className="text-lg">Ürün Yönetimi</CardTitle>
                   <CardDescription>Ürünleri ekleyin, silin ve stok takibini yönetin</CardDescription>
                 </div>
@@ -1127,50 +1345,114 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {(products || []).filter(p => p.isActive).length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-8">
-                    Henüz ürün yok. "Yeni Ürün" butonunu kullanarak ürün ekleyebilirsiniz.
-                  </p>
-                ) : (
-                  (products || []).filter(p => p.isActive).map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 max-w-md">
+                  <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Ürün ara (ad, SKU, açıklama)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                    {productCategories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <SquaresFour className="h-4 w-4" weight="bold" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" weight="bold" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {filteredProducts.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  {searchQuery || selectedCategory !== 'all' 
+                    ? 'Arama kriterlerine uygun ürün bulunamadı' 
+                    : 'Henüz ürün yok. "Yeni Ürün" butonunu kullanarak ürün ekleyebilirsiniz.'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProducts.map((product) => (
+                <Card key={product.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
                       <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-3">
-                          <p className="font-medium">{product.name}</p>
-                          {product.trackStock !== false && (
-                            <Badge variant="outline" className="text-xs">
-                              <Package className="h-3 w-3 mr-1" />
-                              Stok Takipli
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>SKU: {product.sku}</span>
-                          <span>Birim: {product.unit}</span>
-                          <span className="font-tabular-nums">Stok: {product.stock}</span>
-                          <span className="font-tabular-nums">Fiyat: {formatCurrency(product.basePrice)}</span>
-                        </div>
+                        <CardTitle className="text-base">{product.name}</CardTitle>
+                        <CardDescription className="text-xs">
+                          SKU: {product.sku}
+                        </CardDescription>
                       </div>
-                      <div className="flex items-center gap-2">
+                      {product.trackStock !== false && (
+                        <Badge variant="outline" className="shrink-0">
+                          <Package className="h-3 w-3 mr-1" />
+                          Stok Takipli
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Birim</p>
+                        <p className="font-medium">{product.unit}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Stok</p>
+                        <p className="font-medium font-tabular-nums">{product.stock}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Fiyat</p>
+                        <p className="font-semibold font-tabular-nums">{formatCurrency(product.basePrice)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Maliyet</p>
+                        <p className="font-semibold font-tabular-nums">{formatCurrency(product.costPrice)}</p>
+                      </div>
+                    </div>
+                    {product.category && (
+                      <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                    )}
+                    <Separator />
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
+                          className="flex-1"
                           onClick={() => openEditProductDialog(product)}
                         >
                           <PencilSimple className="h-4 w-4 mr-1" />
                           Düzenle
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => toggleProductStockTracking(product.id)}
-                        >
-                          {product.trackStock !== false ? 'Stok Takibini Kapat' : 'Stok Takibini Aç'}
                         </Button>
                         <Button
                           size="sm"
@@ -1183,12 +1465,98 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                           <Trash className="h-4 w-4" />
                         </Button>
                       </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleProductStockTracking(product.id)}
+                      >
+                        {product.trackStock !== false ? 'Stok Takibini Kapat' : 'Stok Takibini Aç'}
+                      </Button>
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {filteredProducts.map((product) => (
+                    <div
+                      key={product.id}
+                      className="p-4 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold truncate">{product.name}</h3>
+                            {product.trackStock !== false && (
+                              <Badge variant="outline" className="shrink-0 text-xs">
+                                <Package className="h-3 w-3 mr-1" />
+                                Stok Takipli
+                              </Badge>
+                            )}
+                            {product.category && (
+                              <Badge variant="secondary" className="shrink-0 text-xs">{product.category}</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>SKU: {product.sku}</span>
+                            <span>Birim: {product.unit}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-6 shrink-0">
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Stok</p>
+                            <p className="text-lg font-semibold font-tabular-nums">{product.stock}</p>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Fiyat</p>
+                            <p className="text-lg font-semibold font-tabular-nums">{formatCurrency(product.basePrice)}</p>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Maliyet</p>
+                            <p className="text-lg font-semibold font-tabular-nums">{formatCurrency(product.costPrice)}</p>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditProductDialog(product)}
+                            >
+                              <PencilSimple className="h-4 w-4 mr-1" />
+                              Düzenle
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => toggleProductStockTracking(product.id)}
+                            >
+                              {product.trackStock !== false ? 'Stok Takibini Kapat' : 'Stok Takibini Aç'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                setProductToDelete(product);
+                                setShowDeleteProductDialog(true);
+                              }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="stock" className="space-y-4">
