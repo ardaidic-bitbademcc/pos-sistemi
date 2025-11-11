@@ -45,6 +45,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   
   const [showRecipeDialog, setShowRecipeDialog] = useState(false);
   const [showMenuItemDialog, setShowMenuItemDialog] = useState(false);
+  const [showEditMenuItemDialog, setShowEditMenuItemDialog] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showDeleteProductDialog, setShowDeleteProductDialog] = useState(false);
@@ -98,6 +99,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     category: '',
     description: '',
     servingSize: 1,
+    basePrice: 0,
     isProduced: false,
     imageUrl: '',
     hasOptions: false,
@@ -605,6 +607,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       category: '',
       description: '',
       servingSize: 1,
+      basePrice: 0,
       isProduced: false,
       imageUrl: '',
       hasOptions: false,
@@ -625,7 +628,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       name: newMenuItem.name,
       category: newMenuItem.category,
       description: newMenuItem.description,
-      sellingPrice: 0,
+      sellingPrice: newMenuItem.basePrice,
       costPrice: 0,
       targetCostPercentage: 30,
       isActive: true,
@@ -647,7 +650,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       description: newMenuItem.description,
       categoryId: 'cat-menu',
       category: newMenuItem.category,
-      basePrice: 0,
+      basePrice: newMenuItem.basePrice,
       costPrice: 0,
       taxRate: 18,
       unit: 'porsiyon',
@@ -664,6 +667,73 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     
     toast.success('Menü öğesi eklendi ve satış ekranında görünür hale geldi');
     setShowMenuItemDialog(false);
+  };
+
+  const openEditMenuItemDialog = (menuItem: MenuItem) => {
+    setEditingMenuItem(menuItem);
+    setNewMenuItem({
+      name: menuItem.name,
+      category: menuItem.category,
+      description: menuItem.description || '',
+      servingSize: menuItem.servingSize || 1,
+      basePrice: menuItem.sellingPrice,
+      isProduced: menuItem.isProduced || false,
+      imageUrl: menuItem.imageUrl || '',
+      hasOptions: menuItem.hasOptions || false,
+      options: menuItem.options || [],
+    });
+    setShowEditMenuItemDialog(true);
+  };
+
+  const saveMenuItemEdit = () => {
+    if (!editingMenuItem) return;
+    
+    if (!newMenuItem.name.trim() || !newMenuItem.category.trim()) {
+      toast.error('Menü öğesi adı ve kategori gerekli');
+      return;
+    }
+
+    setMenuItems((current) =>
+      (current || []).map((item) => {
+        if (item.id === editingMenuItem.id) {
+          return {
+            ...item,
+            name: newMenuItem.name,
+            category: newMenuItem.category,
+            description: newMenuItem.description,
+            sellingPrice: newMenuItem.basePrice,
+            servingSize: newMenuItem.servingSize,
+            isProduced: newMenuItem.isProduced,
+            imageUrl: newMenuItem.imageUrl || undefined,
+            hasOptions: newMenuItem.hasOptions,
+            options: newMenuItem.hasOptions ? newMenuItem.options : undefined,
+          };
+        }
+        return item;
+      })
+    );
+
+    setProducts((current) =>
+      (current || []).map((product) => {
+        if (product.id === editingMenuItem.id) {
+          return {
+            ...product,
+            name: newMenuItem.name,
+            description: newMenuItem.description,
+            category: newMenuItem.category,
+            basePrice: newMenuItem.basePrice,
+            imageUrl: newMenuItem.imageUrl || undefined,
+            hasOptions: newMenuItem.hasOptions,
+            options: newMenuItem.hasOptions ? newMenuItem.options : undefined,
+          };
+        }
+        return product;
+      })
+    );
+
+    toast.success(`${newMenuItem.name} güncellendi`);
+    setShowEditMenuItemDialog(false);
+    setEditingMenuItem(null);
   };
 
   const openInvoiceDialog = () => {
@@ -1059,26 +1129,27 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   };
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight">Menü Mühendisliği</h1>
-          <p className="text-muted-foreground text-sm">Reçete yönetimi, fatura girişi ve AI destekli optimizasyon</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={openInvoiceDialog}>
-            <Receipt className="h-5 w-5 mr-2" />
-            Fatura Gir
+    <ScrollArea className="h-screen">
+      <div className="min-h-screen p-6 space-y-6 pb-24">
+        <header className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Button variant="outline" onClick={openCreateMenuItemDialog}>
-            <Plus className="h-5 w-5 mr-2" />
-            Menü Öğesi
-          </Button>
-        </div>
-      </header>
+          <div className="flex-1">
+            <h1 className="text-3xl font-semibold tracking-tight">Menü Mühendisliği</h1>
+            <p className="text-muted-foreground text-sm">Reçete yönetimi, fatura girişi ve AI destekli optimizasyon</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={openInvoiceDialog}>
+              <Receipt className="h-5 w-5 mr-2" />
+              Fatura Gir
+            </Button>
+            <Button variant="outline" onClick={openCreateMenuItemDialog}>
+              <Plus className="h-5 w-5 mr-2" />
+              Menü Öğesi
+            </Button>
+          </div>
+        </header>
 
       <Tabs defaultValue="menu" className="space-y-4" onValueChange={() => {
         setSearchQuery('');
@@ -1271,9 +1342,18 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                           size="sm"
                           variant="outline"
                           className="flex-1"
+                          onClick={() => openEditMenuItemDialog(item)}
+                        >
+                          <PencilSimple className="h-4 w-4 mr-1" />
+                          Düzenle
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
                           onClick={() => openCreateRecipeDialog(item)}
                         >
-                          {recipe ? 'Reçeteyi Düzenle' : 'Reçete Oluştur'}
+                          {recipe ? 'Reçete' : 'Reçete Oluştur'}
                         </Button>
                         {item.hasActiveCampaign ? (
                           <Button
@@ -2302,14 +2382,27 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                 💡 Ürün görseli QR menüde ve müşteri ekranlarında gösterilecektir. Unsplash, Pexels gibi ücretsiz görsel sitelerinden URL kullanabilirsiniz.
               </p>
             </div>
-            <div className="space-y-2">
-              <Label>Porsiyon Sayısı</Label>
-              <Input
-                type="number"
-                min="1"
-                value={newMenuItem.servingSize}
-                onChange={(e) => setNewMenuItem({ ...newMenuItem, servingSize: Number(e.target.value) })}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Porsiyon Sayısı</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newMenuItem.servingSize}
+                  onChange={(e) => setNewMenuItem({ ...newMenuItem, servingSize: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Satış Fiyatı (₺)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newMenuItem.basePrice || 0}
+                  onChange={(e) => setNewMenuItem({ ...newMenuItem, basePrice: Number(e.target.value) })}
+                  placeholder="0.00"
+                />
+              </div>
             </div>
             
             <Separator />
@@ -2346,6 +2439,146 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             </Button>
             <Button onClick={saveMenuItem}>
               Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditMenuItemDialog} onOpenChange={setShowEditMenuItemDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <ScrollArea className="max-h-[calc(90vh-80px)]">
+            <DialogHeader>
+              <DialogTitle>Menü Öğesini Düzenle</DialogTitle>
+              <DialogDescription>
+                Menü öğesi bilgilerini güncelleyin
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4 px-1">
+              <div className="space-y-2">
+                <Label>Ürün Adı</Label>
+                <Input
+                  value={newMenuItem.name}
+                  onChange={(e) => setNewMenuItem({ ...newMenuItem, name: e.target.value })}
+                  placeholder="Örn: Cheesecake"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Kategori</Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={newMenuItem.category}
+                    onValueChange={(value) => setNewMenuItem({ ...newMenuItem, category: value })}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Kategori seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(categories || []).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowNewCategoryDialog(true)}
+                  >
+                    <Plus className="h-4 w-4" weight="bold" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Açıklama</Label>
+                <Textarea
+                  value={newMenuItem.description}
+                  onChange={(e) => setNewMenuItem({ ...newMenuItem, description: e.target.value })}
+                  placeholder="Ürün açıklaması..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Görsel URL (QR Menü için)</Label>
+                <Input
+                  value={newMenuItem.imageUrl}
+                  onChange={(e) => setNewMenuItem({ ...newMenuItem, imageUrl: e.target.value })}
+                  placeholder="https://images.unsplash.com/photo-..."
+                />
+                {newMenuItem.imageUrl && (
+                  <div className="mt-2 rounded-lg overflow-hidden border">
+                    <img 
+                      src={newMenuItem.imageUrl} 
+                      alt="Önizleme"
+                      className="w-full h-32 object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3EGörsel Yüklenemedi%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  💡 Ürün görseli QR menüde ve müşteri ekranlarında gösterilecektir.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Porsiyon Sayısı</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newMenuItem.servingSize}
+                    onChange={(e) => setNewMenuItem({ ...newMenuItem, servingSize: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Satış Fiyatı (₺)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newMenuItem.basePrice || 0}
+                    onChange={(e) => setNewMenuItem({ ...newMenuItem, basePrice: Number(e.target.value) })}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Ürün Seçenekleri</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Müşterilerin seçebileceği varyantlar ekleyin (örn: Şeker durumu, boyut)
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setNewMenuItem({ ...newMenuItem, hasOptions: !newMenuItem.hasOptions })}
+                  >
+                    {newMenuItem.hasOptions ? 'Seçenekleri Kapat' : 'Seçenek Ekle'}
+                  </Button>
+                </div>
+                
+                {newMenuItem.hasOptions && (
+                  <ProductOptionsEditor
+                    options={newMenuItem.options}
+                    onChange={(options) => setNewMenuItem({ ...newMenuItem, options })}
+                  />
+                )}
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditMenuItemDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={saveMenuItemEdit}>
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Güncelle
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3456,6 +3689,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </ScrollArea>
   );
 }
