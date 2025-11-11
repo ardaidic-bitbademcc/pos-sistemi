@@ -15,6 +15,7 @@ import {
   ChartBar,
   Shield,
   CurrencyCircleDollar,
+  QrCode,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
 import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission } from '@/lib/types';
@@ -171,6 +172,15 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
       bgColor: 'bg-accent/10',
     },
     {
+      id: 'qrmenu' as any,
+      moduleId: 'qrmenu' as Module,
+      title: 'QR Menü',
+      description: 'Dijital menü - otomatik senkronizasyon',
+      icon: QrCode,
+      color: 'text-accent',
+      bgColor: 'bg-accent/10',
+    },
+    {
       id: 'finance' as const,
       moduleId: 'finance' as Module,
       title: 'Finans Yönetimi',
@@ -199,7 +209,10 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
     },
   ];
 
-  const moduleCards = allModuleCards.filter(card => hasModuleAccess(card.id));
+  const moduleCards = allModuleCards.filter(card => {
+    if (card.id === 'qrmenu') return true;
+    return hasModuleAccess(card.id);
+  });
 
   return (
     <div className="min-h-screen p-6 space-y-6">

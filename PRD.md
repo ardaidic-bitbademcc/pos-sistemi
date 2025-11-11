@@ -218,7 +218,27 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Süre 30-300 dakika arasında ayarlanabilir
   - Değişiklikler masalar ekranında anlık yansır
 
-### 7. Rol Yönetimi ve Yetkilendirme Modülü
+### 7. QR Menü Modülü
+- **İşlevsellik**: Müşterilere yönelik dijital menü görüntüleme, otomatik fiyat senkronizasyonu, kampanya gösterimi
+- **Amaç**: Müşterilerin masalarında QR kod ile menüye erişmelerini sağlamak, menü mühendisliğindeki değişikliklerin anında yansımasını sağlamak
+- **Tetikleyici**: Müşteri masa üzerindeki QR kodu okutarak veya personel QR Menü modülünü açarak
+- **Akış**: QR Menü aç → Tüm aktif menü öğelerini görüntüle → Kategori filtrele → Ürün ara → Kampanyalı ürünleri özel göster → Fiyatları canlı senkronize et
+- **Başarı Kriterleri**: 
+  - Menü mühendisliğinde yapılan fiyat değişiklikleri QR menüde anında görünür
+  - Kampanyaya alınan ürünler indirimli fiyatı ve indirim yüzdesi ile gösterilir
+  - Kampanya sonlandırılan ürünler normal fiyata döner
+  - Pasife alınan ürünler QR menüde otomatik gizlenir
+  - Aktife alınan ürünler QR menüde otomatik görünür
+  - Kategori bazlı filtreleme ve arama özelliği
+  - Tüm değişiklikler manuel güncelleme gerektirmez, gerçek zamanlı senkronizasyon
+
+#### Otomatik Senkronizasyon
+- **Fiyat Değişiklikleri**: Menü mühendisliği modülünden manuel veya AI önerileri ile yapılan fiyat güncellemeleri QR menüde anında yansır
+- **Kampanya Durumu**: Başlatılan kampanyalar özel gösterim ile işaretlenir, sonlandırılanlar normal görünüme döner
+- **Ürün Durumu**: Aktif/pasif durumu değişen ürünler otomatik olarak gösterilir/gizlenir
+- **Kategori Değişiklikleri**: Yeni kategoriler ve kategori isimleri QR menüde otomatik güncellenir
+
+### 8. Rol Yönetimi ve Yetkilendirme Modülü
 - **İşlevsellik**: Kullanıcı rollerine modül erişim yetkileri atama, özel yetkileri yönetme
 - **Amaç**: Personelin sadece görevleriyle ilgili modüllere erişmesini sağlamak, veri güvenliğini artırmak
 - **Tetikleyici**: Sistem sahibi "Yetki Yönetimi" butonuna tıklar
@@ -239,7 +259,7 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Kullanıcı Yönetimi**: Personel ekleme/silme/düzenleme yetkisi
 - **Ödeme Onaylama**: Maaş ve fatura onaylama yetkisi
 
-### 8. Raporlama Modülü
+### 9. Raporlama Modülü
 - **İşlevsellik**: Detaylı satış raporları, şube karşılaştırması, garson performansı, ürün analizi
 - **Amaç**: Veri odaklı karar vermeyi desteklemek, performans takibi yapmak
 - **Tetikleyici**: Yönetici "Raporlama" modülünü açar
