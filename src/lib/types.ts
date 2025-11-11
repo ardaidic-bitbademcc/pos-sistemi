@@ -337,6 +337,8 @@ export interface Recipe {
   prepTime?: number;
   createdAt: string;
   updatedAt: string;
+  branchId?: string;
+  adminId?: string;
 }
 
 export type InvoiceType = 'purchase' | 'sale';
@@ -359,6 +361,7 @@ export interface Invoice {
   invoiceNumber: string;
   type: InvoiceType;
   branchId: string;
+  adminId?: string;
   supplierName?: string;
   customerName?: string;
   date: string;
@@ -376,6 +379,7 @@ export interface Invoice {
 export interface Expense {
   id: string;
   branchId: string;
+  adminId?: string;
   category: string;
   amount: number;
   date: string;
@@ -418,6 +422,7 @@ export type CashTransactionType = 'in' | 'out' | 'opening' | 'closing';
 export interface CashTransaction {
   id: string;
   branchId: string;
+  adminId?: string;
   type: CashTransactionType;
   amount: number;
   description: string;
@@ -516,6 +521,7 @@ export interface B2BSupplier {
   pausedAt?: string;
   pausedUntil?: string;
   pauseReason?: string;
+  adminId?: string;
 }
 
 export interface ProductVariant {
@@ -548,6 +554,7 @@ export interface B2BProduct {
   specifications?: Record<string, string>;
   hasVariants?: boolean;
   variants?: ProductVariant[];
+  adminId?: string;
 }
 
 export interface SampleRequest {
@@ -564,6 +571,8 @@ export interface SampleRequest {
   responseDate?: string;
   rejectionReason?: string;
   notes?: string;
+  branchId?: string;
+  adminId?: string;
 }
 
 export interface B2BOrder {
@@ -593,6 +602,8 @@ export interface B2BOrder {
   cancellationReason?: string;
   notes?: string;
   statusHistory: OrderStatusHistory[];
+  branchId?: string;
+  adminId?: string;
 }
 
 export interface B2BOrderItem {
@@ -653,6 +664,8 @@ export interface CustomerAccount {
   isEmployee?: boolean;
   employeeId?: string;
   notes?: string;
+  branchId?: string;
+  adminId?: string;
 }
 
 export interface CustomerTransaction {

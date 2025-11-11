@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useKV } from '@github/spark/hooks';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,10 @@ import QRMenuModule from '@/components/modules/QRMenuModule';
 import TaskManagementModule from '@/components/modules/TaskManagementModule';
 import B2BModule from '@/components/modules/B2BModule';
 import CustomerAccountModule from '@/components/modules/CustomerAccountModule';
+import DataMigration from '@/components/DataMigration';
 import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
+import { checkMigrationStatus } from '@/lib/data-migration';
 import type { UserRole, AuthSession } from '@/lib/types';
 
 export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers';
@@ -33,8 +35,18 @@ function App() {
   const [currentUserRole, setCurrentUserRole] = useKV<UserRole>('currentUserRole', 'owner');
   const [currentUserName, setCurrentUserName] = useState('');
   const [useOldAuth, setUseOldAuth] = useState(false);
+  const [migrationCompleted, setMigrationCompleted] = useState<boolean | null>(null);
+  
   useSeedData();
   useAutoEmployeeAccounts();
+
+  useEffect(() => {
+    const checkMigration = async () => {
+      const status = await checkMigrationStatus();
+      setMigrationCompleted(status?.migrated || false);
+    };
+    checkMigration();
+  }, []);
 
   const handleAuthSuccess = (session: AuthSession) => {
     setAuthSession(session);
@@ -57,6 +69,14 @@ function App() {
     setActiveModule('dashboard');
     setCurrentUserName('');
   };
+
+  if (migrationCompleted === null) {
+    return null;
+  }
+
+  if (!migrationCompleted) {
+    return <DataMigration />;
+  }
 
   const renderModule = () => {
     switch (activeModule) {
