@@ -10,10 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole } from '@/lib/types';
-import { formatCurrency, formatDateTime, calculateHoursWorked, generateId } from '@/lib/helpers';
+import { formatCurrency, formatDateTime, calculateHoursWorked, generateId, formatDate } from '@/lib/helpers';
 
 interface PersonnelModuleProps {
   onBack: () => void;
@@ -39,6 +40,8 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
   const [loginPin, setLoginPin] = useState('');
   const [loginQr, setLoginQr] = useState('');
   const [editingSettings, setEditingSettings] = useState<SalaryCalculationSettings | null>(null);
+  const [showSalaryDetailDialog, setShowSalaryDetailDialog] = useState(false);
+  const [salaryDetailForView, setSalaryDetailForView] = useState<SalaryCalculation | null>(null);
   
   const [newEmployee, setNewEmployee] = useState({
     fullName: '',
@@ -64,6 +67,8 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
     nightShiftMultiplier: 1.25,
     weekendMultiplier: 1.5,
     includeBreaksInCalculation: false,
+    dailyMealAllowance: 0,
+    includeMealAllowance: false,
   };
 
   const currentSettings = (salarySettings || [])[0] || defaultSettings;
@@ -144,13 +149,21 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
     startDate.setMonth(startDate.getMonth() - 1);
 
     const employeeShifts = (shifts || []).filter(
-      (s) => s.employeeId === selectedEmployee.id && s.status === 'completed'
+      (s) => s.employeeId === selectedEmployee.id && s.status === 'completed' && 
+      new Date(s.date) >= startDate && new Date(s.date) <= endDate
     );
 
     const totalHours = employeeShifts.reduce((sum, s) => sum + s.totalHours, 0);
-    const baseSalary = Math.min(totalHours, currentSettings.standardHoursPerMonth) * selectedEmployee.hourlyRate;
+    const standardHours = Math.min(totalHours, currentSettings.standardHoursPerMonth);
     const overtimeHours = Math.max(0, totalHours - currentSettings.standardHoursPerMonth);
+    
+    const baseSalary = standardHours * selectedEmployee.hourlyRate;
     const overtimePay = overtimeHours * selectedEmployee.hourlyRate * currentSettings.overtimeMultiplier;
+    
+    const workDays = employeeShifts.length;
+    const mealAllowance = (currentSettings.includeMealAllowance && currentSettings.dailyMealAllowance) 
+      ? workDays * currentSettings.dailyMealAllowance 
+      : 0;
 
     const newSalary: SalaryCalculation = {
       id: generateId(),
@@ -162,9 +175,13 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
       overtimePay,
       bonuses: 0,
       deductions: 0,
-      netSalary: baseSalary + overtimePay,
+      netSalary: baseSalary + overtimePay + mealAllowance,
       status: 'draft',
       totalHours,
+      standardHours,
+      overtimeHours,
+      workDays,
+      mealAllowance,
       calculationSettings: currentSettings,
     };
 
@@ -496,6 +513,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>Toplam Saat: {salary.totalHours.toFixed(1)}</span>
                           <span>Net Maaş: {formatCurrency(salary.netSalary)}</span>
+                          {salary.workDays && <span>Çalışılan Gün: {salary.workDays}</span>}
                         </div>
                         {salary.rejectionReason && (
                           <p className="text-xs text-destructive">
@@ -523,6 +541,16 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                             ? 'Reddedildi'
                             : 'Taslak'}
                         </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSalaryDetailForView(salary);
+                            setShowSalaryDetailDialog(true);
+                          }}
+                        >
+                          Detaylar
+                        </Button>
                         {salary.status === 'draft' && (
                           <>
                             <Button 
@@ -735,23 +763,61 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                     }
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Günlük Yemek Ücreti (₺)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editingSettings.dailyMealAllowance || 0}
+                    onChange={(e) =>
+                      setEditingSettings({
+                        ...editingSettings,
+                        dailyMealAllowance: Number(e.target.value),
+                      })
+                    }
+                    disabled={!editingSettings.includeMealAllowance}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Çalışılan her gün için eklenecek yemek bedeli
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="includeBreaks"
-                  checked={editingSettings.includeBreaksInCalculation}
-                  onChange={(e) =>
-                    setEditingSettings({
-                      ...editingSettings,
-                      includeBreaksInCalculation: e.target.checked,
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="includeBreaks" className="cursor-pointer">
-                  Mola sürelerini hesaplamaya dahil et
-                </Label>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="includeBreaks"
+                    checked={editingSettings.includeBreaksInCalculation}
+                    onChange={(e) =>
+                      setEditingSettings({
+                        ...editingSettings,
+                        includeBreaksInCalculation: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="includeBreaks" className="cursor-pointer">
+                    Mola sürelerini hesaplamaya dahil et
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="includeMealAllowance"
+                    checked={editingSettings.includeMealAllowance || false}
+                    onChange={(e) =>
+                      setEditingSettings({
+                        ...editingSettings,
+                        includeMealAllowance: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="includeMealAllowance" className="cursor-pointer">
+                    Günlük yemek ücretini maaşa ekle
+                  </Label>
+                </div>
               </div>
             </div>
           )}
@@ -960,6 +1026,186 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
             <Button onClick={updateEmployee}>
               <PencilSimple className="h-4 w-4 mr-2" />
               Güncelle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSalaryDetailDialog} onOpenChange={setShowSalaryDetailDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Maaş Hesaplama Detayı</DialogTitle>
+            <DialogDescription>
+              {salaryDetailForView?.employeeName} - {salaryDetailForView && formatDate(salaryDetailForView.periodStart)} / {salaryDetailForView && formatDate(salaryDetailForView.periodEnd)}
+            </DialogDescription>
+          </DialogHeader>
+          {salaryDetailForView && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Net Maaş</p>
+                    <p className="text-3xl font-bold font-tabular-nums">
+                      {formatCurrency(salaryDetailForView.netSalary)}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      salaryDetailForView.status === 'approved'
+                        ? 'default'
+                        : salaryDetailForView.status === 'paid'
+                        ? 'secondary'
+                        : salaryDetailForView.status === 'rejected'
+                        ? 'destructive'
+                        : 'outline'
+                    }
+                  >
+                    {salaryDetailForView.status === 'approved'
+                      ? 'Onaylandı'
+                      : salaryDetailForView.status === 'paid'
+                      ? 'Ödendi'
+                      : salaryDetailForView.status === 'rejected'
+                      ? 'Reddedildi'
+                      : 'Taslak'}
+                  </Badge>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Hesaplama Detayları</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Açıklama</TableHead>
+                      <TableHead className="text-right">Miktar</TableHead>
+                      <TableHead className="text-right">Tutar</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="font-medium">Standart Saat Ücreti</TableCell>
+                      <TableCell className="text-right font-tabular-nums">
+                        {salaryDetailForView.standardHours?.toFixed(1) || '0.0'} saat × {formatCurrency((employees || []).find(e => e.id === salaryDetailForView.employeeId)?.hourlyRate || 0)}/saat
+                      </TableCell>
+                      <TableCell className="text-right font-tabular-nums font-semibold">
+                        {formatCurrency(salaryDetailForView.baseSalary)}
+                      </TableCell>
+                    </TableRow>
+                    {salaryDetailForView.overtimeHours && salaryDetailForView.overtimeHours > 0 && (
+                      <TableRow>
+                        <TableCell className="font-medium">Mesai Ücreti</TableCell>
+                        <TableCell className="text-right font-tabular-nums">
+                          {salaryDetailForView.overtimeHours.toFixed(1)} saat × {formatCurrency((employees || []).find(e => e.id === salaryDetailForView.employeeId)?.hourlyRate || 0)}/saat × {salaryDetailForView.calculationSettings?.overtimeMultiplier || 1.5}x
+                        </TableCell>
+                        <TableCell className="text-right font-tabular-nums font-semibold">
+                          {formatCurrency(salaryDetailForView.overtimePay)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {salaryDetailForView.mealAllowance && salaryDetailForView.mealAllowance > 0 && (
+                      <TableRow>
+                        <TableCell className="font-medium">Yemek Ücreti</TableCell>
+                        <TableCell className="text-right font-tabular-nums">
+                          {salaryDetailForView.workDays || 0} gün × {formatCurrency(salaryDetailForView.calculationSettings?.dailyMealAllowance || 0)}/gün
+                        </TableCell>
+                        <TableCell className="text-right font-tabular-nums font-semibold">
+                          {formatCurrency(salaryDetailForView.mealAllowance)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {salaryDetailForView.bonuses > 0 && (
+                      <TableRow>
+                        <TableCell className="font-medium">Primler</TableCell>
+                        <TableCell className="text-right font-tabular-nums">-</TableCell>
+                        <TableCell className="text-right font-tabular-nums font-semibold text-accent">
+                          +{formatCurrency(salaryDetailForView.bonuses)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {salaryDetailForView.deductions > 0 && (
+                      <TableRow>
+                        <TableCell className="font-medium">Kesintiler</TableCell>
+                        <TableCell className="text-right font-tabular-nums">-</TableCell>
+                        <TableCell className="text-right font-tabular-nums font-semibold text-destructive">
+                          -{formatCurrency(salaryDetailForView.deductions)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    <TableRow className="bg-muted/50 font-bold">
+                      <TableCell colSpan={2}>Toplam Net Maaş</TableCell>
+                      <TableCell className="text-right font-tabular-nums text-lg">
+                        {formatCurrency(salaryDetailForView.netSalary)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Çalışma İstatistikleri</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Toplam Saat</p>
+                    <p className="text-xl font-bold font-tabular-nums">{salaryDetailForView.totalHours.toFixed(1)}</p>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Standart Saat</p>
+                    <p className="text-xl font-bold font-tabular-nums">{salaryDetailForView.standardHours?.toFixed(1) || '0.0'}</p>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Mesai Saati</p>
+                    <p className="text-xl font-bold font-tabular-nums">{salaryDetailForView.overtimeHours?.toFixed(1) || '0.0'}</p>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Çalışılan Gün</p>
+                    <p className="text-xl font-bold font-tabular-nums">{salaryDetailForView.workDays || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {salaryDetailForView.calculationSettings && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">Hesaplama Ayarları</h3>
+                    <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Standart Aylık Saat:</span>
+                        <span className="font-semibold">{salaryDetailForView.calculationSettings.standardHoursPerMonth} saat</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Mesai Çarpanı:</span>
+                        <span className="font-semibold">{salaryDetailForView.calculationSettings.overtimeMultiplier}x</span>
+                      </div>
+                      {salaryDetailForView.calculationSettings.includeMealAllowance && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Günlük Yemek Ücreti:</span>
+                          <span className="font-semibold">{formatCurrency(salaryDetailForView.calculationSettings.dailyMealAllowance || 0)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {salaryDetailForView.rejectionReason && (
+                <>
+                  <Separator />
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <p className="text-sm font-semibold text-destructive mb-1">Red Nedeni</p>
+                    <p className="text-sm text-muted-foreground">{salaryDetailForView.rejectionReason}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSalaryDetailDialog(false)}>
+              Kapat
             </Button>
           </DialogFooter>
         </DialogContent>

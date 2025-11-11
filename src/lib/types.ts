@@ -159,6 +159,10 @@ export interface SalaryCalculation {
   totalHours: number;
   rejectionReason?: string;
   calculationSettings?: SalaryCalculationSettings;
+  workDays?: number;
+  mealAllowance?: number;
+  standardHours?: number;
+  overtimeHours?: number;
 }
 
 export interface SalaryCalculationSettings {
@@ -170,6 +174,8 @@ export interface SalaryCalculationSettings {
   weekendMultiplier: number;
   includeBreaksInCalculation: boolean;
   autoApproveThreshold?: number;
+  dailyMealAllowance?: number;
+  includeMealAllowance?: boolean;
 }
 
 export interface Table {

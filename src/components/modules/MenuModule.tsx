@@ -32,7 +32,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const [recipes, setRecipes] = useKV<Recipe[]>('recipes', []);
   const [products, setProducts] = useKV<Product[]>('products', []);
-  const [categories] = useKV<Category[]>('categories', []);
+  const [categories, setCategories] = useKV<Category[]>('categories', []);
   const [invoices, setInvoices] = useKV<Invoice[]>('invoices', []);
   const [sales] = useKV<Sale[]>('sales', []);
   
@@ -51,6 +51,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [showCampaignDialog, setShowCampaignDialog] = useState(false);
   const [showEditProductDialog, setShowEditProductDialog] = useState(false);
   const [showStockCountDialog, setShowStockCountDialog] = useState(false);
+  const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
@@ -998,6 +1000,37 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     setShowStockCountDialog(false);
     setProductForCount(null);
     setCountedStock('');
+  };
+
+  const saveNewCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Kategori adı boş olamaz');
+      return;
+    }
+
+    const existingCategory = (categories || []).find(
+      c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+    );
+
+    if (existingCategory) {
+      toast.error('Bu kategori zaten mevcut');
+      return;
+    }
+
+    const newCategory: Category = {
+      id: generateId(),
+      name: newCategoryName.trim(),
+      showInPOS: true,
+      sortOrder: (categories || []).length,
+    };
+
+    setCategories((current) => [...(current || []), newCategory]);
+    toast.success(`${newCategoryName} kategorisi eklendi`);
+    
+    setNewMenuItem({...newMenuItem, category: newCategoryName.trim()});
+    
+    setShowNewCategoryDialog(false);
+    setNewCategoryName('');
   };
 
   return (
@@ -2137,21 +2170,33 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             </div>
             <div className="space-y-2">
               <Label>Kategori</Label>
-              <Select
-                value={newMenuItem.category}
-                onValueChange={(value) => setNewMenuItem({ ...newMenuItem, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Kategori seçin..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {(categories || []).map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  value={newMenuItem.category}
+                  onValueChange={(value) => setNewMenuItem({ ...newMenuItem, category: value })}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Kategori seçin..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(categories || []).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowNewCategoryDialog(true)}
+                >
+                  <Plus className="h-4 w-4" weight="bold" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                💡 İstediğiniz kategori yoksa + butonuna tıklayarak yeni kategori ekleyebilirsiniz
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Açıklama</Label>
@@ -3130,6 +3175,64 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             <Button onClick={saveStockCount} variant="default" disabled={!countedStock || parseFloat(countedStock) < 0}>
               <Check className="h-4 w-4 mr-2" weight="bold" />
               Sayımı Onayla
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showNewCategoryDialog} onOpenChange={setShowNewCategoryDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Yeni Kategori Ekle</DialogTitle>
+            <DialogDescription>
+              Menü öğeleri için yeni bir kategori oluşturun
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Kategori Adı</Label>
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Örn: Tatlılar, Ana Yemekler, İçecekler..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveNewCategory();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                💡 Kategori, menü öğelerini gruplamak için kullanılır
+              </p>
+            </div>
+
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium mb-2">Mevcut Kategoriler:</p>
+              <div className="flex flex-wrap gap-2">
+                {(categories || []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Henüz kategori yok</p>
+                ) : (
+                  (categories || []).map((cat) => (
+                    <Badge key={cat.id} variant="secondary">
+                      {cat.name}
+                    </Badge>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowNewCategoryDialog(false);
+              setNewCategoryName('');
+            }}>
+              <X className="h-4 w-4 mr-2" />
+              İptal
+            </Button>
+            <Button onClick={saveNewCategory}>
+              <Plus className="h-4 w-4 mr-2" weight="bold" />
+              Kategori Ekle
             </Button>
           </DialogFooter>
         </DialogContent>
