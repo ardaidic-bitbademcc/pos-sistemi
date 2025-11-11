@@ -3,7 +3,7 @@ import { useKV } from '@github/spark/hooks';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SignOut, CurrencyCircleDollar, Shield, Buildings } from '@phosphor-icons/react';
+import { SignOut, CurrencyCircleDollar, Shield, Buildings, LockKey } from '@phosphor-icons/react';
 import Login from '@/components/Login';
 import RegisterLogin from '@/components/RegisterLogin';
 import BranchSelector from '@/components/BranchSelector';
@@ -69,6 +69,13 @@ function App() {
   };
 
   const handleLogout = () => {
+    setIsAuthenticated(false);
+    setActiveModule('dashboard');
+    setShowBranchSelector(false);
+    setUseOldAuth(false);
+  };
+
+  const handleSwitchUser = () => {
     setIsAuthenticated(false);
     setAuthSession(null);
     setActiveModule('dashboard');
@@ -195,6 +202,10 @@ function App() {
         <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 max-w-[120px] truncate">
           👤 <span className="hidden sm:inline">{currentUserName}</span>
         </Badge>
+        <Button variant="outline" size="sm" onClick={handleSwitchUser} className="h-8 px-2 sm:px-3">
+          <LockKey className="h-4 w-4 sm:mr-2" weight="bold" />
+          <span className="hidden sm:inline">Kullanıcı Değiştir</span>
+        </Button>
         <Button variant="outline" size="sm" onClick={handleLogout} className="h-8 px-2 sm:px-3">
           <SignOut className="h-4 w-4 sm:mr-2" weight="bold" />
           <span className="hidden sm:inline">Çıkış</span>
