@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
-import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister } from '@/lib/types';
+import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 
 interface POSModuleProps {
@@ -55,6 +55,7 @@ interface SelectedPaymentItem {
 
 export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSModuleProps) {
   const [products, setProducts] = useKV<Product[]>('products', []);
+  const [menuItems] = useKV<MenuItem[]>('menuItems', []);
   const [categories] = useKV<Category[]>('categories', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
@@ -123,6 +124,26 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
 
   const visibleCategories = (categories || []).filter(cat => cat.showInPOS !== false);
 
+  const menuItemsAsProducts = (menuItems || []).map(item => ({
+    id: item.id,
+    sku: item.id,
+    name: item.name,
+    description: item.description,
+    categoryId: item.category,
+    category: item.category,
+    basePrice: item.sellingPrice,
+    costPrice: item.costPrice,
+    taxRate: 18,
+    unit: 'adet',
+    imageUrl: item.imageUrl,
+    isActive: item.isActive,
+    stock: 999,
+    minStockLevel: 0,
+    trackStock: false,
+    hasActiveCampaign: item.hasActiveCampaign,
+    campaignDetails: item.campaignDetails,
+  }));
+
   const getTimeSinceLastOrder = (table: Table): number | null => {
     if (!table.lastOrderTime) return null;
     const lastOrder = new Date(table.lastOrderTime);
@@ -149,7 +170,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     return minutesSinceLastOrder !== null && minutesSinceLastOrder >= lazyTableWarningMinutes;
   };
 
-  const filteredProducts = (products || []).filter((product) => {
+  const filteredProducts = (menuItemsAsProducts || []).filter((product) => {
     const matchesSearch = product.isActive &&
       (product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.sku.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -164,7 +185,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     return matchesSearch && matchesCategory && isVisibleCategory;
   });
 
-  const campaignProducts = (products || []).filter(p => 
+  const campaignProducts = (menuItemsAsProducts || []).filter(p => 
     p.isActive && p.hasActiveCampaign && p.campaignDetails
   );
 
@@ -178,7 +199,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         if (sale) {
           setCart(sale.items.map(item => ({
             ...item,
-            productName: item.productName || (products || []).find(p => p.id === item.productId)?.name || 'Unknown',
+            productName: item.productName || (menuItemsAsProducts || []).find(p => p.id === item.productId)?.name || 'Unknown',
           })));
           setOrderDiscount(sale.discountAmount || 0);
         }

@@ -234,20 +234,6 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
               Modern restoran ve perakende yönetim platformu
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {(currentUserRole === 'owner' || currentPermissions.canViewCashRegister) && (
-              <Button variant="outline" size="sm" onClick={() => onNavigate('cash')}>
-                <CurrencyCircleDollar className="h-4 w-4 mr-2" weight="fill" />
-                Kasa Durumu
-              </Button>
-            )}
-            {currentUserRole === 'owner' && (
-              <Button variant="outline" size="sm" onClick={() => onNavigate('roles')}>
-                <Shield className="h-4 w-4 mr-2" weight="fill" />
-                Yetki Yönetimi
-              </Button>
-            )}
-          </div>
         </div>
       </header>
 

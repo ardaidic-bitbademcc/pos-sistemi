@@ -3,7 +3,7 @@ import { useKV } from '@github/spark/hooks';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SignOut } from '@phosphor-icons/react';
+import { SignOut, CurrencyCircleDollar, Shield } from '@phosphor-icons/react';
 import Login from '@/components/Login';
 import Dashboard from '@/components/Dashboard';
 import POSModule from '@/components/modules/POSModule';
@@ -80,6 +80,20 @@ function App() {
   return (
     <div className="min-h-screen bg-background font-sans">
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
+          <>
+            <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')}>
+              <CurrencyCircleDollar className="h-4 w-4 mr-1" weight="fill" />
+              Kasa
+            </Button>
+            {currentUserRole === 'owner' && (
+              <Button variant="outline" size="sm" onClick={() => setActiveModule('roles')}>
+                <Shield className="h-4 w-4 mr-1" weight="fill" />
+                Yetki
+              </Button>
+            )}
+          </>
+        )}
         <Badge variant="outline" className="text-sm px-3 py-1">
           👤 {currentUserName}
         </Badge>
