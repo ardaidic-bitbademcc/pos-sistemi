@@ -82,6 +82,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     description: '',
     servingSize: 1,
     isProduced: false,
+    imageUrl: '',
   });
   
   const [recipeForm, setRecipeForm] = useState({
@@ -586,6 +587,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       description: '',
       servingSize: 1,
       isProduced: false,
+      imageUrl: '',
     });
     setShowMenuItemDialog(true);
   };
@@ -610,6 +612,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       profitMargin: 0,
       servingSize: newMenuItem.servingSize,
       isProduced: newMenuItem.isProduced,
+      imageUrl: newMenuItem.imageUrl || undefined,
     };
 
     setMenuItems((current) => [...(current || []), menuItem]);
@@ -629,6 +632,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       stock: 999999,
       minStockLevel: 0,
       trackStock: false,
+      imageUrl: newMenuItem.imageUrl || undefined,
     };
     
     setProducts((current) => [...(current || []), product]);
@@ -1537,6 +1541,17 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                 onChange={(e) => setNewMenuItem({ ...newMenuItem, description: e.target.value })}
                 placeholder="Ürün açıklaması..."
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Görsel URL (QR Menü için)</Label>
+              <Input
+                value={newMenuItem.imageUrl}
+                onChange={(e) => setNewMenuItem({ ...newMenuItem, imageUrl: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+              />
+              <p className="text-xs text-muted-foreground">
+                💡 Ürün görseli QR menüde müşterilere gösterilecektir
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Porsiyon Sayısı</Label>

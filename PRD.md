@@ -218,11 +218,33 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Süre 30-300 dakika arasında ayarlanabilir
   - Değişiklikler masalar ekranında anlık yansır
 
+#### Sistem Teması
+- **İşlevsellik**: Uygulamanın genel görünümünü ve renklerini özelleştirme
+- **Amaç**: Mağaza sahiplerinin kendi marka kimliklerine uygun bir sistem görünümü oluşturmasını sağlamak
+- **Tetikleyici**: Yönetici "Ayarlar" → "Sistem Teması" sekmesine girer
+- **Akış**: Tema sekmesi aç → Hazır temalardan birini seç → Tema önizle → Uygula
+- **Başarı Kriterleri**: 
+  - 6 hazır tema seçeneği (Varsayılan, Profesyonel, Sıcak, Minimal, Karanlık, Doğa)
+  - Her tema için renk paleti önizlemesi
+  - Tema seçimi ile görsel kimlik değişir
+  - Font ailesi tercihi
+  - QR Menü teması ayrı olarak yönetilebilir
+  
+##### Hazır Sistem Temaları
+- **Varsayılan**: Modern ve dengeli, yeşil-mavi tonlar, Inter yazı tipi
+- **Profesyonel**: İş odaklı ve ciddi, mavi-gri tonlar, düz köşeler
+- **Sıcak**: Samimi ve davetkar, turuncu-krem tonlar, yuvarlak köşeler
+- **Minimal**: Sade ve şık, siyah-beyaz, keskin hatlar
+- **Karanlık**: Göz yormayan, koyu arkaplan, açık mavi vurgular
+- **Doğa**: Organik ve ferah, yeşil tonlar, doğal hissiyat
+
+**Not**: Sistem teması şu anda önizleme modundadır. QR Menü tema özelleştirmesi tam çalışır durumdadır.
+
 ### 7. QR Menü Modülü
-- **İşlevsellik**: Müşterilere yönelik dijital menü görüntüleme, otomatik fiyat senkronizasyonu, kampanya gösterimi
-- **Amaç**: Müşterilerin masalarında QR kod ile menüye erişmelerini sağlamak, menü mühendisliğindeki değişikliklerin anında yansımasını sağlamak
+- **İşlevsellik**: Müşterilere yönelik dijital menü görüntüleme, ürün görselleri, otomatik fiyat senkronizasyonu, kampanya gösterimi, tema özelleştirme
+- **Amaç**: Müşterilerin masalarında QR kod ile menüye erişmelerini sağlamak, menü mühendisliğindeki değişikliklerin anında yansımasını sağlamak, mağazaya özel görsel kimlik oluşturmak
 - **Tetikleyici**: Müşteri masa üzerindeki QR kodu okutarak veya personel QR Menü modülünü açarak
-- **Akış**: QR Menü aç → Tüm aktif menü öğelerini görüntüle → Kategori filtrele → Ürün ara → Kampanyalı ürünleri özel göster → Fiyatları canlı senkronize et
+- **Akış**: QR Menü aç → Tüm aktif menü öğelerini görüntüle → Kategori filtrele → Ürün ara → Kampanyalı ürünleri özel göster → Fiyatları canlı senkronize et → Ürün görsellerini göster
 - **Başarı Kriterleri**: 
   - Menü mühendisliğinde yapılan fiyat değişiklikleri QR menüde anında görünür
   - Kampanyaya alınan ürünler indirimli fiyatı ve indirim yüzdesi ile gösterilir
@@ -231,12 +253,45 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Aktife alınan ürünler QR menüde otomatik görünür
   - Kategori bazlı filtreleme ve arama özelliği
   - Tüm değişiklikler manuel güncelleme gerektirmez, gerçek zamanlı senkronizasyon
+  - Ürün görselleri (varsa) yüksek kalitede görüntülenir
+
+#### Ürün Görsel Yönetimi
+- **İşlevsellik**: Menü öğelerine görsel URL ekleme, QR menüde görselleri gösterme/gizleme
+- **Amaç**: Müşterilere ürünleri görsel olarak tanıtmak, menüyü daha çekici hale getirmek
+- **Tetikleyici**: Menü mühendisliğinde yeni ürün eklerken veya mevcut ürünü düzenlerken
+- **Akış**: Menü öğesi oluştur/düzenle → Görsel URL alanına resim linki gir → Kaydet → QR menüde otomatik gösterilir
+- **Başarı Kriterleri**: 
+  - Görseller QR menüde yüksek kalitede görüntülenir
+  - Görsel yüklenemezse otomatik gizlenir
+  - Tema ayarlarından görseller toplu olarak gösterilebilir/gizlenebilir
+
+#### QR Menü Tema Özelleştirme
+- **İşlevsellik**: Menü görünümünü mağazaya özel özelleştirme (renkler, yazı tipi, düzen)
+- **Amaç**: Her mağazanın kendi görsel kimliğini menüye yansıtmasını sağlamak
+- **Tetikleyici**: QR Menü modülünde "Tema Ayarları" butonuna tıklama
+- **Akış**: Tema Ayarları aç → Hazır tema seç veya özel renkler belirle → Görünüm ayarlarını düzenle → Müşteri görünümünde önizle → Otomatik kaydet
+- **Başarı Kriterleri**: 
+  - 4 hazır tema seçeneği (Klasik, Modern, Zarif, Canlı)
+  - Ana renk, arkaplan rengi, vurgu rengi özelleştirme
+  - Yazı tipi seçimi (Inter, Lora)
+  - Görselleri göster/gizle toggle
+  - Açıklamaları göster/gizle toggle
+  - Izgara veya liste görünüm seçimi
+  - Değişiklikler müşteri görünümünde anında yansır
+  - Tema ayarları kalıcı olarak saklanır
+
+##### Hazır Temalar
+- **Klasik**: Geleneksel ve şık, yeşil tonları, Inter yazı tipi
+- **Modern**: Minimalist ve temiz, siyah-beyaz tonlar, turuncu vurgu
+- **Zarif**: Lüks ve sofistike, mor tonları, Lora serif yazı tipi
+- **Canlı**: Enerjik ve renkli, kırmızı ve yeşil tonlar, Inter yazı tipi
 
 #### Otomatik Senkronizasyon
 - **Fiyat Değişiklikleri**: Menü mühendisliği modülünden manuel veya AI önerileri ile yapılan fiyat güncellemeleri QR menüde anında yansır
 - **Kampanya Durumu**: Başlatılan kampanyalar özel gösterim ile işaretlenir, sonlandırılanlar normal görünüme döner
 - **Ürün Durumu**: Aktif/pasif durumu değişen ürünler otomatik olarak gösterilir/gizlenir
 - **Kategori Değişiklikleri**: Yeni kategoriler ve kategori isimleri QR menüde otomatik güncellenir
+- **Görsel Değişiklikleri**: Ürün görsellerinde yapılan değişiklikler anında yansır
 
 ### 8. Rol Yönetimi ve Yetkilendirme Modülü
 - **İşlevsellik**: Kullanıcı rollerine modül erişim yetkileri atama, özel yetkileri yönetme

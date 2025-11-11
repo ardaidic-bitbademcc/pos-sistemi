@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, QrCode, ForkKnife, Sparkle, MagnifyingGlass, X, Download, Eye } from '@phosphor-icons/react';
+import { ArrowLeft, QrCode, ForkKnife, Sparkle, MagnifyingGlass, X, Download, Eye, Image } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, Product } from '@/lib/types';
+import type { MenuItem, Product, QRMenuTheme } from '@/lib/types';
 import { formatCurrency } from '@/lib/helpers';
 
 interface QRMenuModuleProps {
@@ -23,7 +23,23 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [showCustomerView, setShowCustomerView] = useState(false);
+  const [showThemeDialog, setShowThemeDialog] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const defaultQRMenuTheme: QRMenuTheme = {
+    id: 'default',
+    name: 'Klasik',
+    primaryColor: 'oklch(0.65 0.20 160)',
+    backgroundColor: 'oklch(0.98 0.01 180)',
+    textColor: 'oklch(0.15 0.02 240)',
+    accentColor: 'oklch(0.75 0.15 280)',
+    fontFamily: 'Inter',
+    showImages: true,
+    showDescriptions: true,
+    layout: 'grid',
+  };
+
+  const [qrMenuTheme, setQRMenuTheme] = useKV<QRMenuTheme>('qrMenuTheme', defaultQRMenuTheme);
 
   const activeMenuItems = (menuItems || []).filter(item => item.isActive);
   
@@ -139,6 +155,10 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setShowThemeDialog(true)}>
+            <Sparkle className="h-4 w-4 mr-2" weight="fill" />
+            Tema Ayarları
+          </Button>
           <Button variant="outline" onClick={() => setShowCustomerView(true)}>
             <Eye className="h-4 w-4 mr-2" />
             Müşteri Görünümü
@@ -284,13 +304,25 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                               hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''
                             }`}
                           >
+                            {item.imageUrl && (qrMenuTheme || defaultQRMenuTheme).showImages && (
+                              <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted">
+                                <img 
+                                  src={item.imageUrl} 
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
                             <CardHeader className="pb-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1 space-y-1">
                                   <CardTitle className="text-base leading-tight">
                                     {item.name}
                                   </CardTitle>
-                                  {item.description && (
+                                  {item.description && (qrMenuTheme || defaultQRMenuTheme).showDescriptions && (
                                     <CardDescription className="text-xs line-clamp-2">
                                       {item.description}
                                     </CardDescription>
@@ -369,13 +401,25 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                           hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''
                         }`}
                       >
+                        {item.imageUrl && (qrMenuTheme || defaultQRMenuTheme).showImages && (
+                          <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted">
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 space-y-1">
                               <CardTitle className="text-base leading-tight">
                                 {item.name}
                               </CardTitle>
-                              {item.description && (
+                              {item.description && (qrMenuTheme || defaultQRMenuTheme).showDescriptions && (
                                 <CardDescription className="text-xs line-clamp-2">
                                   {item.description}
                                 </CardDescription>
@@ -544,10 +588,17 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg p-6 space-y-6">
+            <div 
+              className="rounded-lg p-6 space-y-6"
+              style={{
+                backgroundColor: (qrMenuTheme || defaultQRMenuTheme).backgroundColor,
+                color: (qrMenuTheme || defaultQRMenuTheme).textColor,
+                fontFamily: (qrMenuTheme || defaultQRMenuTheme).fontFamily,
+              }}
+            >
               <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold">Menümüz</h2>
-                <p className="text-muted-foreground">
+                <p className="opacity-70">
                   Lezzetli yemeklerimizi keşfedin
                 </p>
               </div>
@@ -559,6 +610,10 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                   size="sm"
                   variant={selectedCategory === 'all' ? 'default' : 'outline'}
                   onClick={() => setSelectedCategory('all')}
+                  style={{
+                    backgroundColor: selectedCategory === 'all' ? (qrMenuTheme || defaultQRMenuTheme).primaryColor : 'transparent',
+                    color: selectedCategory === 'all' ? 'white' : (qrMenuTheme || defaultQRMenuTheme).textColor,
+                  }}
                 >
                   Tümü ({activeMenuItems.length})
                 </Button>
@@ -570,6 +625,10 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                       size="sm"
                       variant={selectedCategory === category ? 'default' : 'outline'}
                       onClick={() => setSelectedCategory(category)}
+                      style={{
+                        backgroundColor: selectedCategory === category ? (qrMenuTheme || defaultQRMenuTheme).primaryColor : 'transparent',
+                        color: selectedCategory === category ? 'white' : (qrMenuTheme || defaultQRMenuTheme).textColor,
+                      }}
                     >
                       {category} ({count})
                     </Button>
@@ -585,31 +644,56 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                       <Separator className="flex-1" />
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={`grid gap-4 ${
+                      (qrMenuTheme || defaultQRMenuTheme).layout === 'grid' 
+                        ? 'grid-cols-1 md:grid-cols-2' 
+                        : 'grid-cols-1'
+                    }`}>
                       {items.map((item) => {
                         const hasCampaign = item.hasActiveCampaign && item.campaignDetails;
                         
                         return (
                           <Card 
                             key={item.id} 
-                            className={`${
-                              hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''
-                            }`}
+                            className={`${hasCampaign ? 'ring-2' : ''}`}
+                            style={{
+                              borderColor: hasCampaign ? (qrMenuTheme || defaultQRMenuTheme).accentColor : undefined,
+                              backgroundColor: 'white',
+                            }}
                           >
+                            {item.imageUrl && (qrMenuTheme || defaultQRMenuTheme).showImages && (
+                              <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted">
+                                <img 
+                                  src={item.imageUrl} 
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
                             <CardHeader className="pb-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1 space-y-1">
                                   <CardTitle className="text-lg leading-tight">
                                     {item.name}
                                   </CardTitle>
-                                  {item.description && (
+                                  {item.description && (qrMenuTheme || defaultQRMenuTheme).showDescriptions && (
                                     <CardDescription className="text-sm">
                                       {item.description}
                                     </CardDescription>
                                   )}
                                 </div>
                                 {hasCampaign && (
-                                  <Badge variant="default" className="bg-accent animate-pulse shrink-0">
+                                  <Badge 
+                                    variant="default" 
+                                    className="animate-pulse shrink-0"
+                                    style={{
+                                      backgroundColor: (qrMenuTheme || defaultQRMenuTheme).accentColor,
+                                      color: 'white',
+                                    }}
+                                  >
                                     <Sparkle className="h-3 w-3 mr-1" weight="fill" />
                                     İndirim!
                                   </Badge>
@@ -619,9 +703,15 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                             
                             <CardContent className="space-y-3">
                               {hasCampaign && item.campaignDetails && (
-                                <div className="p-3 bg-accent/10 rounded-lg space-y-2 border border-accent/20">
+                                <div 
+                                  className="p-3 rounded-lg space-y-2 border"
+                                  style={{
+                                    backgroundColor: `${(qrMenuTheme || defaultQRMenuTheme).accentColor}10`,
+                                    borderColor: `${(qrMenuTheme || defaultQRMenuTheme).accentColor}40`,
+                                  }}
+                                >
                                   <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground line-through">
+                                    <span className="text-sm opacity-70 line-through">
                                       {formatCurrency(item.campaignDetails.originalPrice)}
                                     </span>
                                     <Badge variant="secondary" className="text-xs">
@@ -629,7 +719,7 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                                     </Badge>
                                   </div>
                                   {item.campaignDetails.reason && (
-                                    <p className="text-xs text-muted-foreground italic">
+                                    <p className="text-xs opacity-70 italic">
                                       💡 {item.campaignDetails.reason}
                                     </p>
                                   )}
@@ -638,13 +728,16 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                               
                               <div className="flex items-center justify-between pt-2">
                                 <div className="space-y-1">
-                                  <p className={`text-3xl font-bold font-tabular-nums ${
-                                    hasCampaign ? 'text-accent' : 'text-foreground'
-                                  }`}>
+                                  <p 
+                                    className="text-3xl font-bold font-tabular-nums"
+                                    style={{
+                                      color: hasCampaign ? (qrMenuTheme || defaultQRMenuTheme).accentColor : (qrMenuTheme || defaultQRMenuTheme).primaryColor,
+                                    }}
+                                  >
                                     {formatCurrency(item.sellingPrice)}
                                   </p>
                                   {item.servingSize && item.servingSize > 1 && (
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-xs opacity-70">
                                       {item.servingSize} porsiyon
                                     </p>
                                   )}
@@ -658,6 +751,211 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showThemeDialog} onOpenChange={setShowThemeDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>QR Menü Tema Ayarları</DialogTitle>
+            <DialogDescription>
+              Müşterilerin göreceği menü görünümünü özelleştirin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-3">
+              <h3 className="font-semibold">Hazır Temalar</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  {
+                    id: 'classic',
+                    name: 'Klasik',
+                    description: 'Geleneksel ve şık',
+                    primaryColor: 'oklch(0.65 0.20 160)',
+                    backgroundColor: 'oklch(0.98 0.01 180)',
+                    textColor: 'oklch(0.15 0.02 240)',
+                    accentColor: 'oklch(0.75 0.15 280)',
+                    fontFamily: 'Inter',
+                  },
+                  {
+                    id: 'modern',
+                    name: 'Modern',
+                    description: 'Minimalist ve temiz',
+                    primaryColor: 'oklch(0.20 0 0)',
+                    backgroundColor: 'oklch(1 0 0)',
+                    textColor: 'oklch(0.20 0 0)',
+                    accentColor: 'oklch(0.70 0.18 45)',
+                    fontFamily: 'Inter',
+                  },
+                  {
+                    id: 'elegant',
+                    name: 'Zarif',
+                    description: 'Lüks ve sofistike',
+                    primaryColor: 'oklch(0.35 0.05 280)',
+                    backgroundColor: 'oklch(0.96 0.01 280)',
+                    textColor: 'oklch(0.25 0.03 280)',
+                    accentColor: 'oklch(0.60 0.15 35)',
+                    fontFamily: 'Lora',
+                  },
+                  {
+                    id: 'vibrant',
+                    name: 'Canlı',
+                    description: 'Enerjik ve renkli',
+                    primaryColor: 'oklch(0.65 0.25 25)',
+                    backgroundColor: 'oklch(0.98 0.02 60)',
+                    textColor: 'oklch(0.20 0.02 25)',
+                    accentColor: 'oklch(0.70 0.22 130)',
+                    fontFamily: 'Inter',
+                  },
+                ].map((theme) => (
+                  <Card 
+                    key={theme.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      (qrMenuTheme || defaultQRMenuTheme).name === theme.name ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => {
+                      setQRMenuTheme((current) => ({
+                        ...(current || defaultQRMenuTheme),
+                        name: theme.name,
+                        primaryColor: theme.primaryColor,
+                        backgroundColor: theme.backgroundColor,
+                        textColor: theme.textColor,
+                        accentColor: theme.accentColor,
+                        fontFamily: theme.fontFamily,
+                      }));
+                      toast.success(`${theme.name} teması seçildi`);
+                    }}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-base">{theme.name}</CardTitle>
+                      <CardDescription className="text-xs">{theme.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2">
+                        <div 
+                          className="w-8 h-8 rounded-md border"
+                          style={{ backgroundColor: theme.primaryColor }}
+                          title="Ana Renk"
+                        />
+                        <div 
+                          className="w-8 h-8 rounded-md border"
+                          style={{ backgroundColor: theme.backgroundColor }}
+                          title="Arkaplan"
+                        />
+                        <div 
+                          className="w-8 h-8 rounded-md border"
+                          style={{ backgroundColor: theme.accentColor }}
+                          title="Vurgu Rengi"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="font-semibold">Görünüm Ayarları</h3>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <p className="font-medium">Ürün Görselleri</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ürün fotoğraflarını göster
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {(qrMenuTheme || defaultQRMenuTheme).showImages && (
+                    <Badge variant="outline" className="text-xs">
+                      <Image className="h-3 w-3 mr-1" />
+                      Aktif
+                    </Badge>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={(qrMenuTheme || defaultQRMenuTheme).showImages ? 'default' : 'outline'}
+                    onClick={() => {
+                      setQRMenuTheme((current) => ({
+                        ...(current || defaultQRMenuTheme),
+                        showImages: !(current || defaultQRMenuTheme).showImages,
+                      }));
+                      toast.success(`Görseller ${!(qrMenuTheme || defaultQRMenuTheme).showImages ? 'gösterilecek' : 'gizlenecek'}`);
+                    }}
+                  >
+                    {(qrMenuTheme || defaultQRMenuTheme).showImages ? 'Gizle' : 'Göster'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <p className="font-medium">Ürün Açıklamaları</p>
+                  <p className="text-sm text-muted-foreground">
+                    Detaylı açıklamaları göster
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={(qrMenuTheme || defaultQRMenuTheme).showDescriptions ? 'default' : 'outline'}
+                  onClick={() => {
+                    setQRMenuTheme((current) => ({
+                      ...(current || defaultQRMenuTheme),
+                      showDescriptions: !(current || defaultQRMenuTheme).showDescriptions,
+                    }));
+                    toast.success(`Açıklamalar ${!(qrMenuTheme || defaultQRMenuTheme).showDescriptions ? 'gösterilecek' : 'gizlenecek'}`);
+                  }}
+                >
+                  {(qrMenuTheme || defaultQRMenuTheme).showDescriptions ? 'Gizle' : 'Göster'}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <p className="font-medium">Menü Düzeni</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ürünlerin nasıl görüneceğini seçin
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={(qrMenuTheme || defaultQRMenuTheme).layout === 'grid' ? 'default' : 'outline'}
+                    onClick={() => {
+                      setQRMenuTheme((current) => ({
+                        ...(current || defaultQRMenuTheme),
+                        layout: 'grid',
+                      }));
+                      toast.success('Izgara görünümü seçildi');
+                    }}
+                  >
+                    Izgara
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={(qrMenuTheme || defaultQRMenuTheme).layout === 'list' ? 'default' : 'outline'}
+                    onClick={() => {
+                      setQRMenuTheme((current) => ({
+                        ...(current || defaultQRMenuTheme),
+                        layout: 'list',
+                      }));
+                      toast.success('Liste görünümü seçildi');
+                    }}
+                  >
+                    Liste
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+              <p className="text-sm leading-relaxed">
+                💡 <strong>İpucu:</strong> Değişiklikler otomatik kaydedilir. "Müşteri Görünümü" butonuna tıklayarak 
+                müşterilerin menüyü nasıl göreceğini önizleyebilirsiniz.
+              </p>
             </div>
           </div>
         </DialogContent>

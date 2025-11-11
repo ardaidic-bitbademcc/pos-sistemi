@@ -232,6 +232,33 @@ export interface MenuItem {
   };
 }
 
+export interface AppTheme {
+  id: string;
+  name: string;
+  description: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  foregroundColor: string;
+  borderRadius: string;
+  fontFamily: string;
+  isDark?: boolean;
+}
+
+export interface QRMenuTheme {
+  id: string;
+  name: string;
+  primaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  accentColor: string;
+  fontFamily: string;
+  showImages: boolean;
+  showDescriptions: boolean;
+  layout: 'grid' | 'list';
+}
+
 export type MenuCategory = 'star' | 'puzzle' | 'plow_horse' | 'dog';
 
 export interface MenuAnalysis {

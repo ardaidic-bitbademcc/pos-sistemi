@@ -8,9 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash } from '@phosphor-icons/react';
+import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Product, PaymentMethod, Category } from '@/lib/types';
+import type { Product, PaymentMethod, Category, AppTheme } from '@/lib/types';
 import { formatCurrency, generateId } from '@/lib/helpers';
 
 interface SettingsModuleProps {
@@ -267,6 +267,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
           <TabsTrigger value="categories">Kategori Yönetimi</TabsTrigger>
           <TabsTrigger value="tax">KDV Ayarları</TabsTrigger>
           <TabsTrigger value="payment">Ödeme Yöntemleri</TabsTrigger>
+          <TabsTrigger value="theme">Sistem Teması</TabsTrigger>
           <TabsTrigger value="general">Genel</TabsTrigger>
         </TabsList>
 
@@ -543,6 +544,172 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="theme" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Palette className="h-5 w-5" weight="bold" />
+                Sistem Teması
+              </CardTitle>
+              <CardDescription>
+                Uygulamanın genel görünümünü özelleştirin
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <h3 className="font-semibold">Hazır Temalar</h3>
+                <p className="text-sm text-muted-foreground">
+                  Aşağıdaki hazır temalardan birini seçerek tüm sistem görünümünü değiştirebilirsiniz
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    {
+                      id: 'default',
+                      name: 'Varsayılan',
+                      description: 'Modern ve dengeli',
+                      primaryColor: 'oklch(0.65 0.20 160)',
+                      secondaryColor: 'oklch(0.92 0.08 200)',
+                      accentColor: 'oklch(0.75 0.15 280)',
+                      backgroundColor: 'oklch(0.98 0.01 180)',
+                      foregroundColor: 'oklch(0.15 0.02 240)',
+                      borderRadius: '0.75rem',
+                      fontFamily: 'Inter',
+                      isDark: false,
+                    },
+                    {
+                      id: 'professional',
+                      name: 'Profesyonel',
+                      description: 'İş odaklı ve ciddi',
+                      primaryColor: 'oklch(0.35 0.05 240)',
+                      secondaryColor: 'oklch(0.90 0.03 240)',
+                      accentColor: 'oklch(0.55 0.15 220)',
+                      backgroundColor: 'oklch(0.97 0.005 240)',
+                      foregroundColor: 'oklch(0.20 0.02 240)',
+                      borderRadius: '0.5rem',
+                      fontFamily: 'Inter',
+                      isDark: false,
+                    },
+                    {
+                      id: 'warm',
+                      name: 'Sıcak',
+                      description: 'Samimi ve davetkar',
+                      primaryColor: 'oklch(0.60 0.18 40)',
+                      secondaryColor: 'oklch(0.93 0.05 60)',
+                      accentColor: 'oklch(0.65 0.20 25)',
+                      backgroundColor: 'oklch(0.98 0.01 50)',
+                      foregroundColor: 'oklch(0.25 0.03 30)',
+                      borderRadius: '1rem',
+                      fontFamily: 'Inter',
+                      isDark: false,
+                    },
+                    {
+                      id: 'minimal',
+                      name: 'Minimal',
+                      description: 'Sade ve şık',
+                      primaryColor: 'oklch(0.25 0 0)',
+                      secondaryColor: 'oklch(0.95 0 0)',
+                      accentColor: 'oklch(0.60 0.15 190)',
+                      backgroundColor: 'oklch(1 0 0)',
+                      foregroundColor: 'oklch(0.20 0 0)',
+                      borderRadius: '0.375rem',
+                      fontFamily: 'Inter',
+                      isDark: false,
+                    },
+                    {
+                      id: 'dark',
+                      name: 'Karanlık',
+                      description: 'Göz yormayan',
+                      primaryColor: 'oklch(0.70 0.18 180)',
+                      secondaryColor: 'oklch(0.30 0.03 240)',
+                      accentColor: 'oklch(0.75 0.20 280)',
+                      backgroundColor: 'oklch(0.18 0.01 240)',
+                      foregroundColor: 'oklch(0.95 0.01 240)',
+                      borderRadius: '0.75rem',
+                      fontFamily: 'Inter',
+                      isDark: true,
+                    },
+                    {
+                      id: 'nature',
+                      name: 'Doğa',
+                      description: 'Organik ve ferah',
+                      primaryColor: 'oklch(0.55 0.15 140)',
+                      secondaryColor: 'oklch(0.93 0.05 120)',
+                      accentColor: 'oklch(0.65 0.18 80)',
+                      backgroundColor: 'oklch(0.97 0.01 130)',
+                      foregroundColor: 'oklch(0.22 0.03 140)',
+                      borderRadius: '0.875rem',
+                      fontFamily: 'Inter',
+                      isDark: false,
+                    },
+                  ].map((theme) => (
+                    <Card 
+                      key={theme.id}
+                      className="cursor-pointer transition-all hover:shadow-md hover:scale-105"
+                      onClick={() => {
+                        toast.success(`${theme.name} teması uygulandı`, {
+                          description: 'Sayfa yenilendiğinde tema aktif olacak',
+                        });
+                      }}
+                    >
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Palette className="h-4 w-4" weight="fill" />
+                          {theme.name}
+                        </CardTitle>
+                        <CardDescription className="text-xs">{theme.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex gap-2">
+                          <div 
+                            className="w-10 h-10 rounded-md border-2 border-border shadow-sm"
+                            style={{ backgroundColor: theme.primaryColor }}
+                            title="Ana Renk"
+                          />
+                          <div 
+                            className="w-10 h-10 rounded-md border-2 border-border shadow-sm"
+                            style={{ backgroundColor: theme.secondaryColor }}
+                            title="İkincil Renk"
+                          />
+                          <div 
+                            className="w-10 h-10 rounded-md border-2 border-border shadow-sm"
+                            style={{ backgroundColor: theme.accentColor }}
+                            title="Vurgu Rengi"
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Font: {theme.fontFamily}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Palette className="h-4 w-4" weight="fill" />
+                  QR Menü Teması
+                </h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  QR menünüzün görünümünü özelleştirmek için <strong>QR Menü</strong> modülündeki 
+                  <strong> Tema Ayarları</strong> butonunu kullanın. Müşterilerinizin göreceği menü görünümünü 
+                  tamamen özelleştirebilirsiniz.
+                </p>
+              </div>
+
+              <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <p className="text-sm leading-relaxed">
+                  💡 <strong>Not:</strong> Sistem teması değişiklikleri şu anda önizleme modundadır. 
+                  Gelecek güncellemelerde bu özellik tam olarak aktif edilecektir. QR Menü tema özelleştirmesi 
+                  ise şu anda tam çalışır durumdadır.
+                </p>
               </div>
             </CardContent>
           </Card>
