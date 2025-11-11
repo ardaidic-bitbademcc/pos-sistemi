@@ -20,13 +20,14 @@ import QRMenuModule from '@/components/modules/QRMenuModule';
 import TaskManagementModule from '@/components/modules/TaskManagementModule';
 import B2BModule from '@/components/modules/B2BModule';
 import CustomerAccountModule from '@/components/modules/CustomerAccountModule';
+import AdminModule from '@/components/modules/AdminModule';
 import DataMigration from '@/components/DataMigration';
 import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
 import { checkMigrationStatus } from '@/lib/data-migration';
 import type { UserRole, AuthSession } from '@/lib/types';
 
-export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers';
+export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers' | 'admin';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
@@ -108,6 +109,8 @@ function App() {
         return <B2BModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole || 'owner'} currentUserName={currentUserName} authSession={authSession} />;
       case 'customers':
         return <CustomerAccountModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
+      case 'admin':
+        return <AdminModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       default:
         return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} authSession={authSession} />;
     }
@@ -132,6 +135,12 @@ function App() {
   return (
     <div className="min-h-screen bg-background font-sans">
       <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex flex-wrap items-center gap-1 sm:gap-2 max-w-[calc(100vw-1rem)]">
+        {currentUserRole === 'owner' && (
+          <Button variant="outline" size="sm" onClick={() => setActiveModule('admin')} className="h-8 px-2 sm:px-3">
+            <Shield className="h-4 w-4 sm:mr-1" weight="fill" />
+            <span className="hidden sm:inline">Admin</span>
+          </Button>
+        )}
         {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
           <>
             <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')} className="h-8 px-2 sm:px-3">

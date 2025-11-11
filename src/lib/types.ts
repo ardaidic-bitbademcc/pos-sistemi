@@ -48,9 +48,12 @@ export interface Branch {
   code: string;
   address: string;
   phone: string;
+  email?: string;
+  managerName?: string;
   isActive: boolean;
   adminId?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ProductOption {
@@ -156,7 +159,10 @@ export interface Employee {
   hourlyRate: number;
   employeePin: string;
   qrCode?: string;
+  joinDate?: string;
   adminId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Shift {
@@ -696,6 +702,7 @@ export interface Admin {
 }
 
 export interface AuthSession {
+  userId?: string;
   adminId: string;
   branchId: string;
   userRole: UserRole;

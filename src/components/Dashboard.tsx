@@ -18,6 +18,7 @@ import {
   QrCode,
   ListChecks,
   Handshake,
+  UserGear,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
 import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission, AuthSession } from '@/lib/types';
@@ -216,6 +217,15 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
       bgColor: 'bg-orange-500/10',
     },
     {
+      id: 'admin' as any,
+      moduleId: 'admin' as Module,
+      title: 'Admin Paneli',
+      description: 'Merkezi şube ve kullanıcı yönetimi',
+      icon: UserGear,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-600/10',
+    },
+    {
       id: 'finance' as const,
       moduleId: 'finance' as Module,
       title: 'Finans Yönetimi',
@@ -246,6 +256,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
 
   const moduleCards = allModuleCards.filter(card => {
     if (card.id === 'qrmenu' || card.id === 'tasks' || card.id === 'b2b' || card.id === 'customers') return hasModuleAccess('tasks');
+    if (card.id === 'admin') return currentUserRole === 'owner';
     return hasModuleAccess(card.id);
   });
 
