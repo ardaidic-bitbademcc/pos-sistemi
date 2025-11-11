@@ -107,6 +107,7 @@ const MODULE_LABELS: Record<ModulePermission, string> = {
   finance: 'Finans Yönetimi',
   settings: 'Ayarlar',
   reports: 'Raporlama',
+  tasks: 'Görev Yönetimi',
 };
 
 export default function RoleManagementModule({ onBack }: RoleManagementModuleProps) {

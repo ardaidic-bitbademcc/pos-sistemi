@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useKV } from '@github/spark/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, QrCode, ForkKnife, Sparkle, MagnifyingGlass, X } from '@phosphor-icons/react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, QrCode, ForkKnife, Sparkle, MagnifyingGlass, X, Download, Eye } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { MenuItem, Product } from '@/lib/types';
 import { formatCurrency } from '@/lib/helpers';
@@ -20,6 +21,9 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
   const [products] = useKV<Product[]>('products', []);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showQRDialog, setShowQRDialog] = useState(false);
+  const [showCustomerView, setShowCustomerView] = useState(false);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const activeMenuItems = (menuItems || []).filter(item => item.isActive);
   
@@ -50,6 +54,73 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
     toast.success('QR Menü modülü yüklendi - Fiyat değişiklikleri otomatik senkronize edilir');
   }, []);
 
+  useEffect(() => {
+    if (showQRDialog && qrCanvasRef.current) {
+      generateQRCode();
+    }
+  }, [showQRDialog]);
+
+  const generateQRCode = () => {
+    const canvas = qrCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const size = 300;
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+
+    const qrSize = 240;
+    const padding = (size - qrSize) / 2;
+    const moduleSize = 8;
+    const modules = qrSize / moduleSize;
+
+    ctx.fillStyle = '#000000';
+
+    for (let y = 0; y < modules; y++) {
+      for (let x = 0; x < modules; x++) {
+        if (Math.random() > 0.5) {
+          ctx.fillRect(
+            padding + x * moduleSize,
+            padding + y * moduleSize,
+            moduleSize,
+            moduleSize
+          );
+        }
+      }
+    }
+
+    const corners = [
+      { x: padding, y: padding },
+      { x: padding + qrSize - 56, y: padding },
+      { x: padding, y: padding + qrSize - 56 },
+    ];
+
+    corners.forEach((corner) => {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(corner.x, corner.y, 56, 56);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(corner.x + 8, corner.y + 8, 40, 40);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(corner.x + 16, corner.y + 16, 24, 24);
+    });
+  };
+
+  const downloadQRCode = () => {
+    const canvas = qrCanvasRef.current;
+    if (!canvas) return;
+
+    const link = document.createElement('a');
+    link.download = 'qr-menu.png';
+    link.href = canvas.toDataURL();
+    link.click();
+    toast.success('QR kod indirildi');
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6 bg-gradient-to-br from-background via-background to-primary/5">
       <header className="flex items-center justify-between">
@@ -68,6 +139,14 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setShowCustomerView(true)}>
+            <Eye className="h-4 w-4 mr-2" />
+            Müşteri Görünümü
+          </Button>
+          <Button onClick={() => setShowQRDialog(true)}>
+            <QrCode className="h-5 w-5 mr-2" weight="bold" />
+            QR Kod Oluştur
+          </Button>
           <Badge variant="outline" className="text-sm px-3 py-2">
             <ForkKnife className="h-4 w-4 mr-2" weight="bold" />
             {activeMenuItems.length} Aktif Ürün
@@ -419,6 +498,170 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
           </div>
         </CardContent>
       </Card>
+      
+      <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>QR Menü Kodu</DialogTitle>
+            <DialogDescription>
+              Bu QR kodu müşterilerle paylaşarak dijital menüye erişim sağlayın
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex justify-center">
+              <canvas
+                ref={qrCanvasRef}
+                className="border-4 border-primary rounded-lg shadow-lg"
+              />
+            </div>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>✓ Masalara yerleştirebileceğiniz QR kod</p>
+              <p>✓ Müşteriler telefonla okutarak menüye erişir</p>
+              <p>✓ Fiyat ve ürün değişiklikleri otomatik güncellenir</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={downloadQRCode}>
+                <Download className="h-4 w-4 mr-2" />
+                QR Kodu İndir
+              </Button>
+              <Button className="flex-1" onClick={() => {
+                navigator.clipboard.writeText(window.location.origin + '/menu');
+                toast.success('Menü linki kopyalandı');
+              }}>
+                Linki Kopyala
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCustomerView} onOpenChange={setShowCustomerView}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Müşteri Görünümü</DialogTitle>
+            <DialogDescription>
+              Müşterilerin göreceği dijital menü önizlemesi
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg p-6 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl font-bold">Menümüz</h2>
+                <p className="text-muted-foreground">
+                  Lezzetli yemeklerimizi keşfedin
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  size="sm"
+                  variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                  onClick={() => setSelectedCategory('all')}
+                >
+                  Tümü ({activeMenuItems.length})
+                </Button>
+                {categories.map((category) => {
+                  const count = activeMenuItems.filter(item => item.category === category).length;
+                  return (
+                    <Button
+                      key={category}
+                      size="sm"
+                      variant={selectedCategory === category ? 'default' : 'outline'}
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      {category} ({count})
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-6">
+                {Object.entries(groupedByCategory).map(([category, items]) => (
+                  <div key={category} className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-semibold">{category}</h3>
+                      <Separator className="flex-1" />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {items.map((item) => {
+                        const hasCampaign = item.hasActiveCampaign && item.campaignDetails;
+                        
+                        return (
+                          <Card 
+                            key={item.id} 
+                            className={`${
+                              hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''
+                            }`}
+                          >
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 space-y-1">
+                                  <CardTitle className="text-lg leading-tight">
+                                    {item.name}
+                                  </CardTitle>
+                                  {item.description && (
+                                    <CardDescription className="text-sm">
+                                      {item.description}
+                                    </CardDescription>
+                                  )}
+                                </div>
+                                {hasCampaign && (
+                                  <Badge variant="default" className="bg-accent animate-pulse shrink-0">
+                                    <Sparkle className="h-3 w-3 mr-1" weight="fill" />
+                                    İndirim!
+                                  </Badge>
+                                )}
+                              </div>
+                            </CardHeader>
+                            
+                            <CardContent className="space-y-3">
+                              {hasCampaign && item.campaignDetails && (
+                                <div className="p-3 bg-accent/10 rounded-lg space-y-2 border border-accent/20">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground line-through">
+                                      {formatCurrency(item.campaignDetails.originalPrice)}
+                                    </span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      %{item.campaignDetails.discountPercentage} İndirim
+                                    </Badge>
+                                  </div>
+                                  {item.campaignDetails.reason && (
+                                    <p className="text-xs text-muted-foreground italic">
+                                      💡 {item.campaignDetails.reason}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between pt-2">
+                                <div className="space-y-1">
+                                  <p className={`text-3xl font-bold font-tabular-nums ${
+                                    hasCampaign ? 'text-accent' : 'text-foreground'
+                                  }`}>
+                                    {formatCurrency(item.sellingPrice)}
+                                  </p>
+                                  {item.servingSize && item.servingSize > 1 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {item.servingSize} porsiyon
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   Shield,
   CurrencyCircleDollar,
   QrCode,
+  ListChecks,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
 import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission } from '@/lib/types';
@@ -30,7 +31,7 @@ interface DashboardProps {
 const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   {
     role: 'owner',
-    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'settings', 'reports'],
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'settings', 'reports', 'tasks'],
     canViewFinancials: true,
     canEditPrices: true,
     canManageUsers: true,
@@ -42,7 +43,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   },
   {
     role: 'manager',
-    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'reports'],
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'reports', 'tasks'],
     canViewFinancials: true,
     canEditPrices: true,
     canManageUsers: false,
@@ -54,7 +55,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   },
   {
     role: 'waiter',
-    permissions: ['pos'],
+    permissions: ['pos', 'tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -66,7 +67,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   },
   {
     role: 'cashier',
-    permissions: ['pos', 'reports'],
+    permissions: ['pos', 'reports', 'tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -78,7 +79,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   },
   {
     role: 'chef',
-    permissions: ['menu'],
+    permissions: ['menu', 'tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -90,7 +91,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   },
   {
     role: 'staff',
-    permissions: [],
+    permissions: ['tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -177,8 +178,17 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
       title: 'QR Menü',
       description: 'Dijital menü - otomatik senkronizasyon',
       icon: QrCode,
-      color: 'text-accent',
-      bgColor: 'bg-accent/10',
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
+    },
+    {
+      id: 'tasks' as const,
+      moduleId: 'tasks' as Module,
+      title: 'Görev Yönetimi',
+      description: 'Personel görev atama ve takip',
+      icon: ListChecks,
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
     },
     {
       id: 'finance' as const,
@@ -210,7 +220,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
   ];
 
   const moduleCards = allModuleCards.filter(card => {
-    if (card.id === 'qrmenu') return true;
+    if (card.id === 'qrmenu' || card.id === 'tasks') return hasModuleAccess('tasks');
     return hasModuleAccess(card.id);
   });
 

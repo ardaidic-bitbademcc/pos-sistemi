@@ -1,6 +1,6 @@
 export type UserRole = 'owner' | 'manager' | 'cashier' | 'chef' | 'staff' | 'waiter';
 
-export type ModulePermission = 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports';
+export type ModulePermission = 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'tasks';
 
 export interface RolePermissions {
   role: UserRole;
@@ -379,4 +379,46 @@ export interface UserCredential {
   role: UserRole;
   employeeId?: string;
   isActive: boolean;
+}
+
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type TaskRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  assignedTo: string;
+  assignedToName: string;
+  createdBy: string;
+  createdByName: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate: string;
+  createdAt: string;
+  completedAt?: string;
+  completedBy?: string;
+  completedByName?: string;
+  rating?: number;
+  ratingComment?: string;
+  ratedBy?: string;
+  ratedByName?: string;
+  ratedAt?: string;
+  recurrence: TaskRecurrence;
+  lastRecurrenceDate?: string;
+  branchId: string;
+  category?: string;
+  estimatedDuration?: number;
+  actualDuration?: number;
+  notes?: string;
+}
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  userId: string;
+  userName: string;
+  comment: string;
+  createdAt: string;
 }
