@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
+import ProductOptionsSelector from '@/components/ProductOptionsSelector';
 import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 
@@ -115,6 +116,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [quantityToProcess, setQuantityToProcess] = useState('');
   const [showCartSplitDialog, setShowCartSplitDialog] = useState(false);
   const [cartSplitCount, setCartSplitCount] = useState<number | 'custom'>(2);
+  const [showOptionsSelector, setShowOptionsSelector] = useState(false);
+  const [selectedProductForOptions, setSelectedProductForOptions] = useState<Product | null>(null);
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
@@ -142,6 +145,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     trackStock: false,
     hasActiveCampaign: item.hasActiveCampaign,
     campaignDetails: item.campaignDetails,
+    hasOptions: item.hasOptions,
+    options: item.options,
   }));
 
   const getTimeSinceLastOrder = (table: Table): number | null => {
@@ -264,7 +269,13 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   };
 
   const addToCart = (product: Product) => {
-    const existingItem = cart.find((item) => item.productId === product.id && !item.isComplimentary);
+    if (product.hasOptions && product.options && product.options.length > 0) {
+      setSelectedProductForOptions(product);
+      setShowOptionsSelector(true);
+      return;
+    }
+
+    const existingItem = cart.find((item) => item.productId === product.id && !item.isComplimentary && !item.selectedOptions);
 
     let unitPrice = product.basePrice;
     let subtotal = unitPrice;
@@ -297,6 +308,48 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       setCart([...cart, newItem]);
     }
     toast.success(`${product.name} sepete eklendi`);
+  };
+
+  const addToCartWithOptions = (
+    product: Product,
+    selectedOptions: {
+      optionName: string;
+      choiceName: string;
+      priceModifier: number;
+    }[]
+  ) => {
+    let unitPrice = product.basePrice;
+    
+    selectedOptions.forEach(option => {
+      unitPrice += option.priceModifier;
+    });
+
+    if (pricesIncludeVAT) {
+      unitPrice = unitPrice / (1 + product.taxRate / 100);
+    }
+
+    const subtotal = unitPrice;
+
+    const newItem: CartItem = {
+      id: generateId(),
+      productId: product.id,
+      productName: product.name,
+      quantity: 1,
+      unitPrice: unitPrice,
+      taxRate: product.taxRate,
+      discountAmount: 0,
+      subtotal: subtotal,
+      isComplimentary: false,
+      selectedOptions: selectedOptions,
+    };
+    
+    setCart([...cart, newItem]);
+    
+    const optionsText = selectedOptions.map(o => o.choiceName).join(', ');
+    toast.success(`${product.name} (${optionsText}) sepete eklendi`);
+    
+    setShowOptionsSelector(false);
+    setSelectedProductForOptions(null);
   };
 
   const updateQuantity = (itemId: string, change: number) => {
@@ -1112,7 +1165,14 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                         >
                           <CardContent className="p-3 space-y-2">
                             <div className="flex items-start justify-between">
-                              <p className="font-semibold text-sm leading-tight">{product.name}</p>
+                              <div className="flex-1">
+                                <p className="font-semibold text-sm leading-tight">{product.name}</p>
+                                {product.hasOptions && product.options && product.options.length > 0 && (
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    Seçenekli
+                                  </Badge>
+                                )}
+                              </div>
                               <Gift className="h-4 w-4 text-accent flex-shrink-0" weight="fill" />
                             </div>
                             <div className="space-y-1">
@@ -1188,7 +1248,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <div className="space-y-1 flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <CardTitle className="text-base leading-tight">
                                 {product.name}
                               </CardTitle>
@@ -1196,6 +1256,11 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                                 <Badge variant="default" className="bg-accent animate-pulse">
                                   <Gift className="h-3 w-3 mr-1" weight="fill" />
                                   Kampanya!
+                                </Badge>
+                              )}
+                              {product.hasOptions && product.options && product.options.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Seçenekli
                                 </Badge>
                               )}
                             </div>
@@ -1279,6 +1344,11 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                                     </Badge>
                                   )}
                                 </div>
+                                {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                  <p className="text-xs text-muted-foreground italic mt-1">
+                                    {item.selectedOptions.map(opt => opt.choiceName).join(', ')}
+                                  </p>
+                                )}
                                 <p className="text-xs text-muted-foreground font-tabular-nums">
                                   {formatCurrency(item.unitPrice)} × {item.quantity}
                                 </p>
@@ -1565,6 +1635,11 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                               </Badge>
                             )}
                           </div>
+                          {item.selectedOptions && item.selectedOptions.length > 0 && (
+                            <p className="text-xs text-muted-foreground italic mt-1">
+                              {item.selectedOptions.map(opt => opt.choiceName).join(', ')}
+                            </p>
+                          )}
                           <p className="text-sm text-muted-foreground font-tabular-nums">
                             {item.quantity} adet × {formatCurrency(item.unitPrice)}
                           </p>
@@ -2327,6 +2402,11 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                                   <Checkbox checked={isSelected} onCheckedChange={() => {}} />
                                   <div>
                                     <p className="font-medium">{item.productName}</p>
+                                    {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                      <p className="text-xs text-muted-foreground italic">
+                                        {item.selectedOptions.map(opt => opt.choiceName).join(', ')}
+                                      </p>
+                                    )}
                                     {item.isComplimentary && (
                                       <Badge variant="secondary" className="text-xs mt-1">
                                         <Gift className="h-3 w-3 mr-1" />
@@ -2412,11 +2492,18 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           if (!item) return null;
                           
                           return (
-                            <div key={si.itemId} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
-                              <span>{item.productName} × {si.quantity}</span>
-                              <span className="font-semibold font-tabular-nums">
-                                {formatCurrency(item.unitPrice * si.quantity)}
-                              </span>
+                            <div key={si.itemId} className="flex flex-col gap-1 text-sm p-2 bg-muted/50 rounded">
+                              <div className="flex items-center justify-between">
+                                <span>{item.productName} × {si.quantity}</span>
+                                <span className="font-semibold font-tabular-nums">
+                                  {formatCurrency(item.unitPrice * si.quantity)}
+                                </span>
+                              </div>
+                              {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                <span className="text-xs text-muted-foreground italic">
+                                  {item.selectedOptions.map(opt => opt.choiceName).join(', ')}
+                                </span>
+                              )}
                             </div>
                           );
                         })}
@@ -2597,6 +2684,18 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedProductForOptions && (
+        <ProductOptionsSelector
+          product={selectedProductForOptions}
+          open={showOptionsSelector}
+          onClose={() => {
+            setShowOptionsSelector(false);
+            setSelectedProductForOptions(null);
+          }}
+          onConfirm={(selectedOptions) => addToCartWithOptions(selectedProductForOptions, selectedOptions)}
+        />
+      )}
     </div>
   );
 }
