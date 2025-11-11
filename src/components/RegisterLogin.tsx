@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Storefront, EnvelopeSimple, LockKey, Phone, Buildings } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Admin, AuthSession, Branch } from '@/lib/types';
-import { generateId } from '@/lib/helpers';
+import type { Admin, AuthSession, Branch, Category } from '@/lib/types';
+import { generateId, getBaseCategories } from '@/lib/helpers';
 
 interface RegisterLoginProps {
   onSuccess: (session: AuthSession) => void;
@@ -17,6 +17,7 @@ interface RegisterLoginProps {
 export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
   const [admins, setAdmins] = useKV<Admin[]>('admins', []);
   const [branches, setBranches] = useKV<Branch[]>('branches', []);
+  const [categories, setCategories] = useKV<Category[]>('categories', []);
   
   const [isLoading, setIsLoading] = useState(false);
   
@@ -129,8 +130,16 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       createdAt: new Date().toISOString(),
     };
 
+    const baseCategories = getBaseCategories().map(cat => ({
+      ...cat,
+      id: `${newAdminId}-${cat.id}`,
+      adminId: newAdminId,
+      branchId: newBranchId,
+    }));
+
     setAdmins((current) => [...(current || []), newAdmin]);
     setBranches((current) => [...(current || []), newBranch]);
+    setCategories((current) => [...(current || []), ...baseCategories]);
 
     const session: AuthSession = {
       adminId: newAdminId,

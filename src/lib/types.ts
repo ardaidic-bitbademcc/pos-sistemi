@@ -217,6 +217,7 @@ export interface SalaryCalculationSettings {
 export interface Table {
   id: string;
   branchId: string;
+  adminId?: string;
   tableNumber: string;
   capacity: number;
   status: 'available' | 'occupied' | 'reserved' | 'cleaning';

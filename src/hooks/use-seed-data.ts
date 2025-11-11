@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useKV } from '@github/spark/hooks';
-import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem, B2BSupplier, B2BProduct } from '@/lib/types';
-import { generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
+import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem, B2BSupplier, B2BProduct, Admin } from '@/lib/types';
+import { generateId, generateSaleNumber, calculateTax, getBaseCategories } from '@/lib/helpers';
 
 export function useSeedData() {
+  const [admins, setAdmins] = useKV<Admin[]>('admins', []);
   const [employees, setEmployees] = useKV<Employee[]>('employees', []);
   const [products, setProducts] = useKV<Product[]>('products', []);
   const [categories, setCategories] = useKV<Category[]>('categories', []);
@@ -17,6 +18,19 @@ export function useSeedData() {
 
   useEffect(() => {
     if (seeded) return;
+    
+    if (!admins || admins.length === 0) {
+      const demoAdmin: Admin = {
+        id: 'demo-admin',
+        email: 'demo@posaca.com',
+        password: 'demo123',
+        businessName: 'Demo Restoran',
+        phone: '0555 000 0000',
+        createdAt: new Date().toISOString(),
+        isActive: true,
+      };
+      setAdmins([demoAdmin]);
+    }
     
     if (!b2bSuppliers || b2bSuppliers.length === 0) {
       const sampleSuppliers: B2BSupplier[] = [
@@ -32,6 +46,7 @@ export function useSeedData() {
           totalProducts: 5,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
         {
           id: 'supplier-2',
@@ -44,6 +59,7 @@ export function useSeedData() {
           totalProducts: 3,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
         {
           id: 'supplier-3',
@@ -56,6 +72,7 @@ export function useSeedData() {
           totalProducts: 4,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
       ];
       setB2BSuppliers(sampleSuppliers);
@@ -77,6 +94,7 @@ export function useSeedData() {
           stock: 5000,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
         {
           id: 'b2b-prod-2',
@@ -94,6 +112,7 @@ export function useSeedData() {
           stock: 2000,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
         {
           id: 'b2b-prod-3',
@@ -111,6 +130,7 @@ export function useSeedData() {
           stock: 10000,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
         {
           id: 'b2b-prod-4',
@@ -128,6 +148,7 @@ export function useSeedData() {
           stock: 3000,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
         {
           id: 'b2b-prod-5',
@@ -145,6 +166,7 @@ export function useSeedData() {
           stock: 50000,
           isActive: true,
           createdAt: new Date().toISOString(),
+          adminId: 'demo-admin',
         },
       ];
       setB2BProducts(sampleB2BProducts);
@@ -159,6 +181,7 @@ export function useSeedData() {
           address: 'Kadıköy, İstanbul',
           phone: '0216 555 0001',
           isActive: true,
+          adminId: 'demo-admin',
         },
         {
           id: 'branch-2',
@@ -167,6 +190,7 @@ export function useSeedData() {
           address: 'Beşiktaş, İstanbul',
           phone: '0212 555 0002',
           isActive: true,
+          adminId: 'demo-admin',
         },
         {
           id: 'branch-3',
@@ -175,49 +199,18 @@ export function useSeedData() {
           address: 'Üsküdar, İstanbul',
           phone: '0216 555 0003',
           isActive: true,
+          adminId: 'demo-admin',
         },
       ];
       setBranches(sampleBranches);
     }
     
     if (!categories || categories.length === 0) {
-      const sampleCategories: Category[] = [
-        {
-          id: 'beverages',
-          name: 'İçecek',
-          description: 'Sıcak ve soğuk içecekler',
-          showInPOS: true,
-          sortOrder: 0,
-        },
-        {
-          id: 'food',
-          name: 'Yiyecek',
-          description: 'Ana yemekler ve atıştırmalıklar',
-          showInPOS: true,
-          sortOrder: 1,
-        },
-        {
-          id: 'dessert',
-          name: 'Tatlı',
-          description: 'Tatlılar ve unlu mamuller',
-          showInPOS: true,
-          sortOrder: 2,
-        },
-        {
-          id: 'coffee',
-          name: 'Kahve',
-          description: 'Kahve çeşitleri',
-          showInPOS: true,
-          sortOrder: 3,
-        },
-        {
-          id: 'ingredients',
-          name: 'Malzeme',
-          description: 'Ham maddeler ve malzemeler',
-          showInPOS: false,
-          sortOrder: 4,
-        },
-      ];
+      const sampleCategories: Category[] = getBaseCategories().map(cat => ({
+        ...cat,
+        adminId: 'demo-admin',
+        branchId: 'branch-1',
+      }));
       setCategories(sampleCategories);
     }
     
@@ -234,6 +227,7 @@ export function useSeedData() {
           hourlyRate: 85,
           employeePin: '1234',
           qrCode: 'QR001',
+          adminId: 'demo-admin',
         },
         {
           id: 'emp-002',
@@ -246,6 +240,7 @@ export function useSeedData() {
           hourlyRate: 95,
           employeePin: '5678',
           qrCode: 'QR002',
+          adminId: 'demo-admin',
         },
         {
           id: 'emp-003',
@@ -258,6 +253,7 @@ export function useSeedData() {
           hourlyRate: 75,
           employeePin: '9012',
           qrCode: 'QR003',
+          adminId: 'demo-admin',
         },
         {
           id: 'emp-004',
@@ -270,6 +266,7 @@ export function useSeedData() {
           hourlyRate: 75,
           employeePin: '3456',
           qrCode: 'QR004',
+          adminId: 'demo-admin',
         },
         {
           id: 'emp-005',
@@ -282,6 +279,7 @@ export function useSeedData() {
           hourlyRate: 75,
           employeePin: '7890',
           qrCode: 'QR005',
+          adminId: 'demo-admin',
         },
         {
           id: 'emp-006',
@@ -294,6 +292,7 @@ export function useSeedData() {
           hourlyRate: 75,
           employeePin: '2345',
           qrCode: 'QR006',
+          adminId: 'demo-admin',
         },
         {
           id: 'emp-007',
@@ -306,6 +305,7 @@ export function useSeedData() {
           hourlyRate: 75,
           employeePin: '6789',
           qrCode: 'QR007',
+          adminId: 'demo-admin',
         },
         {
           id: 'emp-008',
@@ -318,6 +318,7 @@ export function useSeedData() {
           hourlyRate: 120,
           employeePin: '1111',
           qrCode: 'QR008',
+          adminId: 'demo-admin',
         },
       ];
       setEmployees(sampleEmployees);
@@ -577,7 +578,7 @@ export function useSeedData() {
           stock: 100,
           minStockLevel: 20,
         },
-      ];
+      ].map(p => ({ ...p, adminId: 'demo-admin', branchId: 'branch-1' }));
       setProducts(sampleProducts);
     }
 
@@ -585,6 +586,7 @@ export function useSeedData() {
       const sampleTables: Table[] = Array.from({ length: 12 }, (_, i) => ({
         id: generateId(),
         branchId: 'branch-1',
+        adminId: 'demo-admin',
         tableNumber: (i + 1).toString(),
         capacity: i < 4 ? 2 : i < 8 ? 4 : 6,
         status: 'available' as const,
@@ -877,7 +879,7 @@ export function useSeedData() {
         },
       ];
       
-      setMenuItems(menuItemsData);
+      setMenuItems(menuItemsData.map(item => ({ ...item, adminId: 'demo-admin', branchId: 'branch-1' })));
       
       const menuProducts: Product[] = menuItemsData.map(item => ({
         id: item.id,
@@ -897,6 +899,8 @@ export function useSeedData() {
         imageUrl: item.imageUrl,
         hasOptions: item.hasOptions,
         options: item.options,
+        adminId: 'demo-admin',
+        branchId: 'branch-1',
       }));
       
       setProducts((current) => [...(current || []), ...menuProducts]);

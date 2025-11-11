@@ -112,3 +112,43 @@ export function generateAccountNumber(): string {
   const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
   return `CA-${year}${month}-${random}`;
 }
+
+export function getBaseCategories() {
+  return [
+    {
+      id: 'beverages',
+      name: 'İçecek',
+      description: 'Sıcak ve soğuk içecekler',
+      showInPOS: true,
+      sortOrder: 0,
+    },
+    {
+      id: 'food',
+      name: 'Yiyecek',
+      description: 'Ana yemekler ve atıştırmalıklar',
+      showInPOS: true,
+      sortOrder: 1,
+    },
+    {
+      id: 'dessert',
+      name: 'Tatlı',
+      description: 'Tatlılar ve unlu mamuller',
+      showInPOS: true,
+      sortOrder: 2,
+    },
+    {
+      id: 'coffee',
+      name: 'Kahve',
+      description: 'Kahve çeşitleri',
+      showInPOS: true,
+      sortOrder: 3,
+    },
+    {
+      id: 'ingredients',
+      name: 'Malzeme',
+      description: 'Ham maddeler ve malzemeler',
+      showInPOS: false,
+      sortOrder: 4,
+    },
+  ];
+}
