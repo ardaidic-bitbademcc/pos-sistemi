@@ -490,6 +490,21 @@ export function useSeedData() {
           servingSize: 1,
           isProduced: false,
           imageUrl: 'https://images.unsplash.com/photo-1610889556528-9a770e32642f?w=400',
+          hasOptions: true,
+          options: [
+            {
+              id: 'opt-kahve-seker',
+              name: 'Şeker Durumu',
+              required: true,
+              multiSelect: false,
+              choices: [
+                { id: 'choice-sade', name: 'Sade', priceModifier: 0 },
+                { id: 'choice-az', name: 'Az Şekerli', priceModifier: 0 },
+                { id: 'choice-orta', name: 'Orta Şekerli', priceModifier: 0 },
+                { id: 'choice-sekerli', name: 'Şekerli', priceModifier: 0 },
+              ],
+            },
+          ],
         },
         {
           id: 'menu-003',
@@ -580,6 +595,46 @@ export function useSeedData() {
           servingSize: 1,
           isProduced: true,
           imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400',
+          hasOptions: true,
+          options: [
+            {
+              id: 'opt-pizza-boyut',
+              name: 'Pizza Boyutu',
+              required: true,
+              multiSelect: false,
+              choices: [
+                { id: 'choice-kucuk', name: 'Küçük (25cm)', priceModifier: -30 },
+                { id: 'choice-orta', name: 'Orta (30cm)', priceModifier: 0 },
+                { id: 'choice-buyuk', name: 'Büyük (35cm)', priceModifier: 40 },
+                { id: 'choice-xl', name: 'XL (40cm)', priceModifier: 70 },
+              ],
+            },
+            {
+              id: 'opt-pizza-malzeme',
+              name: 'Ekstra Malzeme',
+              required: false,
+              multiSelect: true,
+              choices: [
+                { id: 'choice-sucuk', name: 'Sucuk', priceModifier: 15 },
+                { id: 'choice-sosis', name: 'Sosis', priceModifier: 12 },
+                { id: 'choice-mantar', name: 'Mantar', priceModifier: 10 },
+                { id: 'choice-zeytin', name: 'Zeytin', priceModifier: 8 },
+                { id: 'choice-peynir', name: 'Ekstra Peynir', priceModifier: 20 },
+                { id: 'choice-misir', name: 'Mısır', priceModifier: 8 },
+              ],
+            },
+            {
+              id: 'opt-pizza-hamur',
+              name: 'Hamur Tipi',
+              required: false,
+              multiSelect: false,
+              choices: [
+                { id: 'choice-ince', name: 'İnce Hamur', priceModifier: 0 },
+                { id: 'choice-kalin', name: 'Kalın Hamur', priceModifier: 5 },
+                { id: 'choice-peynirli', name: 'Peynirli Kenar', priceModifier: 25 },
+              ],
+            },
+          ],
         },
         {
           id: 'menu-009',
@@ -706,6 +761,8 @@ export function useSeedData() {
         minStockLevel: 0,
         trackStock: false,
         imageUrl: item.imageUrl,
+        hasOptions: item.hasOptions,
+        options: item.options,
       }));
       
       setProducts((current) => [...(current || []), ...menuProducts]);

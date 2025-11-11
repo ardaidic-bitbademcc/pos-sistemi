@@ -51,6 +51,20 @@ export interface Branch {
   isActive: boolean;
 }
 
+export interface ProductOption {
+  id: string;
+  name: string;
+  choices: ProductOptionChoice[];
+  required: boolean;
+  multiSelect: boolean;
+}
+
+export interface ProductOptionChoice {
+  id: string;
+  name: string;
+  priceModifier: number;
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -75,6 +89,8 @@ export interface Product {
     endDate?: string;
     reason?: string;
   };
+  hasOptions?: boolean;
+  options?: ProductOption[];
 }
 
 export interface Category {
@@ -115,6 +131,11 @@ export interface SaleItem {
   taxRate: number;
   discountAmount: number;
   subtotal: number;
+  selectedOptions?: {
+    optionName: string;
+    choiceName: string;
+    priceModifier: number;
+  }[];
 }
 
 export interface Employee {
@@ -236,6 +257,8 @@ export interface MenuItem {
     endDate?: string;
     reason?: string;
   };
+  hasOptions?: boolean;
+  options?: ProductOption[];
 }
 
 export interface AppTheme {

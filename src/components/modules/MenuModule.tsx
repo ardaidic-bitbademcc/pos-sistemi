@@ -11,10 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent, MagnifyingGlass, SquaresFour, List } from '@phosphor-icons/react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent, MagnifyingGlass, SquaresFour, List, Image } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category } from '@/lib/types';
+import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category, ProductOption } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
+import ProductOptionsEditor from '@/components/ProductOptionsEditor';
 
 interface MenuModuleProps {
   onBack: () => void;
@@ -87,6 +89,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     minStockLevel: 10,
     trackStock: true,
     imageUrl: '',
+    hasOptions: false,
+    options: [] as ProductOption[],
   });
   
   const [newMenuItem, setNewMenuItem] = useState({
@@ -96,6 +100,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     servingSize: 1,
     isProduced: false,
     imageUrl: '',
+    hasOptions: false,
+    options: [] as ProductOption[],
   });
   
   const [recipeForm, setRecipeForm] = useState({
@@ -601,6 +607,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       servingSize: 1,
       isProduced: false,
       imageUrl: '',
+      hasOptions: false,
+      options: [],
     });
     setShowMenuItemDialog(true);
   };
@@ -626,6 +634,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       servingSize: newMenuItem.servingSize,
       isProduced: newMenuItem.isProduced,
       imageUrl: newMenuItem.imageUrl || undefined,
+      hasOptions: newMenuItem.hasOptions,
+      options: newMenuItem.hasOptions ? newMenuItem.options : undefined,
     };
 
     setMenuItems((current) => [...(current || []), menuItem]);
@@ -646,6 +656,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       minStockLevel: 0,
       trackStock: false,
       imageUrl: newMenuItem.imageUrl || undefined,
+      hasOptions: newMenuItem.hasOptions,
+      options: newMenuItem.hasOptions ? newMenuItem.options : undefined,
     };
     
     setProducts((current) => [...(current || []), product]);
@@ -872,6 +884,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       minStockLevel: 10,
       trackStock: true,
       imageUrl: '',
+      hasOptions: false,
+      options: [],
     });
   };
 
@@ -915,6 +929,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       minStockLevel: product.minStockLevel,
       trackStock: product.trackStock !== false,
       imageUrl: product.imageUrl || '',
+      hasOptions: product.hasOptions || false,
+      options: product.options || [],
     });
     setShowEditProductDialog(true);
   };
@@ -943,6 +959,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             minStockLevel: newProduct.minStockLevel,
             trackStock: newProduct.trackStock,
             imageUrl: newProduct.imageUrl || undefined,
+            hasOptions: newProduct.hasOptions,
+            options: newProduct.hasOptions ? newProduct.options : undefined,
           };
         }
         return p;
@@ -964,6 +982,8 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       minStockLevel: 10,
       trackStock: true,
       imageUrl: '',
+      hasOptions: false,
+      options: [],
     });
   };
 
@@ -2291,6 +2311,34 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                 onChange={(e) => setNewMenuItem({ ...newMenuItem, servingSize: Number(e.target.value) })}
               />
             </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Ürün Seçenekleri</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Müşterilerin seçebileceği varyantlar ekleyin (örn: Şeker durumu, boyut)
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewMenuItem({ ...newMenuItem, hasOptions: !newMenuItem.hasOptions })}
+                >
+                  {newMenuItem.hasOptions ? 'Seçenekleri Kapat' : 'Seçenek Ekle'}
+                </Button>
+              </div>
+              
+              {newMenuItem.hasOptions && (
+                <ProductOptionsEditor
+                  options={newMenuItem.options}
+                  onChange={(options) => setNewMenuItem({ ...newMenuItem, options })}
+                />
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMenuItemDialog(false)}>
@@ -2759,6 +2807,36 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                 </Label>
               </div>
             </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Ürün Seçenekleri</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Müşterilerin seçebileceği varyantlar ekleyin (örn: Şeker durumu, boyut)
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewProduct({ ...newProduct, hasOptions: !newProduct.hasOptions })}
+                >
+                  {newProduct.hasOptions ? 'Seçenekleri Kapat' : 'Seçenek Ekle'}
+                </Button>
+              </div>
+              
+              {newProduct.hasOptions && (
+                <ScrollArea className="max-h-[300px]">
+                  <ProductOptionsEditor
+                    options={newProduct.options}
+                    onChange={(options) => setNewProduct({ ...newProduct, options })}
+                  />
+                </ScrollArea>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowProductDialog(false)}>
@@ -3187,6 +3265,36 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                   Stok takibi yap
                 </Label>
               </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Ürün Seçenekleri</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Müşterilerin seçebileceği varyantlar ekleyin (örn: Şeker durumu, boyut)
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewProduct({ ...newProduct, hasOptions: !newProduct.hasOptions })}
+                >
+                  {newProduct.hasOptions ? 'Seçenekleri Kapat' : 'Seçenek Ekle'}
+                </Button>
+              </div>
+              
+              {newProduct.hasOptions && (
+                <ScrollArea className="max-h-[300px]">
+                  <ProductOptionsEditor
+                    options={newProduct.options}
+                    onChange={(options) => setNewProduct({ ...newProduct, options })}
+                  />
+                </ScrollArea>
+              )}
             </div>
           </div>
           <DialogFooter>

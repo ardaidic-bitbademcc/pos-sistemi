@@ -275,6 +275,26 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Görseller QR menüde yüksek kalitede görüntülenir
   - Görsel yüklenemezse otomatik gizlenir
   - Tema ayarlarından görseller toplu olarak gösterilebilir/gizlenebilir
+  - Ürün ekleme ve düzenleme formlarında görsel URL alanı aktif
+  - Görsel önizleme özelliği çalışır
+
+#### Ürün Seçenekleri ve Varyantlar
+- **İşlevsellik**: Her ürün için özelleştirilebilir seçenekler tanımlama (şeker durumu, boyut, ekstra malzeme vb.), fiyat değişiklikleri uygulama
+- **Amaç**: Müşterilerin ürünleri kendi tercihlerine göre özelleştirmelerini sağlamak, ek gelir kaynakları yaratmak
+- **Tetikleyici**: Menü mühendisliğinde veya ürün yönetiminde "Seçenek Ekle" butonuna tıklama
+- **Akış**: 
+  - Ürün oluştur/düzenle → Seçenek Ekle → Seçenek adı gir (örn: "Şeker Durumu") → Zorunlu/Opsiyonel belirle
+  - Seçim türü belirle (tekli/çoklu) → Seçim seçenekleri ekle → Her seçeneğe fiyat değişikliği ata
+  - POS'ta ürün seçildiğinde → Seçenekler dialog açılır → Müşteri seçim yapar → Fiyat otomatik hesaplanır
+  - Seçilen seçenekler sipariş detayında görünür → Fatura ve raporlarda detaylı kayıt tutulur
+- **Başarı Kriterleri**:
+  - Seçenek ekleme arayüzü sezgisel ve kullanımı kolay
+  - Zorunlu seçenekler seçilmeden sipariş tamamlanamaz
+  - Çoklu seçim özelliği çalışır (örn: pizzaya birden fazla malzeme)
+  - Fiyat değişiklikleri doğru hesaplanır ve toplam fiyata yansır
+  - Seçenekler sipariş geçmişinde görünür
+  - Seed data'da Türk Kahvesi (şeker durumu) ve Pizza (boyut, ekstra malzeme) örnekleri mevcut
+  - KDV hesaplaması seçeneklerle birlikte doğru çalışır
 
 #### QR Menü Tema Özelleştirme
 - **İşlevsellik**: Menü görünümünü mağazaya özel özelleştirme (renkler, yazı tipi, düzen)
