@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt } from '@phosphor-icons/react';
+import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { CustomerAccount, CustomerTransaction, Employee } from '@/lib/types';
 import { formatCurrency, formatDateTime, generateId, generateAccountNumber } from '@/lib/helpers';
@@ -42,12 +42,12 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
     email: '',
     phone: '',
     address: '',
-    creditLimit: 5000,
+    spendingLimit: 5000,
     notes: '',
   });
 
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'transfer'>('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
 
   const filteredAccounts = (accounts || []).filter(account => {
@@ -75,7 +75,7 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
       email: '',
       phone: '',
       address: '',
-      creditLimit: 5000,
+      spendingLimit: 5000,
       notes: '',
     });
   };
@@ -86,8 +86,8 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
       return;
     }
 
-    if (formData.creditLimit < 0) {
-      toast.error('Kredi limiti sıfırdan küçük olamaz');
+    if (formData.spendingLimit < 0) {
+      toast.error('Harcama limiti sıfırdan küçük olamaz');
       return;
     }
 
@@ -101,7 +101,7 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
       email: formData.email || undefined,
       phone: formData.phone,
       address: formData.address || undefined,
-      creditLimit: formData.creditLimit,
+      creditLimit: formData.spendingLimit,
       currentBalance: 0,
       totalDebt: 0,
       totalPaid: 0,
@@ -124,13 +124,13 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
       return;
     }
 
-    if (formData.creditLimit < 0) {
-      toast.error('Kredi limiti sıfırdan küçük olamaz');
+    if (formData.spendingLimit < 0) {
+      toast.error('Harcama limiti sıfırdan küçük olamaz');
       return;
     }
 
-    if (formData.creditLimit < selectedAccount.currentBalance) {
-      toast.error('Kredi limiti mevcut bakiyeden düşük olamaz');
+    if (formData.spendingLimit < selectedAccount.currentBalance) {
+      toast.error('Harcama limiti mevcut bakiyeden düşük olamaz');
       return;
     }
 
@@ -146,7 +146,7 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
               email: formData.email || undefined,
               phone: formData.phone,
               address: formData.address || undefined,
-              creditLimit: formData.creditLimit,
+              creditLimit: formData.spendingLimit,
               notes: formData.notes || undefined,
             }
           : account
@@ -253,7 +253,7 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
       email: account.email || '',
       phone: account.phone,
       address: account.address || '',
-      creditLimit: account.creditLimit,
+      spendingLimit: account.creditLimit,
       notes: account.notes || '',
     });
     setShowEditDialog(true);
@@ -317,7 +317,7 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Toplam Kredi Limiti</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">Toplam Harcama Limiti</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalCreditLimit)}</div>
@@ -333,7 +333,7 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Kullanılabilir Kredi</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">Kullanılabilir Limit</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(totalAvailableCredit)}</div>
@@ -449,6 +449,17 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-1">
+                                {account.currentBalance > 0 && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => openPaymentDialog(account)}
+                                    className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                                    title="Ödeme Al"
+                                  >
+                                    <Money className="h-3 w-3 sm:h-4 sm:w-4" weight="bold" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -577,12 +588,12 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
                 </div>
               )}
               <div className="space-y-1.5 sm:space-y-2">
-                <Label htmlFor="creditLimit" className="text-xs sm:text-sm">Kredi Limiti *</Label>
+                <Label htmlFor="spendingLimit" className="text-xs sm:text-sm">Harcama Limiti *</Label>
                 <Input
-                  id="creditLimit"
+                  id="spendingLimit"
                   type="number"
-                  value={formData.creditLimit}
-                  onChange={(e) => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) || 0 })}
+                  value={formData.spendingLimit}
+                  onChange={(e) => setFormData({ ...formData, spendingLimit: parseFloat(e.target.value) || 0 })}
                   min="0"
                   step="100"
                   className="h-9 text-sm"
@@ -713,12 +724,12 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
                 </div>
               )}
               <div className="space-y-1.5 sm:space-y-2">
-                <Label htmlFor="edit-creditLimit" className="text-xs sm:text-sm">Kredi Limiti *</Label>
+                <Label htmlFor="edit-spendingLimit" className="text-xs sm:text-sm">Harcama Limiti *</Label>
                 <Input
-                  id="edit-creditLimit"
+                  id="edit-spendingLimit"
                   type="number"
-                  value={formData.creditLimit}
-                  onChange={(e) => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) || 0 })}
+                  value={formData.spendingLimit}
+                  onChange={(e) => setFormData({ ...formData, spendingLimit: parseFloat(e.target.value) || 0 })}
                   min="0"
                   step="100"
                   className="h-9 text-sm"
@@ -780,7 +791,7 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-xs sm:text-sm">Kredi Limiti</CardTitle>
+                      <CardTitle className="text-xs sm:text-sm">Harcama Limiti</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-lg sm:text-2xl font-bold">{formatCurrency(selectedAccount.creditLimit)}</div>
@@ -905,7 +916,21 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm sm:text-base">{transaction.description}</div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium text-sm sm:text-base">{transaction.description}</span>
+                                    {transaction.paymentMethod && (
+                                      <Badge variant="outline" className="text-[10px] sm:text-xs flex items-center gap-1">
+                                        {transaction.paymentMethod === 'cash' && <Money className="h-3 w-3" weight="bold" />}
+                                        {transaction.paymentMethod === 'card' && <CreditCard className="h-3 w-3" weight="bold" />}
+                                        {transaction.paymentMethod === 'transfer' && <Bank className="h-3 w-3" weight="bold" />}
+                                        {transaction.paymentMethod === 'mobile' && <DeviceMobile className="h-3 w-3" weight="bold" />}
+                                        {transaction.paymentMethod === 'cash' && 'Nakit'}
+                                        {transaction.paymentMethod === 'card' && 'Kart'}
+                                        {transaction.paymentMethod === 'transfer' && 'Havale'}
+                                        {transaction.paymentMethod === 'mobile' && 'Mobil'}
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <div className="text-xs text-muted-foreground">
                                     {formatDateTime(transaction.date)}
                                   </div>
@@ -969,17 +994,45 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
             </div>
 
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="paymentMethod" className="text-xs sm:text-sm">Ödeme Yöntemi</Label>
-              <Select value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
-                <SelectTrigger id="paymentMethod" className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Nakit</SelectItem>
-                  <SelectItem value="card">Kredi Kartı</SelectItem>
-                  <SelectItem value="mobile">Mobil Ödeme</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs sm:text-sm">Ödeme Yöntemi</Label>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                  onClick={() => setPaymentMethod('cash')}
+                  className="h-16 sm:h-20 flex flex-col gap-1"
+                >
+                  <Money className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                  <span className="text-xs sm:text-sm">Nakit</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'card' ? 'default' : 'outline'}
+                  onClick={() => setPaymentMethod('card')}
+                  className="h-16 sm:h-20 flex flex-col gap-1"
+                >
+                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                  <span className="text-xs sm:text-sm">Kredi Kartı</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
+                  onClick={() => setPaymentMethod('transfer')}
+                  className="h-16 sm:h-20 flex flex-col gap-1"
+                >
+                  <Bank className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                  <span className="text-xs sm:text-sm">Havale</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'mobile' ? 'default' : 'outline'}
+                  onClick={() => setPaymentMethod('mobile')}
+                  className="h-16 sm:h-20 flex flex-col gap-1"
+                >
+                  <DeviceMobile className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                  <span className="text-xs sm:text-sm">Mobil Ödeme</span>
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-1.5 sm:space-y-2">

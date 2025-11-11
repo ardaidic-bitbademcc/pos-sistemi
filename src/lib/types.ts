@@ -101,7 +101,7 @@ export interface Category {
   sortOrder?: number;
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'mobile';
+export type PaymentMethod = 'cash' | 'card' | 'mobile' | 'transfer';
 export type PaymentStatus = 'pending' | 'completed' | 'refunded';
 
 export interface Sale {

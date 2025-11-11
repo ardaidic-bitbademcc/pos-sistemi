@@ -199,17 +199,17 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Form geçerli olmadan kayıt yapılamaz
   - Telefon numarası benzersiz olmalı
 
-#### Kredi Limiti Yönetimi
-- **İşlevsellik**: Müşteri bazında kredi limiti belirleme, limit kullanım takibi, limit aşım uyarıları
+#### Harcama Limiti Yönetimi
+- **İşlevsellik**: Müşteri bazında harcama limiti belirleme, limit kullanım takibi, limit aşım uyarıları
 - **Amaç**: Müşteri risk yönetimi ve borç kontrolü
 - **Tetikleyici**: Hesap oluşturma/düzenleme veya satış işlemi
-- **Akış**: Hesap oluştur/düzenle → Kredi limiti gir → Satış yap → Sistem limit kontrol eder → Limit aşımında işlem reddedilir
+- **Akış**: Hesap oluştur/düzenle → Harcama limiti gir → Satış yap → Sistem limit kontrol eder → Limit aşımında işlem reddedilir
 - **Başarı Kriterleri**:
   - Varsayılan limit 5000₺
   - Limit düzenlenebilir (0₺ ve üzeri)
   - Mevcut borç limitten fazla olamaz
   - Satış anında anlık limit kontrolü
-  - Kullanılabilir kredi miktarı görünür
+  - Kullanılabilir limit miktarı görünür
   - Limit aşım durumunda net uyarı
 
 #### Hesap Ekstreleri
@@ -233,7 +233,7 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Akış**: Sepet doldur → Ödeme Al → Cari Hesap seç → Müşteri seç → Limit kontrol → Satış tamamla → Hesaba borç ekle
 - **Başarı Kriterleri**:
   - Sadece aktif hesaplar listelenir
-  - Her müşteri için kullanılabilir kredi görünür
+  - Her müşteri için kullanılabilir limit görünür
   - Limit yetersiz müşteriler seçilemez
   - Satış sonrası hesap bakiyesi güncellenir
   - Fiş notu ile müşteri bilgisi kaydedilir
@@ -247,23 +247,26 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Başarı Kriterleri**:
   - Her aktif personel için cari hesap oluşturulur
   - Personel bilgileri (ad, telefon, e-posta) hesaba aktarılır
-  - Varsayılan 5000₺ kredi limiti atanır
+  - Varsayılan 5000₺ harcama limiti atanır
   - Hesap tipi "Şahıs" olarak belirlenir
   - Hesap notunda personel rolü belirtilir
   - Personel hesapları düzenlenemez/silinemez
   - İşlem otomatik ve arka planda çalışır
 
 #### Ödeme Alma İşlemleri
-- **İşlevsellik**: Müşteri borcunu ödeme alma, kısmi/tam ödeme, ödeme yöntemi seçimi
+- **İşlevsellik**: Müşteri borcunu ödeme alma, kısmi/tam ödeme, ödeme yöntemi seçimi (nakit, kredi kartı, havale, mobil ödeme)
 - **Amaç**: Müşteri borçlarını tahsil etmek
-- **Tetikleyici**: Hesap detaylarında "Ödeme Al" butonuna tıklanır
-- **Akış**: Hesap aç → Ödeme Al → Tutar gir → Ödeme yöntemi seç → Onayla → Bakiye güncellenir
+- **Tetikleyici**: Hesap listesinde müşteri satırındaki ödeme butonu veya hesap detaylarında "Ödeme Al" butonuna tıklanır
+- **Akış**: Ödeme butonuna tıkla → Tutar gir → Ödeme yöntemi seç (nakit/kart/havale/mobil) → İsteğe bağlı not ekle → Onayla → Bakiye güncellenir
 - **Başarı Kriterleri**:
+  - Ödeme butonu sadece borcu olan müşterilerde görünür
   - Ödeme tutarı mevcut borçtan fazla olamaz
-  - Nakit, kart, mobil ödeme seçenekleri
+  - Dört ödeme yöntemi: Nakit, Kredi Kartı, Havale, Mobil Ödeme
+  - Ödeme yöntemleri icon'larla görsel olarak sunulur (POS ekranındaki gibi)
   - Ödeme notu eklenebilir
-  - İşlem ekstrede görünür
+  - İşlem ekstrede ödeme yöntemi ile birlikte görünür
   - Başarılı ödeme sonrası bildirim
+  - Liste üzerinden hızlı ödeme alma imkanı
 
 #### Hesap Durumları
 - **İşlevsellik**: Hesap aktif etme, askıya alma, kapatma
@@ -279,12 +282,12 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - POS'ta sadece aktif hesaplar görünür
 
 #### Dashboard ve Raporlama
-- **İşlevsellik**: Toplam kredi limiti, toplam borç, kullanılabilir kredi, aktif hesap sayısı göstergeleri
+- **İşlevsellik**: Toplam harcama limiti, toplam borç, kullanılabilir limit, aktif hesap sayısı göstergeleri
 - **Amaç**: Cari hesapları genel durumunu özetlemek
 - **Göstergeler**:
-  - Toplam Kredi Limiti: Tüm aktif hesapların limitleri toplamı
+  - Toplam Harcama Limiti: Tüm aktif hesapların limitleri toplamı
   - Toplam Borç: Tüm hesapların mevcut borcu
-  - Kullanılabilir Kredi: Kullanılmayan kredi miktarı
+  - Kullanılabilir Limit: Kullanılmayan limit miktarı
   - Aktif Hesaplar: Aktif durumdaki hesap sayısı
 - **Başarı Kriterleri**:
   - Göstergeler gerçek zamanlı güncellenir
