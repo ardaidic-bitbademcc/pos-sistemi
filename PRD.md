@@ -125,10 +125,42 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - Mola süreleri hesaplamaya dahil edilsin/edilmesin seçeneği
 
 ### 3. Şube Yönetimi Modülü
-- **İşlevsellik**: Çoklu şube senkronizasyonu, merkezi ürün yönetimi, şubeler arası stok transferi
-- **Amaç**: Çok şubeli işletmelerde tutarlılığı sağlamak ve merkezi kontrolü güçlendirmek
-- **Tetikleyici**: Merkezi yönetici ürün güncellemesi yapar veya stok transferi başlatır
-- **Akış**: Merkezi panel → Ürün seç → Şubeleri seç → Fiyat/stok güncelle → Onayla → Tüm şubelere yayınla
+- **İşlevsellik**: Çoklu şube yönetimi, şube ekleme/düzenleme/silme, şube seçim ekranı, şubeler arası geçiş, merkezi ürün yönetimi, şubeler arası stok transferi
+- **Amaç**: Çok şubeli işletmelerde tutarlılığı sağlamak, merkezi kontrolü güçlendirmek ve admin kullanıcıların birden fazla şube arasında kolayca geçiş yapabilmesini sağlamak
+- **Tetikleyici**: Admin şube yönetimine gider, yeni şube ekler veya mevcut şubeyi düzenler; veya şube seçim ekranını açar
+- **Akış**: 
+  - **Yeni Şube Ekleme**: Şube Yönetimi → Yeni Şube butonu → Şube bilgileri (ad, kod, adres, telefon, e-posta, yönetici) gir → Ekle → Başarı bildirimi
+  - **Şube Düzenleme**: Şube kartında Düzenle → Bilgileri güncelle → Güncelle → Başarı bildirimi
+  - **Şube Silme**: Şube kartında Sil → Onay → Şube pasif olur → Başarı bildirimi
+  - **Şube Geçişi**: Üst menüden şube adı butonuna tıkla → Şube seçim ekranı → Şube kartına tıkla → Seçili şubeye geçiş yap → Dashboard
+
+#### Şube Seçim Ekranı
+- **İşlevsellik**: Admin kullanıcıların tüm şubelerini görmesi ve aralarında geçiş yapabilmesi
+- **Amaç**: Çoklu şube yönetimini kolaylaştırmak ve hızlı şube değiştirme imkanı sunmak
+- **Tetikleyici**: Admin birden fazla şubeye sahipse üst menüde şube butonuna tıklar
+- **Akış**: Şube butonu tıkla → Şube seçim ekranı aç → Tüm aktif şubeler grid görünümünde listelenir → İstenen şubeye tıkla → Yeni şubeye geçiş yap → Toast bildirimi
+- **Başarı Kriterleri**: 
+  - Sadece ilgili admin'in şubeleri görünür
+  - Aktif şube işaretli gösterilir
+  - Her şube kartında: ad, kod, adres, telefon, yönetici bilgisi görünür
+  - Smooth animasyonlar ile modern görünüm
+  - Şube yoksa bilgilendirici boş durum mesajı
+  - Seçim sonrası authSession güncellenir ve uygulama yeni şubeye göre filtrelenir
+
+#### Şube CRUD İşlemleri
+- **İşlevsellik**: Yeni şube ekleme, mevcut şube düzenleme, şube silme (pasif yapma)
+- **Amaç**: Admin kullanıcıların işletmelerine şube ekleyip yönetebilmesi
+- **Tetikleyici**: Şube yönetimi modülünde "Yeni Şube" butonu veya şube kartında "Düzenle/Sil" butonları
+- **Akış**: 
+  - **Ekleme**: Dialog aç → Form doldur (ad*, kod*, adres*, telefon*, e-posta, yönetici) → Validasyon → Ekle → Başarı
+  - **Düzenleme**: Düzenle butonu → Mevcut bilgiler dolu form → Değiştir → Güncelle → Başarı
+  - **Silme**: Sil butonu → Onay dialogu → İsActive = false → Başarı
+- **Başarı Kriterleri**: 
+  - Zorunlu alanlar (*) doldurulmadan kayıt yapılamaz
+  - Her şubeye benzersiz ID atanır
+  - AdminId otomatik eklenir
+  - CreatedAt ve updatedAt timestamp'leri saklanır
+  - Silinen şubeler listeden kalkar ama veri korunur
 
 #### Stok Transfer Sistemi
 - **İşlevsellik**: Şubeler arası ürün stoğu transferi, transfer geçmişi takibi
@@ -140,7 +172,7 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Transfer geçmişi son 5 işlem olarak görüntülenir
   - Her transfer tarih, miktar ve durum bilgisi içerir
   - Transfer edilen ürün ve şube isimleri açıkça gösterilir
-- **Başarı Kriterleri**: Tüm şubeler 5 saniye içinde güncellenir, çakışma yok
+  - Tüm şubeler senkronize çalışır
 
 ### 4. Menü Mühendisliği Modülü
 - **İşlevsellik**: Reçete yönetimi, fatura girişi, otomatik stok güncelleme, maliyet analizi, AI destekli menü optimizasyonu (tarih aralığı filtreli)

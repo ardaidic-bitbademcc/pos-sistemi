@@ -3,9 +3,10 @@ import { useKV } from '@github/spark/hooks';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SignOut, CurrencyCircleDollar, Shield } from '@phosphor-icons/react';
+import { SignOut, CurrencyCircleDollar, Shield, Buildings } from '@phosphor-icons/react';
 import Login from '@/components/Login';
 import RegisterLogin from '@/components/RegisterLogin';
+import BranchSelector from '@/components/BranchSelector';
 import Dashboard from '@/components/Dashboard';
 import POSModule from '@/components/modules/POSModule';
 import PersonnelModule from '@/components/modules/PersonnelModule';
@@ -25,7 +26,8 @@ import DataMigration from '@/components/DataMigration';
 import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
 import { checkMigrationStatus } from '@/lib/data-migration';
-import type { UserRole, AuthSession } from '@/lib/types';
+import type { UserRole, AuthSession, Branch } from '@/lib/types';
+import { toast } from 'sonner';
 
 export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers' | 'admin';
 
@@ -37,6 +39,8 @@ function App() {
   const [currentUserName, setCurrentUserName] = useState('');
   const [useOldAuth, setUseOldAuth] = useState(false);
   const [migrationCompleted, setMigrationCompleted] = useState<boolean | null>(null);
+  const [showBranchSelector, setShowBranchSelector] = useState(false);
+  const [branches] = useKV<Branch[]>('branches', []);
   
   useSeedData();
   useAutoEmployeeAccounts();
@@ -69,6 +73,24 @@ function App() {
     setAuthSession(null);
     setActiveModule('dashboard');
     setCurrentUserName('');
+    setShowBranchSelector(false);
+  };
+
+  const handleSelectBranch = (branchId: string) => {
+    if (authSession) {
+      const branch = branches?.find((b) => b.id === branchId);
+      const updatedSession: AuthSession = {
+        ...authSession,
+        branchId,
+      };
+      setAuthSession(updatedSession);
+      setShowBranchSelector(false);
+      toast.success(`${branch?.name} şubesine geçildi`);
+    }
+  };
+
+  const openBranchSelector = () => {
+    setShowBranchSelector(true);
   };
 
   if (migrationCompleted === null) {
@@ -132,9 +154,24 @@ function App() {
     );
   }
 
+  if (showBranchSelector && authSession) {
+    return <BranchSelector authSession={authSession} onSelectBranch={handleSelectBranch} />;
+  }
+
+  const adminBranches = (branches || []).filter(
+    (b) => b.isActive && authSession?.adminId && b.adminId === authSession.adminId
+  );
+  const currentBranch = adminBranches.find((b) => b.id === authSession?.branchId);
+
   return (
     <div className="min-h-screen bg-background font-sans">
       <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex flex-wrap items-center gap-1 sm:gap-2 max-w-[calc(100vw-1rem)]">
+        {adminBranches.length > 1 && (
+          <Button variant="outline" size="sm" onClick={openBranchSelector} className="h-8 px-2 sm:px-3">
+            <Buildings className="h-4 w-4 sm:mr-1" weight="fill" />
+            <span className="hidden sm:inline">{currentBranch?.name || 'Şube Seç'}</span>
+          </Button>
+        )}
         {currentUserRole === 'owner' && (
           <Button variant="outline" size="sm" onClick={() => setActiveModule('admin')} className="h-8 px-2 sm:px-3">
             <Shield className="h-4 w-4 sm:mr-1" weight="fill" />
