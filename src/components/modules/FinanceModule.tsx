@@ -51,18 +51,18 @@ export default function FinanceModule({ onBack }: FinanceModuleProps) {
   }, [expenses]);
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <header className="flex items-center gap-2 sm:gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Finans Yönetimi</h1>
-          <p className="text-muted-foreground text-sm">Gelir-gider takibi ve kar-zarar analizi</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-semibold tracking-tight truncate">Finans Yönetimi</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm truncate">Gelir-gider takibi ve kar-zarar analizi</p>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">

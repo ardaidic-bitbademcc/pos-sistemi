@@ -227,26 +227,26 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
   });
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+        <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <Button variant="ghost" size="sm" onClick={onBack} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-semibold">B2B Tedarik Platformu</h1>
-            <p className="text-muted-foreground">Ürün siparişi ver veya tedarikçi olarak ürün sat</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-semibold truncate">B2B Tedarik Platformu</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm truncate">Ürün siparişi ver veya tedarikçi olarak ürün sat</p>
           </div>
         </div>
 
         {!isSupplierMode && (
-          <Alert className="mb-6">
+          <Alert className="mb-4 sm:mb-6">
             <Storefront className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="text-xs sm:text-sm">
               Kendi ürettiğiniz ürünleri (kahve, pasta, çikolata vb.) satmak ister misiniz?
               <Button
                 variant="link"
-                className="ml-2"
+                className="ml-2 h-auto p-0"
                 onClick={activateSupplierMode}
               >
                 Tedarikçi Panelini Aktifleştir
@@ -255,15 +255,15 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
           </Alert>
         )}
 
-        <Tabs defaultValue="customer" className="space-y-6">
+        <Tabs defaultValue="customer" className="space-y-4 sm:space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="customer">
-              <ShoppingBag className="h-4 w-4 mr-2" />
+            <TabsTrigger value="customer" className="text-xs sm:text-sm">
+              <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Sipariş Ver
             </TabsTrigger>
             {isSupplierMode && (
-              <TabsTrigger value="supplier">
-                <Storefront className="h-4 w-4 mr-2" />
+              <TabsTrigger value="supplier" className="text-xs sm:text-sm">
+                <Storefront className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Tedarikçi Panelim
               </TabsTrigger>
             )}

@@ -82,27 +82,27 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background font-sans">
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+      <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex flex-wrap items-center gap-1 sm:gap-2 max-w-[calc(100vw-1rem)]">
         {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
           <>
-            <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')}>
-              <CurrencyCircleDollar className="h-4 w-4 mr-1" weight="fill" />
-              Kasa
+            <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')} className="h-8 px-2 sm:px-3">
+              <CurrencyCircleDollar className="h-4 w-4 sm:mr-1" weight="fill" />
+              <span className="hidden sm:inline">Kasa</span>
             </Button>
             {currentUserRole === 'owner' && (
-              <Button variant="outline" size="sm" onClick={() => setActiveModule('roles')}>
-                <Shield className="h-4 w-4 mr-1" weight="fill" />
-                Yetki
+              <Button variant="outline" size="sm" onClick={() => setActiveModule('roles')} className="h-8 px-2 sm:px-3">
+                <Shield className="h-4 w-4 sm:mr-1" weight="fill" />
+                <span className="hidden sm:inline">Yetki</span>
               </Button>
             )}
           </>
         )}
-        <Badge variant="outline" className="text-sm px-3 py-1">
-          👤 {currentUserName}
+        <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 max-w-[120px] truncate">
+          👤 <span className="hidden sm:inline">{currentUserName}</span>
         </Badge>
-        <Button variant="outline" size="sm" onClick={handleLogout}>
-          <SignOut className="h-4 w-4 mr-2" weight="bold" />
-          Çıkış
+        <Button variant="outline" size="sm" onClick={handleLogout} className="h-8 px-2 sm:px-3">
+          <SignOut className="h-4 w-4 sm:mr-2" weight="bold" />
+          <span className="hidden sm:inline">Çıkış</span>
         </Button>
       </div>
       {renderModule()}

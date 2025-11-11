@@ -1130,23 +1130,25 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
 
   return (
     <ScrollArea className="h-screen">
-      <div className="min-h-screen p-6 space-y-6 pb-24">
-        <header className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-semibold tracking-tight">Menü Mühendisliği</h1>
-            <p className="text-muted-foreground text-sm">Reçete yönetimi, fatura girişi ve AI destekli optimizasyon</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={openInvoiceDialog}>
-              <Receipt className="h-5 w-5 mr-2" />
-              Fatura Gir
+      <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6 pb-24">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Button variant="outline" onClick={openCreateMenuItemDialog}>
-              <Plus className="h-5 w-5 mr-2" />
-              Menü Öğesi
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-3xl font-semibold tracking-tight truncate">Menü Mühendisliği</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm truncate">Reçete yönetimi, fatura girişi ve AI destekli optimizasyon</p>
+            </div>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={openInvoiceDialog} className="flex-1 sm:flex-none text-xs sm:text-sm h-9">
+              <Receipt className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Fatura Gir</span>
+            </Button>
+            <Button variant="outline" onClick={openCreateMenuItemDialog} className="flex-1 sm:flex-none text-xs sm:text-sm h-9">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Menü Öğesi</span>
             </Button>
           </div>
         </header>
@@ -1155,13 +1157,13 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
         setSearchQuery('');
         setSelectedCategory('all');
       }}>
-        <TabsList>
-          <TabsTrigger value="menu">Menü Öğeleri</TabsTrigger>
-          <TabsTrigger value="products">Ürünler</TabsTrigger>
-          <TabsTrigger value="stock">Stok Yönetimi</TabsTrigger>
-          <TabsTrigger value="recipes">Reçeteler</TabsTrigger>
-          <TabsTrigger value="invoices">Faturalar</TabsTrigger>
-          <TabsTrigger value="analysis">AI Analizi</TabsTrigger>
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto">
+          <TabsTrigger value="menu" className="text-xs sm:text-sm">Menü Öğeleri</TabsTrigger>
+          <TabsTrigger value="products" className="text-xs sm:text-sm">Ürünler</TabsTrigger>
+          <TabsTrigger value="stock" className="text-xs sm:text-sm">Stok Yönetimi</TabsTrigger>
+          <TabsTrigger value="recipes" className="text-xs sm:text-sm">Reçeteler</TabsTrigger>
+          <TabsTrigger value="invoices" className="text-xs sm:text-sm">Faturalar</TabsTrigger>
+          <TabsTrigger value="analysis" className="text-xs sm:text-sm">AI Analizi</TabsTrigger>
         </TabsList>
 
         <TabsContent value="menu" className="space-y-4">

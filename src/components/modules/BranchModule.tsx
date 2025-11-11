@@ -84,24 +84,25 @@ export default function BranchModule({ onBack }: BranchModuleProps) {
   };
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Şube Yönetimi</h1>
-            <p className="text-muted-foreground text-sm">Çoklu şube senkronizasyonu ve yönetim</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight truncate">Şube Yönetimi</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm truncate">Çoklu şube senkronizasyonu ve yönetim</p>
           </div>
         </div>
-        <Button onClick={() => setIsTransferDialogOpen(true)}>
-          <ArrowsLeftRight className="h-4 w-4 mr-2" weight="bold" />
-          Stok Transferi
+        <Button onClick={() => setIsTransferDialogOpen(true)} className="w-full sm:w-auto text-xs sm:text-sm h-9">
+          <ArrowsLeftRight className="h-4 w-4 sm:mr-2" weight="bold" />
+          <span className="hidden sm:inline">Stok Transferi</span>
+          <span className="sm:hidden">Transfer</span>
         </Button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {activeBranches.map((branch) => (
           <Card key={branch.id} className="hover:shadow-md transition-shadow">
             <CardHeader>

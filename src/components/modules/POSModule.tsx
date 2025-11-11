@@ -1104,31 +1104,32 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const totals = calculateTotals();
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">POS - Satış Noktası</h1>
-            <p className="text-muted-foreground text-sm">Hızlı satış işlemleri ve masa yönetimi</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight truncate">POS - Satış Noktası</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm truncate">Hızlı satış işlemleri ve masa yönetimi</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
           {selectedTable && (
             <>
-              <Badge variant="default" className="text-sm px-3 py-2">
-                <TableIcon className="h-4 w-4 mr-2" weight="bold" />
+              <Badge variant="default" className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 shrink-0">
+                <TableIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" weight="bold" />
                 Masa {selectedTable.tableNumber}
               </Badge>
               {selectedTable.currentSaleId && (
-                <Button variant="outline" size="sm" onClick={() => setShowOrderDetailsDialog(true)}>
-                  Sipariş Detayları
+                <Button variant="outline" size="sm" onClick={() => setShowOrderDetailsDialog(true)} className="text-xs shrink-0">
+                  <Eye className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Sipariş Detayları</span>
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => setShowTransferDialog(true)} disabled={cart.length === 0}>
-                <ArrowsLeftRight className="h-5 w-5" weight="bold" />
+              <Button variant="outline" size="sm" onClick={() => setShowTransferDialog(true)} disabled={cart.length === 0} className="shrink-0">
+                <ArrowsLeftRight className="h-4 w-4 sm:h-5 sm:w-5" weight="bold" />
               </Button>
             </>
           )}
@@ -1136,13 +1137,13 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       </header>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'quick-sale' | 'tables')} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="quick-sale">Hızlı Satış</TabsTrigger>
-          <TabsTrigger value="tables">Masalar</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="quick-sale" className="flex-1 sm:flex-none">Hızlı Satış</TabsTrigger>
+          <TabsTrigger value="tables" className="flex-1 sm:flex-none">Masalar</TabsTrigger>
         </TabsList>
 
         <TabsContent value="quick-sale" className="space-y-0">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="lg:col-span-2 space-y-4">
               {campaignProducts.length > 0 && (
                 <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent">

@@ -221,24 +221,24 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
   };
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <header className="flex items-center gap-2 sm:gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Ayarlar</h1>
-          <p className="text-muted-foreground text-sm">Sistem ayarlarını yönet</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-semibold tracking-tight truncate">Ayarlar</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm truncate">Sistem ayarlarını yönet</p>
         </div>
       </header>
 
       <Tabs defaultValue="categories" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="categories">Kategori Yönetimi</TabsTrigger>
-          <TabsTrigger value="tax">KDV Ayarları</TabsTrigger>
-          <TabsTrigger value="payment">Ödeme Yöntemleri</TabsTrigger>
-          <TabsTrigger value="theme">Sistem Teması</TabsTrigger>
-          <TabsTrigger value="general">Genel</TabsTrigger>
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto">
+          <TabsTrigger value="categories" className="text-xs sm:text-sm">Kategori Yönetimi</TabsTrigger>
+          <TabsTrigger value="tax" className="text-xs sm:text-sm">KDV Ayarları</TabsTrigger>
+          <TabsTrigger value="payment" className="text-xs sm:text-sm">Ödeme Yöntemleri</TabsTrigger>
+          <TabsTrigger value="theme" className="text-xs sm:text-sm">Sistem Teması</TabsTrigger>
+          <TabsTrigger value="general" className="text-xs sm:text-sm">Genel</TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories" className="space-y-4">

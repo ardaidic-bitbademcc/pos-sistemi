@@ -235,19 +235,19 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
   });
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <header className="space-y-2">
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6 pb-20">
+      <header className="space-y-2 pt-12 sm:pt-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-semibold tracking-tight">Entegre POS Sistemi</h1>
-            <p className="text-muted-foreground text-base">
+            <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">Entegre POS Sistemi</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Modern restoran ve perakende yönetim platformu
             </p>
           </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -326,7 +326,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Modüller</h2>
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Modüller</h2>
         {moduleCards.length === 0 ? (
           <Card>
             <CardContent className="py-8">
@@ -336,7 +336,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {moduleCards.map((module) => {
               const Icon = module.icon;
               return (

@@ -389,31 +389,32 @@ export default function TaskManagementModule({
   };
 
   return (
-    <div className="min-h-screen p-6 space-y-6 bg-gradient-to-br from-background via-background to-primary/5">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6 bg-gradient-to-br from-background via-background to-primary/5">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-3">
-              <ListChecks className="h-8 w-8 text-primary" weight="bold" />
-              Görev Yönetimi
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight flex items-center gap-2 sm:gap-3 truncate">
+              <ListChecks className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" weight="bold" />
+              <span className="truncate">Görev Yönetimi</span>
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-xs sm:text-sm truncate">
               Personel görev atama ve takip sistemi
             </p>
           </div>
         </div>
         {(isAdmin || currentUserRole !== 'waiter') && (
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-5 w-5 mr-2" />
-            Yeni Görev
+          <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto text-xs sm:text-sm h-9">
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+            <span className="hidden sm:inline">Yeni Görev</span>
+            <span className="sm:hidden">Yeni</span>
           </Button>
         )}
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">

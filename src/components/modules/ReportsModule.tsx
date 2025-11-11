@@ -173,18 +173,20 @@ export default function ReportsModule({ onBack }: ReportsModuleProps) {
   }, [sales, selectedBranch, selectedPeriod]);
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight">Raporlama</h1>
-          <p className="text-muted-foreground text-sm">Detaylı satış ve performans raporları</p>
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight truncate">Raporlama</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm truncate">Detaylı satış ve performans raporları</p>
+          </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
           <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] text-xs sm:text-sm h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -197,7 +199,7 @@ export default function ReportsModule({ onBack }: ReportsModuleProps) {
             </SelectContent>
           </Select>
           <Select value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'today' | 'week' | 'month')}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-full sm:w-[140px] text-xs sm:text-sm h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -209,7 +211,7 @@ export default function ReportsModule({ onBack }: ReportsModuleProps) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">

@@ -83,7 +83,7 @@ export default function Login({ onLogin }: LoginProps) {
           scale: i === pin.length && pin.length < 4 ? [1, 1.2, 1] : 1,
         }}
         transition={{ duration: 0.2 }}
-        className={`w-12 h-12 rounded-lg border-2 flex items-center justify-center ${
+        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 flex items-center justify-center ${
           error 
             ? 'border-destructive bg-destructive/10' 
             : i < pin.length 
@@ -104,31 +104,32 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-background via-background to-secondary/20">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-6 bg-gradient-to-br from-background via-background to-secondary/20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="w-full"
       >
-        <Card className="w-full max-w-md shadow-2xl">
-          <CardHeader className="space-y-3 text-center pb-8">
+        <Card className="w-full max-w-md mx-auto shadow-2xl">
+          <CardHeader className="space-y-3 text-center pb-6 sm:pb-8">
             <motion.div
-              className="w-20 h-20 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center"
+              className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center"
               animate={shake ? { x: [-10, 10, -10, 10, 0] } : {}}
               transition={{ duration: 0.5 }}
             >
-              <Lock className="w-10 h-10 text-primary" weight="fill" />
+              <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-primary" weight="fill" />
             </motion.div>
             <div>
-              <CardTitle className="text-3xl font-semibold">NEXUSPOS</CardTitle>
-              <CardDescription className="text-base mt-2">
+              <CardTitle className="text-2xl sm:text-3xl font-semibold">NEXUSPOS</CardTitle>
+              <CardDescription className="text-sm sm:text-base mt-2">
                 Devam etmek için PIN kodunuzu girin
               </CardDescription>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-8">
-            <div className="flex justify-center gap-3">
+          <CardContent className="space-y-6 sm:space-y-8">
+            <div className="flex justify-center gap-2 sm:gap-3">
               {getPinDisplay()}
             </div>
 
@@ -147,13 +148,13 @@ export default function Login({ onLogin }: LoginProps) {
               )}
             </AnimatePresence>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                 <motion.div key={num} whileTap={{ scale: 0.95 }}>
                   <Button
                     size="lg"
                     variant="outline"
-                    className="w-full h-16 text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
+                    className="w-full h-14 sm:h-16 text-xl sm:text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
                     onClick={() => handleNumberClick(num.toString())}
                     disabled={pin.length >= 4}
                   >
@@ -166,11 +167,11 @@ export default function Login({ onLogin }: LoginProps) {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full h-16 hover:bg-destructive/10 hover:border-destructive"
+                  className="w-full h-14 sm:h-16 hover:bg-destructive/10 hover:border-destructive"
                   onClick={handleClear}
                   disabled={pin.length === 0}
                 >
-                  <X className="w-6 h-6" weight="bold" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" weight="bold" />
                 </Button>
               </motion.div>
 
@@ -178,7 +179,7 @@ export default function Login({ onLogin }: LoginProps) {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full h-16 text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
+                  className="w-full h-14 sm:h-16 text-xl sm:text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
                   onClick={() => handleNumberClick('0')}
                   disabled={pin.length >= 4}
                 >
@@ -190,11 +191,11 @@ export default function Login({ onLogin }: LoginProps) {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full h-16 hover:bg-muted-foreground/10"
+                  className="w-full h-14 sm:h-16 hover:bg-muted-foreground/10"
                   onClick={handleBackspace}
                   disabled={pin.length === 0}
                 >
-                  <Backspace className="w-6 h-6" weight="bold" />
+                  <Backspace className="w-5 h-5 sm:w-6 sm:h-6" weight="bold" />
                 </Button>
               </motion.div>
             </div>

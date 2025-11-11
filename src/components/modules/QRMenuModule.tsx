@@ -138,40 +138,41 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
   };
 
   return (
-    <div className="min-h-screen p-6 space-y-6 bg-gradient-to-br from-background via-background to-primary/5">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6 bg-gradient-to-br from-background via-background to-primary/5">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-3">
-              <QrCode className="h-8 w-8 text-primary" weight="bold" />
-              QR Menü Yönetimi
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight flex items-center gap-2 sm:gap-3 truncate">
+              <QrCode className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" weight="bold" />
+              <span className="truncate">QR Menü Yönetimi</span>
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-xs sm:text-sm truncate">
               Dijital menü - Fiyat ve ürün değişiklikleri otomatik senkronize edilir
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setShowThemeDialog(true)}>
-            <Sparkle className="h-4 w-4 mr-2" weight="fill" />
-            Tema Ayarları
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setShowThemeDialog(true)} size="sm" className="text-xs h-9">
+            <Sparkle className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" weight="fill" />
+            <span className="hidden sm:inline">Tema Ayarları</span>
           </Button>
-          <Button variant="outline" onClick={() => setShowCustomerView(true)}>
-            <Eye className="h-4 w-4 mr-2" />
-            Müşteri Görünümü
+          <Button variant="outline" onClick={() => setShowCustomerView(true)} size="sm" className="text-xs h-9">
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Müşteri Görünümü</span>
           </Button>
-          <Button onClick={() => setShowQRDialog(true)}>
-            <QrCode className="h-5 w-5 mr-2" weight="bold" />
-            QR Kod Oluştur
+          <Button onClick={() => setShowQRDialog(true)} size="sm" className="text-xs h-9">
+            <QrCode className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" weight="bold" />
+            <span className="hidden sm:inline">QR Kod Oluştur</span>
+            <span className="sm:hidden">QR</span>
           </Button>
-          <Badge variant="outline" className="text-sm px-3 py-2">
-            <ForkKnife className="h-4 w-4 mr-2" weight="bold" />
-            {activeMenuItems.length} Aktif Ürün
+          <Badge variant="outline" className="text-xs px-2 py-1">
+            <ForkKnife className="h-3 w-3 mr-1" weight="bold" />
+            {activeMenuItems.length}
           </Badge>
-          <Badge variant="secondary" className="text-sm px-3 py-2">
+          <Badge variant="secondary" className="text-xs px-2 py-1 hidden sm:flex">
             🔄 Canlı Senkronizasyon
           </Badge>
         </div>
@@ -185,7 +186,7 @@ export default function QRMenuModule({ onBack }: QRMenuModuleProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div className="p-4 bg-card rounded-lg border">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-primary/10 rounded-lg">

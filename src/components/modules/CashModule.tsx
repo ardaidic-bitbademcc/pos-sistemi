@@ -405,26 +405,26 @@ export default function CashModule({ onBack, currentUserRole = 'owner' }: CashMo
   }
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
+    <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
       <header>
-        <Button variant="ghost" size="sm" onClick={onBack} className="mb-4">
+        <Button variant="ghost" size="sm" onClick={onBack} className="mb-3 sm:mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Geri Dön
         </Button>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Kasa Yönetimi</h1>
-            <p className="text-muted-foreground mt-1">
+        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight truncate">Kasa Yönetimi</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1 truncate">
               Nakit akışı takibi ve kasa durumu
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {(branches || []).length > 1 && (
               <Select
                 value={selectedBranch || activeBranch.id}
                 onValueChange={setSelectedBranch}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px] text-xs sm:text-sm h-9">
                   <SelectValue placeholder="Şube seçin" />
                 </SelectTrigger>
                 <SelectContent>
