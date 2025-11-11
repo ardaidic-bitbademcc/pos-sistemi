@@ -10,9 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { ArrowLeft, Package, Users, ShoppingBag, Truck, FileText, CheckCircle, XCircle, Clock } from '@phosphor-icons/react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { B2BSupplier, B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus } from '@/lib/types';
+import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus } from '@/lib/types';
 
 interface B2BModuleProps {
   onBack: () => void;
@@ -21,26 +22,32 @@ interface B2BModuleProps {
 }
 
 export default function B2BModule({ onBack, currentUserRole, currentUserName }: B2BModuleProps) {
-  const [activeTab, setActiveTab] = useState<'supplier' | 'customer'>('supplier');
-  const [suppliers, setSuppliers] = useKV<B2BSupplier[]>('b2b-suppliers', []);
+  const [isSupplierMode, setIsSupplierMode] = useKV<boolean>('b2b-is-supplier-mode', false);
   const [products, setProducts] = useKV<B2BProduct[]>('b2b-products', []);
   const [orders, setOrders] = useKV<B2BOrder[]>('b2b-orders', []);
   const [sampleRequests, setSampleRequests] = useKV<SampleRequest[]>('b2b-sample-requests', []);
-  const [selectedSupplier, setSelectedSupplier] = useState<string>('');
+  const [commissionRate] = useKV<number>('b2b-commission-rate', 10);
+  const actualCommissionRate = commissionRate ?? 10;
   
-  const currentSupplierId = 'supplier-1';
-  const currentCustomerId = 'customer-1';
+  const currentUserId = 'user-1';
+
+  const getAnonymousSupplierName = (supplierId: string): string => {
+    const allSuppliers = [...new Set((products || []).map(p => p.supplierId))];
+    const sortedSuppliers = allSuppliers.sort();
+    const index = sortedSuppliers.indexOf(supplierId);
+    return `Tedarikçi ${String.fromCharCode(65 + index)}`;
+  };
 
   const addProduct = (productData: Omit<B2BProduct, 'id' | 'createdAt' | 'supplierId' | 'supplierName'>) => {
     const newProduct: B2BProduct = {
       ...productData,
       id: `product-${Date.now()}`,
-      supplierId: currentSupplierId,
-      supplierName: 'Demo Tedarikçi',
+      supplierId: currentUserId,
+      supplierName: currentUserName,
       createdAt: new Date().toISOString(),
     };
     setProducts((current) => [...(current || []), newProduct]);
-    toast.success('Ürün başarıyla eklendi');
+    toast.success('Ürün başarıyla eklendi ve yayınlandı');
   };
 
   const requestSample = (productId: string) => {
@@ -51,7 +58,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
       id: `sample-${Date.now()}`,
       productId,
       productName: product.name,
-      customerId: currentCustomerId,
+      customerId: currentUserId,
       customerName: currentUserName,
       supplierId: product.supplierId,
       supplierName: product.supplierName,
@@ -74,16 +81,21 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
     toast.success(`Numune talebi ${status === 'approved' ? 'onaylandı' : 'reddedildi'}`);
   };
 
-  const createOrder = (productId: string, quantity: number, designFiles?: File[]) => {
+  const createOrder = (productId: string, quantity: number) => {
     const product = (products || []).find(p => p.id === productId);
     if (!product) return;
+
+    const subtotal = product.unitPrice * quantity;
+    const shippingCost = product.shippingMethod === 'free' ? 0 : 150;
+    const taxAmount = subtotal * 0.18;
+    const totalAmount = subtotal + shippingCost + taxAmount;
 
     const order: B2BOrder = {
       id: `order-${Date.now()}`,
       orderNumber: `B2B-${Date.now()}`,
       supplierId: product.supplierId,
       supplierName: product.supplierName,
-      customerId: currentCustomerId,
+      customerId: currentUserId,
       customerName: currentUserName,
       items: [{
         id: `item-${Date.now()}`,
@@ -91,13 +103,13 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
         productName: product.name,
         quantity,
         unitPrice: product.unitPrice,
-        totalPrice: product.unitPrice * quantity,
+        totalPrice: subtotal,
         requiresDesign: product.requiresDesign,
       }],
-      subtotal: product.unitPrice * quantity,
-      shippingCost: product.shippingMethod === 'free' ? 0 : 150,
-      taxAmount: (product.unitPrice * quantity) * 0.18,
-      totalAmount: (product.unitPrice * quantity) * 1.18 + (product.shippingMethod === 'free' ? 0 : 150),
+      subtotal,
+      shippingCost,
+      taxAmount,
+      totalAmount,
       status: 'pending',
       deliveryAddress: 'Demo Adres, İstanbul',
       orderDate: new Date().toISOString(),
@@ -109,7 +121,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
     };
 
     setOrders((current) => [...(current || []), order]);
-    toast.success('Sipariş oluşturuldu');
+    toast.success('Sipariş oluşturuldu - platform onayı bekleniyor');
   };
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus, notes?: string) => {
@@ -135,15 +147,17 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
     toast.success('Sipariş durumu güncellendi');
   };
 
-  const groupSuppliersByLetter = () => {
-    const grouped: Record<string, B2BSupplier[]> = {};
-    (suppliers || []).forEach(supplier => {
-      const letter = supplier.companyName[0].toUpperCase();
-      if (!grouped[letter]) grouped[letter] = [];
-      grouped[letter].push(supplier);
-    });
-    return grouped;
+  const activateSupplierMode = () => {
+    setIsSupplierMode(true);
+    toast.success('Tedarikçi paneli aktifleştirildi');
   };
+
+  const myProducts = (products || []).filter(p => p.supplierId === currentUserId);
+  const mySupplierOrders = (orders || []).filter(o => o.supplierId === currentUserId);
+  const myCustomerOrders = (orders || []).filter(o => o.customerId === currentUserId);
+  const mySupplierSampleRequests = (sampleRequests || []).filter(r => r.supplierId === currentUserId);
+  const myCustomerSampleRequests = (sampleRequests || []).filter(r => r.customerId === currentUserId);
+  const availableProducts = (products || []).filter(p => p.supplierId !== currentUserId && p.isActive);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -153,42 +167,67 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-semibold">B2B Platform</h1>
-            <p className="text-muted-foreground">Tedarikçi ve müşteri yönetimi</p>
+            <h1 className="text-3xl font-semibold">B2B Tedarik Platformu</h1>
+            <p className="text-muted-foreground">Ürün siparişi ver veya tedarikçi olarak ürün sat</p>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'supplier' | 'customer')}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="supplier">Tedarikçi Paneli</TabsTrigger>
-            <TabsTrigger value="customer">Müşteri Paneli</TabsTrigger>
-          </TabsList>
+        {!isSupplierMode && (
+          <Alert className="mb-6">
+            <Storefront className="h-4 w-4" />
+            <AlertDescription>
+              Kendi ürettiğiniz ürünleri (kahve, pasta, çikolata vb.) satmak ister misiniz?
+              <Button
+                variant="link"
+                className="ml-2"
+                onClick={activateSupplierMode}
+              >
+                Tedarikçi Panelini Aktifleştir
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
-          <TabsContent value="supplier" className="space-y-6">
-            <SupplierPanel
-              products={(products || []).filter(p => p.supplierId === currentSupplierId)}
-              orders={(orders || []).filter(o => o.supplierId === currentSupplierId)}
-              sampleRequests={(sampleRequests || []).filter(r => r.supplierId === currentSupplierId)}
-              onAddProduct={addProduct}
-              onUpdateSampleRequest={updateSampleRequest}
-              onUpdateOrderStatus={updateOrderStatus}
-            />
-          </TabsContent>
+        <Tabs defaultValue="customer" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="customer">
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              Sipariş Ver
+            </TabsTrigger>
+            {isSupplierMode && (
+              <TabsTrigger value="supplier">
+                <Storefront className="h-4 w-4 mr-2" />
+                Tedarikçi Panelim
+              </TabsTrigger>
+            )}
+          </TabsList>
 
           <TabsContent value="customer" className="space-y-6">
             <CustomerPanel
-              suppliers={suppliers || []}
-              products={products || []}
-              orders={(orders || []).filter(o => o.customerId === currentCustomerId)}
-              sampleRequests={(sampleRequests || []).filter(r => r.customerId === currentCustomerId)}
-              selectedSupplier={selectedSupplier}
-              onSelectSupplier={setSelectedSupplier}
+              products={availableProducts}
+              orders={myCustomerOrders}
+              sampleRequests={myCustomerSampleRequests}
               onRequestSample={requestSample}
               onCreateOrder={createOrder}
               onUpdateOrderStatus={updateOrderStatus}
-              groupedSuppliers={groupSuppliersByLetter()}
+              getAnonymousSupplierName={getAnonymousSupplierName}
+              commissionRate={actualCommissionRate}
             />
           </TabsContent>
+
+          {isSupplierMode && (
+            <TabsContent value="supplier" className="space-y-6">
+              <SupplierPanel
+                products={myProducts}
+                orders={mySupplierOrders}
+                sampleRequests={mySupplierSampleRequests}
+                onAddProduct={addProduct}
+                onUpdateSampleRequest={updateSampleRequest}
+                onUpdateOrderStatus={updateOrderStatus}
+                commissionRate={actualCommissionRate}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
@@ -202,6 +241,7 @@ function SupplierPanel({
   onAddProduct,
   onUpdateSampleRequest,
   onUpdateOrderStatus,
+  commissionRate,
 }: {
   products: B2BProduct[];
   orders: B2BOrder[];
@@ -209,6 +249,7 @@ function SupplierPanel({
   onAddProduct: (data: Omit<B2BProduct, 'id' | 'createdAt' | 'supplierId' | 'supplierName'>) => void;
   onUpdateSampleRequest: (id: string, status: SampleRequestStatus, reason?: string) => void;
   onUpdateOrderStatus: (id: string, status: OrderStatus, notes?: string) => void;
+  commissionRate: number;
 }) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -247,12 +288,27 @@ function SupplierPanel({
     });
   };
 
+  const totalRevenue = orders
+    .filter(o => o.status === 'delivered')
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+  
+  const platformCommission = totalRevenue * (commissionRate / 100);
+  const netRevenue = totalRevenue - platformCommission;
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Alert>
+        <EyeSlash className="h-4 w-4" />
+        <AlertDescription>
+          Müşteriler sizin adınızı göremez. Ürünleriniz anonim kod ile gösterilir. Tüm iletişim platform üzerinden yapılır.
+          Platform komisyon oranı: <strong>%{commissionRate}</strong>
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Toplam Ürün</CardTitle>
+            <CardTitle className="text-sm font-medium">Ürünler</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{products.length}</div>
@@ -264,6 +320,15 @@ function SupplierPanel({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{orders.filter(o => o.status === 'pending').length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Toplam Ciro</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalRevenue.toFixed(2)} ₺</div>
+            <p className="text-xs text-muted-foreground mt-1">Net: {netRevenue.toFixed(2)} ₺</p>
           </CardContent>
         </Card>
         <Card>
@@ -290,7 +355,7 @@ function SupplierPanel({
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Yeni Ürün Ekle</DialogTitle>
-                  <DialogDescription>Ürün bilgilerini girin</DialogDescription>
+                  <DialogDescription>Ürününüz anonim kod ile müşterilere gösterilecek</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -299,14 +364,28 @@ function SupplierPanel({
                       <Input
                         value={newProduct.name}
                         onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                        placeholder="Örn: Organik Arabica Kahve"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Kategori *</Label>
-                      <Input
+                      <Select
                         value={newProduct.category}
-                        onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                      />
+                        onValueChange={(v) => setNewProduct({ ...newProduct, category: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seçiniz" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Kahve">Kahve</SelectItem>
+                          <SelectItem value="Ambalaj">Ambalaj</SelectItem>
+                          <SelectItem value="İçecek">İçecek</SelectItem>
+                          <SelectItem value="Gıda">Gıda</SelectItem>
+                          <SelectItem value="Pasta/Çikolata">Pasta/Çikolata</SelectItem>
+                          <SelectItem value="Ekipman">Ekipman</SelectItem>
+                          <SelectItem value="Diğer">Diğer</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -314,6 +393,8 @@ function SupplierPanel({
                     <Textarea
                       value={newProduct.description}
                       onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      placeholder="Ürün detayları..."
+                      rows={3}
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-4">
@@ -321,16 +402,17 @@ function SupplierPanel({
                       <Label>Birim Fiyat (₺) *</Label>
                       <Input
                         type="number"
-                        value={newProduct.unitPrice}
-                        onChange={(e) => setNewProduct({ ...newProduct, unitPrice: parseFloat(e.target.value) })}
+                        step="0.01"
+                        value={newProduct.unitPrice || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, unitPrice: parseFloat(e.target.value) || 0 })}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Min. Sipariş Adedi *</Label>
                       <Input
                         type="number"
-                        value={newProduct.minOrderQuantity}
-                        onChange={(e) => setNewProduct({ ...newProduct, minOrderQuantity: parseInt(e.target.value) })}
+                        value={newProduct.minOrderQuantity || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, minOrderQuantity: parseInt(e.target.value) || 1 })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -338,6 +420,7 @@ function SupplierPanel({
                       <Input
                         value={newProduct.unit}
                         onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
+                        placeholder="adet, kg, litre"
                       />
                     </div>
                   </div>
@@ -361,20 +444,26 @@ function SupplierPanel({
                       <Label>Stok</Label>
                       <Input
                         type="number"
-                        value={newProduct.stock}
-                        onChange={(e) => setNewProduct({ ...newProduct, stock: parseInt(e.target.value) })}
+                        value={newProduct.stock || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, stock: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <Label>Numune Verilebilir</Label>
+                    <div>
+                      <Label>Numune Verilebilir</Label>
+                      <p className="text-xs text-muted-foreground">Müşterilere ücretsiz numune gönderebilir misiniz?</p>
+                    </div>
                     <Switch
                       checked={newProduct.canProvideSample}
                       onCheckedChange={(checked) => setNewProduct({ ...newProduct, canProvideSample: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <Label>Baskılı/Tasarım Gerektiriyor</Label>
+                    <div>
+                      <Label>Baskılı/Tasarım Gerektiriyor</Label>
+                      <p className="text-xs text-muted-foreground">Ürün özel tasarım veya logo baskısı gerektiriyor mu?</p>
+                    </div>
                     <Switch
                       checked={newProduct.requiresDesign}
                       onCheckedChange={(checked) => setNewProduct({ ...newProduct, requiresDesign: checked })}
@@ -383,84 +472,164 @@ function SupplierPanel({
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowAddDialog(false)}>İptal</Button>
-                  <Button onClick={handleAddProduct}>Ekle</Button>
+                  <Button onClick={handleAddProduct}>Ekle ve Yayınla</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {products.map(product => (
-              <Card key={product.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">{product.name}</h3>
-                      <p className="text-sm text-muted-foreground">{product.description}</p>
-                      <div className="flex gap-2 mt-2">
-                        <Badge variant="secondary">{product.category}</Badge>
-                        {product.canProvideSample && <Badge variant="outline">Numune Verilebilir</Badge>}
-                        {product.requiresDesign && <Badge variant="outline">Tasarım Gerekli</Badge>}
-                        <Badge>{product.shippingMethod === 'free' ? 'Ücretsiz Kargo' : 'Alıcı Ödemeli'}</Badge>
+          {products.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Henüz ürün eklemediniz. Yeni ürün ekleyerek başlayın.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {products.map(product => (
+                <Card key={product.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{product.name}</h3>
+                          <Badge variant={product.isActive ? 'default' : 'secondary'}>
+                            {product.isActive ? 'Aktif' : 'Pasif'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{product.description}</p>
+                        <div className="flex gap-4 text-sm">
+                          <span>Fiyat: <strong>{product.unitPrice} ₺/{product.unit}</strong></span>
+                          <span>Min. Sipariş: <strong>{product.minOrderQuantity} {product.unit}</strong></span>
+                          <span>Stok: <strong>{product.stock}</strong></span>
+                        </div>
+                        <div className="flex gap-2">
+                          {product.canProvideSample && (
+                            <Badge variant="outline">Numune Verilebilir</Badge>
+                          )}
+                          {product.requiresDesign && (
+                            <Badge variant="outline">Tasarım Gerekir</Badge>
+                          )}
+                          <Badge variant="outline">
+                            {product.shippingMethod === 'free' ? 'Ücretsiz Kargo' : 'Alıcı Ödemeli'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold">{product.unitPrice.toLocaleString('tr-TR')} ₺</div>
-                      <div className="text-sm text-muted-foreground">Min: {product.minOrderQuantity} {product.unit}</div>
-                      <div className="text-sm text-muted-foreground">Stok: {product.stock}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Numune Talepleri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {sampleRequests.filter(r => r.status === 'pending').map(request => (
-              <Card key={request.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold">{request.productName}</h3>
-                      <p className="text-sm text-muted-foreground">Müşteri: {request.customerName}</p>
-                      <p className="text-sm text-muted-foreground">{request.deliveryAddress}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => onUpdateSampleRequest(request.id, 'approved')}>
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Onayla
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => onUpdateSampleRequest(request.id, 'rejected')}>
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reddet
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Siparişler</CardTitle>
+          <CardDescription>Müşteri isimleri anonim gösterilir</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {orders.map(order => (
-              <OrderCard key={order.id} order={order} onUpdateStatus={onUpdateOrderStatus} isSupplier />
-            ))}
-          </div>
+          {orders.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Henüz sipariş yok
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {orders.map(order => (
+                <Card key={order.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm">{order.orderNumber}</span>
+                          <Badge>{getOrderStatusBadge(order.status)}</Badge>
+                        </div>
+                        <p className="text-sm">Müşteri: <strong>Müşteri X</strong> (Anonim)</p>
+                        <div className="text-sm space-y-1">
+                          {order.items.map(item => (
+                            <div key={item.id}>
+                              {item.productName} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm">Toplam: <strong>{order.totalAmount.toFixed(2)} ₺</strong></p>
+                        <p className="text-xs text-muted-foreground">
+                          Platform komisyonu (%{commissionRate}): {(order.totalAmount * commissionRate / 100).toFixed(2)} ₺
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {order.status === 'pending' && (
+                          <>
+                            <Button size="sm" onClick={() => onUpdateOrderStatus(order.id, 'approved')}>
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Onayla
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => onUpdateOrderStatus(order.id, 'cancelled')}>
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reddet
+                            </Button>
+                          </>
+                        )}
+                        {order.status === 'approved' && (
+                          <Button size="sm" onClick={() => onUpdateOrderStatus(order.id, 'preparing')}>
+                            <Clock className="h-4 w-4 mr-1" />
+                            Hazırlanıyor
+                          </Button>
+                        )}
+                        {order.status === 'preparing' && (
+                          <Button size="sm" onClick={() => onUpdateOrderStatus(order.id, 'shipped')}>
+                            <Truck className="h-4 w-4 mr-1" />
+                            Kargoya Ver
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Numune Talepleri</CardTitle>
+          <CardDescription>Müşteri bilgileri anonim gösterilir</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {sampleRequests.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Henüz numune talebi yok
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sampleRequests.map(request => (
+                <Card key={request.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <h3 className="font-semibold">{request.productName}</h3>
+                        <p className="text-sm">Müşteri: <strong>Müşteri X</strong> (Anonim)</p>
+                        <p className="text-xs text-muted-foreground">Talep: {new Date(request.requestDate).toLocaleDateString('tr-TR')}</p>
+                        <Badge>{getSampleStatusBadge(request.status)}</Badge>
+                      </div>
+                      {request.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => onUpdateSampleRequest(request.id, 'approved')}>
+                            Onayla
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => onUpdateSampleRequest(request.id, 'rejected', 'Stok yok')}>
+                            Reddet
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -468,88 +637,175 @@ function SupplierPanel({
 }
 
 function CustomerPanel({
-  suppliers,
   products,
   orders,
   sampleRequests,
-  selectedSupplier,
-  onSelectSupplier,
   onRequestSample,
   onCreateOrder,
   onUpdateOrderStatus,
-  groupedSuppliers,
+  getAnonymousSupplierName,
+  commissionRate,
 }: {
-  suppliers: B2BSupplier[];
   products: B2BProduct[];
   orders: B2BOrder[];
   sampleRequests: SampleRequest[];
-  selectedSupplier: string;
-  onSelectSupplier: (id: string) => void;
   onRequestSample: (productId: string) => void;
   onCreateOrder: (productId: string, quantity: number) => void;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  groupedSuppliers: Record<string, B2BSupplier[]>;
+  getAnonymousSupplierName: (supplierId: string) => string;
+  commissionRate: number;
 }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const supplierProducts = selectedSupplier ? products.filter(p => p.supplierId === selectedSupplier) : products;
-  const filteredProducts = supplierProducts.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedProduct, setSelectedProduct] = useState<B2BProduct | null>(null);
+  const [orderQuantity, setOrderQuantity] = useState(1);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
+
+  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
+  const filteredProducts = selectedCategory === 'all'
+    ? products
+    : products.filter(p => p.category === selectedCategory);
+
+  const handleOrderClick = (product: B2BProduct) => {
+    setSelectedProduct(product);
+    setOrderQuantity(product.minOrderQuantity);
+    setShowOrderDialog(true);
+  };
+
+  const handleCreateOrder = () => {
+    if (!selectedProduct) return;
+    if (orderQuantity < selectedProduct.minOrderQuantity) {
+      toast.error(`Minimum sipariş miktarı: ${selectedProduct.minOrderQuantity}`);
+      return;
+    }
+    onCreateOrder(selectedProduct.id, orderQuantity);
+    setShowOrderDialog(false);
+    setSelectedProduct(null);
+  };
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Tedarikçiler</CardTitle>
-          <CardDescription>Alfabetik sıralama ile tedarikçi listesi</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {Object.keys(groupedSuppliers).sort().map(letter => (
-              <div key={letter}>
-                <h3 className="text-2xl font-bold text-primary mb-3">{letter}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {groupedSuppliers[letter].map(supplier => (
-                    <Card
-                      key={supplier.id}
-                      className={`cursor-pointer transition-colors ${selectedSupplier === supplier.id ? 'border-primary' : ''}`}
-                      onClick={() => onSelectSupplier(supplier.id)}
-                    >
-                      <CardContent className="p-4">
-                        <h4 className="font-semibold">{supplier.companyName}</h4>
-                        <p className="text-sm text-muted-foreground">{supplier.contactName}</p>
-                        <Badge variant="secondary" className="mt-2">{supplier.totalProducts} ürün</Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <Alert>
+        <Eye className="h-4 w-4" />
+        <AlertDescription>
+          Tedarikçi isimleri gizlidir. Tüm sipariş ve iletişim platform üzerinden yapılır. Platform komisyon oranı: %{commissionRate}
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Toplam Ürün</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{products.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Siparişlerim</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{orders.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Bekleyen Talepler</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{sampleRequests.filter(r => r.status === 'pending').length}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Ürün Kataloğu</CardTitle>
-          <Input
-            placeholder="Ürün ara..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
+          <CardDescription>Tedarikçi isimleri anonim gösterilir</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredProducts.map(product => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onRequestSample={onRequestSample}
-                onCreateOrder={onCreateOrder}
-              />
-            ))}
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              {categories.map(cat => (
+                <Button
+                  key={cat}
+                  variant={selectedCategory === cat ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory(cat)}
+                >
+                  {cat === 'all' ? 'Tümü' : cat}
+                </Button>
+              ))}
+            </div>
+
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Bu kategoride ürün bulunmuyor
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProducts.map(product => (
+                  <Card key={product.id}>
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-semibold">{product.name}</h3>
+                            <Badge variant="secondary">{getAnonymousSupplierName(product.supplierId)}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                        </div>
+
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span>Fiyat:</span>
+                            <strong>{product.unitPrice} ₺/{product.unit}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Min. Sipariş:</span>
+                            <strong>{product.minOrderQuantity} {product.unit}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Kargo:</span>
+                            <span>{product.shippingMethod === 'free' ? 'Ücretsiz' : 'Alıcı Ödemeli'}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          {product.canProvideSample && (
+                            <Badge variant="outline" className="text-xs">Numune Var</Badge>
+                          )}
+                          {product.requiresDesign && (
+                            <Badge variant="outline" className="text-xs">Tasarım Gerekir</Badge>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          {product.canProvideSample && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => onRequestSample(product.id)}
+                            >
+                              Numune İste
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleOrderClick(product)}
+                          >
+                            <ShoppingBag className="h-4 w-4 mr-1" />
+                            Sipariş Ver
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -559,150 +815,134 @@ function CustomerPanel({
           <CardTitle>Siparişlerim</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {orders.map(order => (
-              <OrderCard key={order.id} order={order} onUpdateStatus={onUpdateOrderStatus} isSupplier={false} />
-            ))}
-          </div>
+          {orders.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Henüz sipariş vermediniz
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {orders.map(order => (
+                <Card key={order.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm">{order.orderNumber}</span>
+                          <Badge>{getOrderStatusBadge(order.status)}</Badge>
+                        </div>
+                        <p className="text-sm">Tedarikçi: <strong>{getAnonymousSupplierName(order.supplierId)}</strong></p>
+                        <div className="text-sm space-y-1">
+                          {order.items.map(item => (
+                            <div key={item.id}>
+                              {item.productName} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm">Toplam: <strong>{order.totalAmount.toFixed(2)} ₺</strong></p>
+                        <p className="text-xs text-muted-foreground">
+                          Sipariş tarihi: {new Date(order.orderDate).toLocaleDateString('tr-TR')}
+                        </p>
+                      </div>
+                      <div>
+                        {order.status === 'delivered' && (
+                          <Button size="sm" variant="outline" disabled>
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Teslim Alındı
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sipariş Ver</DialogTitle>
+            <DialogDescription>
+              Sipariş detaylarını belirleyin
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold">{selectedProduct.name}</h3>
+                <p className="text-sm text-muted-foreground">Tedarikçi: {getAnonymousSupplierName(selectedProduct.supplierId)}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Miktar ({selectedProduct.unit})</Label>
+                <Input
+                  type="number"
+                  min={selectedProduct.minOrderQuantity}
+                  value={orderQuantity}
+                  onChange={(e) => setOrderQuantity(parseInt(e.target.value) || selectedProduct.minOrderQuantity)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Min. sipariş: {selectedProduct.minOrderQuantity} {selectedProduct.unit}
+                </p>
+              </div>
+              <div className="space-y-2 border-t pt-4">
+                <div className="flex justify-between text-sm">
+                  <span>Birim Fiyat:</span>
+                  <span>{selectedProduct.unitPrice} ₺</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Ara Toplam:</span>
+                  <span>{(selectedProduct.unitPrice * orderQuantity).toFixed(2)} ₺</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>KDV (%18):</span>
+                  <span>{(selectedProduct.unitPrice * orderQuantity * 0.18).toFixed(2)} ₺</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Kargo:</span>
+                  <span>{selectedProduct.shippingMethod === 'free' ? 'Ücretsiz' : '150 ₺'}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                  <span>Toplam:</span>
+                  <span>
+                    {(
+                      selectedProduct.unitPrice * orderQuantity * 1.18 +
+                      (selectedProduct.shippingMethod === 'free' ? 0 : 150)
+                    ).toFixed(2)} ₺
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOrderDialog(false)}>İptal</Button>
+            <Button onClick={handleCreateOrder}>Siparişi Onayla</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function ProductCard({
-  product,
-  onRequestSample,
-  onCreateOrder,
-}: {
-  product: B2BProduct;
-  onRequestSample: (id: string) => void;
-  onCreateOrder: (id: string, quantity: number) => void;
-}) {
-  const [quantity, setQuantity] = useState(product.minOrderQuantity);
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-semibold">{product.name}</h3>
-            <p className="text-sm text-muted-foreground">{product.description}</p>
-            <Badge variant="secondary" className="mt-1">{product.category}</Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xl font-bold">{product.unitPrice.toLocaleString('tr-TR')} ₺</div>
-              <div className="text-sm text-muted-foreground">Min: {product.minOrderQuantity} {product.unit}</div>
-            </div>
-            <div className="flex gap-2">
-              {product.canProvideSample && (
-                <Button size="sm" variant="outline" onClick={() => onRequestSample(product.id)}>
-                  Numune İstiyorum
-                </Button>
-              )}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm">Sipariş Ver</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Sipariş Oluştur</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Miktar</Label>
-                      <Input
-                        type="number"
-                        value={quantity}
-                        min={product.minOrderQuantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value))}
-                      />
-                    </div>
-                    <div className="text-lg font-semibold">
-                      Toplam: {(product.unitPrice * quantity).toLocaleString('tr-TR')} ₺
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={() => onCreateOrder(product.id, quantity)}>Sipariş Oluştur</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+function getOrderStatusBadge(status: OrderStatus): string {
+  const statusMap: Record<OrderStatus, string> = {
+    pending: 'Bekliyor',
+    approved: 'Onaylandı',
+    cancelled: 'İptal',
+    preparing: 'Hazırlanıyor',
+    shipped: 'Kargoda',
+    delivered: 'Teslim Edildi',
+  };
+  return statusMap[status] || status;
 }
 
-function OrderCard({
-  order,
-  onUpdateStatus,
-  isSupplier,
-}: {
-  order: B2BOrder;
-  onUpdateStatus: (id: string, status: OrderStatus) => void;
-  isSupplier: boolean;
-}) {
-  const statusConfig = {
-    pending: { label: 'Bekliyor', icon: Clock, color: 'text-yellow-600' },
-    approved: { label: 'Onaylandı', icon: CheckCircle, color: 'text-green-600' },
-    preparing: { label: 'Hazırlanıyor', icon: Package, color: 'text-blue-600' },
-    shipped: { label: 'Kargoda', icon: Truck, color: 'text-purple-600' },
-    delivered: { label: 'Teslim Edildi', icon: CheckCircle, color: 'text-green-600' },
-    cancelled: { label: 'İptal Edildi', icon: XCircle, color: 'text-red-600' },
+function getSampleStatusBadge(status: SampleRequestStatus): string {
+  const statusMap: Record<SampleRequestStatus, string> = {
+    pending: 'Bekliyor',
+    approved: 'Onaylandı',
+    rejected: 'Reddedildi',
+    sent: 'Gönderildi',
   };
-
-  const StatusIcon = statusConfig[order.status].icon;
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-semibold">Sipariş #{order.orderNumber}</h3>
-              <p className="text-sm text-muted-foreground">
-                {isSupplier ? `Müşteri: ${order.customerName}` : `Tedarikçi: ${order.supplierName}`}
-              </p>
-            </div>
-            <Badge className={statusConfig[order.status].color}>
-              <StatusIcon className="h-3 w-3 mr-1" />
-              {statusConfig[order.status].label}
-            </Badge>
-          </div>
-          <div className="space-y-1">
-            {order.items.map(item => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span>{item.productName} x {item.quantity}</span>
-                <span className="font-medium">{item.totalPrice.toLocaleString('tr-TR')} ₺</span>
-              </div>
-            ))}
-          </div>
-          <div className="border-t pt-2">
-            <div className="flex justify-between font-semibold">
-              <span>Toplam</span>
-              <span>{order.totalAmount.toLocaleString('tr-TR')} ₺</span>
-            </div>
-          </div>
-          {isSupplier && order.status === 'pending' && (
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => onUpdateStatus(order.id, 'approved')}>Onayla</Button>
-              <Button size="sm" variant="destructive" onClick={() => onUpdateStatus(order.id, 'cancelled')}>İptal Et</Button>
-            </div>
-          )}
-          {isSupplier && order.status === 'approved' && (
-            <Button size="sm" onClick={() => onUpdateStatus(order.id, 'preparing')}>Hazırlanıyor Olarak İşaretle</Button>
-          )}
-          {isSupplier && order.status === 'preparing' && (
-            <Button size="sm" onClick={() => onUpdateStatus(order.id, 'shipped')}>Kargoya Verildi</Button>
-          )}
-          {!isSupplier && order.status === 'shipped' && (
-            <Button size="sm" onClick={() => onUpdateStatus(order.id, 'delivered')}>Teslim Alındı</Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return statusMap[status] || status;
 }

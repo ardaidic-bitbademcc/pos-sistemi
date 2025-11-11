@@ -394,49 +394,57 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Gerçekçi satış dağılımı (günde 50-80 işlem)
 - **Başarı Kriterleri**: Tüm raporlama ve analiz özellikleri demo veriyle test edilebilir
 
-### 10. B2B Marketplace Modülü
-- **İşlevsellik**: Tedarikçi-müşteri entegrasyon platformu, ürün katalog yönetimi, numune talep sistemi, tasarım dosyası yönetimi, otomatik mockup oluşturma, sipariş akış yönetimi, kargo entegrasyonu
-- **Amaç**: Tedarikçileri ve müşterileri tek platformda buluşturarak B2B ticareti kolaylaştırmak, sipariş sürecini dijitalleştirmek
-- **Tetikleyici**: Tedarikçi ürün ekler veya müşteri tedarikçi kataloğuna göz atar
+### 10. B2B Marketplace Modülü (Gizli Tedarikçi Modeli)
+- **İşlevsellik**: Anonimleştirilmiş tedarikçi-müşteri entegrasyonu, ürün katalog yönetimi, komisyon bazlı aracılık, numune talep sistemi, tasarım dosyası yönetimi, otomatik mockup oluşturma, sipariş akış yönetimi, kargo entegrasyonu
+- **Amaç**: Kafe/restoran sahiplerinin tedarik ihtiyaçlarını karşılarken tedarikçi isimlerini gizleyerek aracılık komisyonu almak, doğrudan iletişimi engellemek
+- **Temel Mantık**: Müşteriler tedarikçi isimlerini değil, sadece ürünleri ve kategorileri görebilir. Tedarikçi "Tedarikçi A", "Tedarikçi B" gibi anonimleştirilmiş kodlarla gösterilir. Sipariş ve iletişim tamamıyla platform üzerinden yapılır. Kafe sahibi hem alıcı hem de (opsiyonel) tedarikçi olabilir.
+- **Tetikleyici**: Tedarikçi ürün ekler veya müşteri ürün kataloğuna göz atar
 - **Akış**: 
-  - **Tedarikçi**: Ürün ekle → Min. sipariş adedi, fiyat, numune durumu belirle → Kargo koşulları ayarla → Yayınla → Müşteri talebi gelir → Talep onayla/reddet → Tasarım varsa mockup oluştur → Sipariş durumunu güncelle → Kargo takibi → Teslimat
-  - **Müşteri**: Tedarikçileri listele (A-B-C sıralama) → Ürünlere göz at → Numune talep et → Tasarım yükle (baskılı ürünlerde) → Sipariş oluştur → Mockup onayı → Ödeme → Takip → Teslim alındı onayla
+  - **Tedarikçi**: Tedarikçi paneli aç (opsiyonel buton) → Ürün ekle → Min. sipariş adedi, fiyat, numune durumu belirle → Kargo koşulları ayarla → Yayınla → Müşteri talebi gelir (müşteri adı görünmez, sadece "Müşteri X") → Talep onayla/reddet → Tasarım varsa mockup oluştur → Sipariş durumunu güncelle → Kargo takibi → Teslimat
+  - **Müşteri**: Ürün kataloğuna göz at → Tedarikçi ismi görünmez, sadece "Tedarikçi A", "Tedarikçi B" vs. → Ürün filtrele (kategori, fiyat, min. sipariş) → Numune talep et → Tasarım yükle (baskılı ürünlerde) → Sipariş oluştur → Platform aracılık yapar → Mockup onayı → Ödeme (platforma) → Takip → Teslim alındı onayla → Platform tedarikçiye ödeme yapar (komisyon kesintisi ile)
 - **Başarı Kriterleri**:
-  - Tedarikçiler ürünlerini tüm detaylarıyla ekleyebilir
-  - Müşteriler A-B-C formatında tedarikçi listesi görür
-  - Numune talepleri otomatik iletilir
-  - Baskılı ürünlerde tasarım dosyası yüklenir ve tedarikçiye gider
+  - Tedarikçi isimleri müşterilerden tamamen gizlidir
+  - Müşteriler "Tedarikçi A", "Tedarikçi B" gibi kodlarla tedarikçileri görür
+  - Tedarikçi paneli varsayılan olarak gizlidir, sadece "Tedarikçi Ol" butonu ile açılır
+  - Numune talepleri otomatik iletilir (anonim)
+  - Baskılı ürünlerde tasarım dosyası platformdan geçer
   - Tedarikçi onayında sistem otomatik mockup üretir
-  - Her iki taraf da mockup'ı mail ile alır
-  - Sipariş durumu e-ticaret akışında güncellenir (onaylandı/iptal/hazırlanıyor/kargoda/teslim edildi)
+  - Sipariş durumu e-ticaret akışında güncellenir
   - Kargo entegrasyonu ile sevkiyat yönetimi yapılır
   - Teslim alındığında stoklar otomatik güncellenir
   - Reçetelerdeki alış fiyatları senkronize edilir
+  - Platform komisyon oranı ayarlanabilir (varsayılan %10)
 
 #### B2B Kullanıcı Rolleri
-- **Tedarikçi (Supplier)**: Ürün ekler, numune taleplerini yönetir, siparişleri işler, kargo düzenler
-- **Müşteri (Customer)**: Tedarikçileri görür, numune talep eder, sipariş verir, tasarım yükler
+- **Tedarikçi (Supplier)**: Ürün ekler, numune taleplerini yönetir (anonim müşteri), siparişleri işler, kargo düzenler. Tedarikçi paneli opsiyonel olarak açılır.
+- **Müşteri (Customer)**: Ürünleri görür (tedarikçi ismi gizli), numune talep eder, sipariş verir, tasarım yükler. Varsayılan rol, herkes sipariş verebilir.
+- **Hibrit (Hem Müşteri Hem Tedarikçi)**: Kafe sahibi hem ürün sipariş edebilir, hem de kendi ürettiği ürünleri (kahve, pasta vb.) satabilir.
 
-#### Tedarikçi Ürün Yönetimi
-- **İşlevsellik**: Ürün katalog oluşturma, min. sipariş adedi, fiyat, numune durumu belirleme
-- **Amaç**: Tedarikçilerin ürünlerini detaylı şekilde sunması
-- **Tetikleyici**: Tedarikçi "Yeni Ürün Ekle" butonuna tıklar
-- **Akış**: Ürün bilgileri gir → Görsel yükle → Min. sipariş adedi belirle → Birim fiyat gir → "Numune Verilebilir" toggle → Baskılı ürün ise işaretle → Kargo koşulları belirle → Kaydet
+#### Tedarikçi Ürün Yönetimi (Opsiyonel Panel)
+- **İşlevsellik**: Ürün katalog oluşturma, min. sipariş adedi, fiyat, numune durumu belirleme, anonim olarak yayınlama
+- **Amaç**: Tedarikçilerin ürünlerini detaylı şekilde sunması, müşterilerden kimliklerini gizlemesi
+- **Tetikleyici**: Kullanıcı "Tedarikçi Panelini Aç" butonuna tıklar (ilk kez)
+- **Akış**: Tedarikçi panelini aktifleştir → Şirket bilgileri gir (sadece platform için) → Ürün bilgileri gir → Görsel yükle → Min. sipariş adedi belirle → Birim fiyat gir → "Numune Verilebilir" toggle → Baskılı ürün ise işaretle → Kargo koşulları belirle → Kaydet → Ürün anonim kodla yayınlanır
 - **Başarı Kriterleri**:
+  - Tedarikçi paneli varsayılan olarak kapalıdır
+  - Kullanıcı isteğe bağlı olarak tedarikçi panelini aktifleştirir
   - Tüm ürün bilgileri doğru kaydedilir
+  - Ürünler müşterilere anonim kod ile gösterilir (örn: "Tedarikçi A")
   - Numune durumu açıkça belirtilir
   - Baskılı/tasarım gerektiren ürünler işaretlenir
   - Kargo koşulları (ücretsiz/alıcı ödemeli) seçilebilir
 
-#### Müşteri Tedarikçi Görüntüleme
-- **İşlevsellik**: Tedarikçileri A-B-C formatında listeleme, ürün katalogları görüntüleme
-- **Amaç**: Müşterilerin tedarikçileri kolayca keşfetmesi
+#### Müşteri Ürün Görüntüleme (Anonim Tedarikçi)
+- **İşlevsellik**: Ürünleri kategorize ederek listeleme, tedarikçi isimlerini gizleme
+- **Amaç**: Müşterilerin ürünleri kolayca keşfetmesi, tedarikçilere doğrudan ulaşamaması
 - **Tetikleyici**: Müşteri B2B modülünü açar
-- **Akış**: Tedarikçi listesi yükle → A-B-C alfabetik gruplandırma → Tedarikçi seç → Katalog görüntüle → Ürün filtrele/ara
+- **Akış**: Ürün kataloğu yükle → Kategori filtrele (Ambalaj, Kahve, İçecek, Gıda vb.) → Tedarikçi anonim kodla gösterilir → Ürün seç → Ürün filtrele/ara
 - **Başarı Kriterleri**:
-  - Tedarikçiler alfabetik gruplarda gösterilir
-  - Her tedarikçinin ürün sayısı görünür
+  - Tedarikçi isimleri asla gösterilmez
+  - Her ürün "Tedarikçi A", "Tedarikçi B" gibi kodlarla işaretlenir
+  - Müşteriler direkt iletişim kuramaz
   - Katalog hızlı yüklenir
+  - Kategori bazlı filtreleme çalışır
 
 #### Numune Talep Sistemi
 - **İşlevsellik**: "Numune İstiyorum" butonu ile talep oluşturma, tedarikçiye bildirim

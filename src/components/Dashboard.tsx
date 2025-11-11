@@ -194,8 +194,8 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner' }: Das
     {
       id: 'b2b' as any,
       moduleId: 'b2b' as Module,
-      title: 'B2B Platform',
-      description: 'Tedarikçi ve müşteri yönetimi',
+      title: 'B2B Tedarik Platformu',
+      description: 'Anonim tedarikçi ve sipariş yönetimi',
       icon: Handshake,
       color: 'text-green-500',
       bgColor: 'bg-green-500/10',
