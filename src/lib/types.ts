@@ -484,6 +484,8 @@ export type OrderStatus = 'pending' | 'approved' | 'cancelled' | 'preparing' | '
 export type SampleRequestStatus = 'pending' | 'approved' | 'rejected' | 'sent';
 export type ShippingMethod = 'free' | 'buyer_pays';
 
+export type SupplierPanelStatus = 'active' | 'paused' | 'vacation';
+
 export interface B2BSupplier {
   id: string;
   companyName: string;
@@ -497,6 +499,10 @@ export interface B2BSupplier {
   isActive: boolean;
   createdAt: string;
   logo?: string;
+  panelStatus?: SupplierPanelStatus;
+  pausedAt?: string;
+  pausedUntil?: string;
+  pauseReason?: string;
 }
 
 export interface ProductVariant {

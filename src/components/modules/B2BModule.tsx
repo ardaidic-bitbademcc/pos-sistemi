@@ -11,9 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash, Power, Pause, AirplaneTilt, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant } from '@/lib/types';
+import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus } from '@/lib/types';
 
 interface B2BModuleProps {
   onBack: () => void;
@@ -27,6 +27,8 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
   const [orders, setOrders] = useKV<B2BOrder[]>('b2b-orders', []);
   const [sampleRequests, setSampleRequests] = useKV<SampleRequest[]>('b2b-sample-requests', []);
   const [commissionRate] = useKV<number>('b2b-commission-rate', 10);
+  const [supplierPanelStatus, setSupplierPanelStatus] = useKV<SupplierPanelStatus>('b2b-supplier-panel-status', 'active');
+  const [supplierPausedUntil, setSupplierPausedUntil] = useKV<string | null>('b2b-supplier-paused-until', null);
   const actualCommissionRate = commissionRate ?? 10;
   
   const currentUserId = 'user-1';
@@ -165,12 +167,64 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
     toast.success('Tedarikçi paneli aktifleştirildi');
   };
 
+  const toggleProductActive = (productId: string) => {
+    setProducts((current) =>
+      (current || []).map(p =>
+        p.id === productId ? { ...p, isActive: !p.isActive } : p
+      )
+    );
+    const product = (products || []).find(p => p.id === productId);
+    if (product) {
+      toast.success(`Ürün ${!product.isActive ? 'aktifleştirildi' : 'pasife alındı'}`);
+    }
+  };
+
+  const toggleVariantActive = (productId: string, variantId: string) => {
+    setProducts((current) =>
+      (current || []).map(p =>
+        p.id === productId && p.variants
+          ? {
+              ...p,
+              variants: p.variants.map(v =>
+                v.id === variantId ? { ...v, isActive: !v.isActive } : v
+              )
+            }
+          : p
+      )
+    );
+    toast.success('Varyant durumu güncellendi');
+  };
+
+  const setSupplierPanelVacation = (until: string, reason?: string) => {
+    setSupplierPanelStatus('vacation');
+    setSupplierPausedUntil(until);
+    toast.success('Tedarikçi paneli tatil moduna alındı');
+  };
+
+  const setSupplierPanelPaused = (reason?: string) => {
+    setSupplierPanelStatus('paused');
+    setSupplierPausedUntil(null);
+    toast.success('Tedarikçi paneli duraklatıldı');
+  };
+
+  const setSupplierPanelActive = () => {
+    setSupplierPanelStatus('active');
+    setSupplierPausedUntil(null);
+    toast.success('Tedarikçi paneli aktifleştirildi');
+  };
+
   const myProducts = (products || []).filter(p => p.supplierId === currentUserId);
   const mySupplierOrders = (orders || []).filter(o => o.supplierId === currentUserId);
   const myCustomerOrders = (orders || []).filter(o => o.customerId === currentUserId);
   const mySupplierSampleRequests = (sampleRequests || []).filter(r => r.supplierId === currentUserId);
   const myCustomerSampleRequests = (sampleRequests || []).filter(r => r.customerId === currentUserId);
-  const availableProducts = (products || []).filter(p => p.supplierId !== currentUserId && p.isActive);
+  const availableProducts = (products || []).filter(p => {
+    if (p.supplierId === currentUserId) return false;
+    if (!p.isActive) return false;
+    const supplierProducts = (products || []).filter(prod => prod.supplierId === p.supplierId);
+    const supplierHasActivePanel = supplierProducts.length > 0;
+    return supplierHasActivePanel;
+  });
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -237,7 +291,14 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
                 onAddProduct={addProduct}
                 onUpdateSampleRequest={updateSampleRequest}
                 onUpdateOrderStatus={updateOrderStatus}
+                onToggleProductActive={toggleProductActive}
+                onToggleVariantActive={toggleVariantActive}
                 commissionRate={actualCommissionRate}
+                panelStatus={supplierPanelStatus ?? 'active'}
+                pausedUntil={supplierPausedUntil ?? null}
+                onSetPanelVacation={setSupplierPanelVacation}
+                onSetPanelPaused={setSupplierPanelPaused}
+                onSetPanelActive={setSupplierPanelActive}
               />
             </TabsContent>
           )}
@@ -254,7 +315,14 @@ function SupplierPanel({
   onAddProduct,
   onUpdateSampleRequest,
   onUpdateOrderStatus,
+  onToggleProductActive,
+  onToggleVariantActive,
   commissionRate,
+  panelStatus,
+  pausedUntil,
+  onSetPanelVacation,
+  onSetPanelPaused,
+  onSetPanelActive,
 }: {
   products: B2BProduct[];
   orders: B2BOrder[];
@@ -262,9 +330,18 @@ function SupplierPanel({
   onAddProduct: (data: Omit<B2BProduct, 'id' | 'createdAt' | 'supplierId' | 'supplierName'>) => void;
   onUpdateSampleRequest: (id: string, status: SampleRequestStatus, reason?: string) => void;
   onUpdateOrderStatus: (id: string, status: OrderStatus, notes?: string) => void;
+  onToggleProductActive: (productId: string) => void;
+  onToggleVariantActive: (productId: string, variantId: string) => void;
   commissionRate: number;
+  panelStatus: SupplierPanelStatus;
+  pausedUntil: string | null;
+  onSetPanelVacation: (until: string, reason?: string) => void;
+  onSetPanelPaused: (reason?: string) => void;
+  onSetPanelActive: () => void;
 }) {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showPanelStatusDialog, setShowPanelStatusDialog] = useState(false);
+  const [vacationUntilDate, setVacationUntilDate] = useState('');
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
@@ -363,6 +440,125 @@ function SupplierPanel({
           Platform komisyon oranı: <strong>%{commissionRate}</strong>
         </AlertDescription>
       </Alert>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tedarikçi Paneli Durumu</CardTitle>
+          <CardDescription>
+            {panelStatus === 'active' && 'Paneliniz aktif - sipariş alabilirsiniz'}
+            {panelStatus === 'paused' && 'Paneliniz duraklatıldı - yeni sipariş alamazsınız'}
+            {panelStatus === 'vacation' && pausedUntil && `Tatil modunda - ${new Date(pausedUntil).toLocaleDateString('tr-TR')} tarihine kadar`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              {panelStatus === 'active' && (
+                <Badge variant="default" className="text-sm">
+                  <Power className="h-4 w-4 mr-1" weight="fill" />
+                  Aktif
+                </Badge>
+              )}
+              {panelStatus === 'paused' && (
+                <Badge variant="secondary" className="text-sm">
+                  <Pause className="h-4 w-4 mr-1" weight="fill" />
+                  Duraklatıldı
+                </Badge>
+              )}
+              {panelStatus === 'vacation' && (
+                <Badge variant="outline" className="text-sm">
+                  <AirplaneTilt className="h-4 w-4 mr-1" weight="fill" />
+                  Tatil Modu
+                </Badge>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowPanelStatusDialog(true)}>
+              Durumu Değiştir
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showPanelStatusDialog} onOpenChange={setShowPanelStatusDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tedarikçi Paneli Durumu</DialogTitle>
+            <DialogDescription>
+              Panel durumunuzu değiştirin. Pasif veya tatil modunda yeni sipariş alamazsınız.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Button
+              variant={panelStatus === 'active' ? 'default' : 'outline'}
+              className="w-full justify-start"
+              onClick={() => {
+                onSetPanelActive();
+                setShowPanelStatusDialog(false);
+              }}
+            >
+              <Power className="h-5 w-5 mr-3" weight="fill" />
+              <div className="text-left">
+                <div className="font-semibold">Aktif</div>
+                <div className="text-xs opacity-80">Yeni siparişler alabilirsiniz</div>
+              </div>
+            </Button>
+            <Button
+              variant={panelStatus === 'paused' ? 'default' : 'outline'}
+              className="w-full justify-start"
+              onClick={() => {
+                onSetPanelPaused();
+                setShowPanelStatusDialog(false);
+              }}
+            >
+              <Pause className="h-5 w-5 mr-3" weight="fill" />
+              <div className="text-left">
+                <div className="font-semibold">Duraklatıldı</div>
+                <div className="text-xs opacity-80">Geçici olarak sipariş almayı durdurun</div>
+              </div>
+            </Button>
+            <div className="space-y-2">
+              <Button
+                variant={panelStatus === 'vacation' ? 'default' : 'outline'}
+                className="w-full justify-start"
+              >
+                <AirplaneTilt className="h-5 w-5 mr-3" weight="fill" />
+                <div className="text-left">
+                  <div className="font-semibold">Tatil Modu</div>
+                  <div className="text-xs opacity-80">Belirli bir tarihe kadar tatilde olun</div>
+                </div>
+              </Button>
+              <div className="pl-11 space-y-2">
+                <Label className="text-xs">Tatil Bitiş Tarihi</Label>
+                <Input
+                  type="date"
+                  value={vacationUntilDate}
+                  onChange={(e) => setVacationUntilDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={!vacationUntilDate}
+                  onClick={() => {
+                    if (vacationUntilDate) {
+                      onSetPanelVacation(vacationUntilDate);
+                      setShowPanelStatusDialog(false);
+                      setVacationUntilDate('');
+                    }
+                  }}
+                >
+                  Tatil Modunu Aktifleştir
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPanelStatusDialog(false)}>
+              İptal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -637,7 +833,7 @@ function SupplierPanel({
               {products.map(product => (
                 <Card key={product.id}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1 flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{product.name}</h3>
@@ -656,7 +852,23 @@ function SupplierPanel({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                               {product.variants.map(variant => (
                                 <div key={variant.id} className="flex items-center justify-between p-2 border rounded-md text-sm">
-                                  <span className="font-medium">{variant.name}</span>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => onToggleVariantActive(product.id, variant.id)}
+                                    >
+                                      {variant.isActive ? (
+                                        <ToggleRight className="h-5 w-5 text-primary" weight="fill" />
+                                      ) : (
+                                        <ToggleLeft className="h-5 w-5 text-muted-foreground" weight="fill" />
+                                      )}
+                                    </Button>
+                                    <span className={`font-medium ${!variant.isActive ? 'text-muted-foreground line-through' : ''}`}>
+                                      {variant.name}
+                                    </span>
+                                  </div>
                                   <div className="flex gap-3 text-xs">
                                     <span><strong>{variant.unitPrice} ₺</strong></span>
                                     <span className="text-muted-foreground">Min: {variant.minOrderQuantity}</span>
@@ -685,6 +897,25 @@ function SupplierPanel({
                             {product.shippingMethod === 'free' ? 'Ücretsiz Kargo' : 'Alıcı Ödemeli'}
                           </Badge>
                         </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant={product.isActive ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => onToggleProductActive(product.id)}
+                        >
+                          {product.isActive ? (
+                            <>
+                              <Power className="h-4 w-4 mr-1" weight="fill" />
+                              Aktif
+                            </>
+                          ) : (
+                            <>
+                              <Power className="h-4 w-4 mr-1" />
+                              Pasif
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -841,9 +1072,15 @@ function CustomerPanel({
   const handleOrderClick = (product: B2BProduct) => {
     setSelectedProduct(product);
     if (product.hasVariants && product.variants && product.variants.length > 0) {
-      const firstVariant = product.variants[0];
-      setSelectedVariantId(firstVariant.id);
-      setOrderQuantity(firstVariant.minOrderQuantity);
+      const activeVariants = product.variants.filter(v => v.isActive);
+      if (activeVariants.length > 0) {
+        const firstVariant = activeVariants[0];
+        setSelectedVariantId(firstVariant.id);
+        setOrderQuantity(firstVariant.minOrderQuantity);
+      } else {
+        setSelectedVariantId(undefined);
+        setOrderQuantity(product.minOrderQuantity);
+      }
     } else {
       setSelectedVariantId(undefined);
       setOrderQuantity(product.minOrderQuantity);
@@ -961,14 +1198,14 @@ function CustomerPanel({
                           <div className="space-y-2">
                             <p className="text-xs font-medium text-muted-foreground">Seçenekler:</p>
                             <div className="space-y-1">
-                              {product.variants.slice(0, 3).map((variant) => (
+                              {product.variants.filter(v => v.isActive).slice(0, 3).map((variant) => (
                                 <div key={variant.id} className="flex justify-between text-xs p-2 border rounded">
                                   <span className="font-medium">{variant.name}</span>
                                   <span className="text-primary font-semibold">{variant.unitPrice} ₺</span>
                                 </div>
                               ))}
-                              {product.variants.length > 3 && (
-                                <p className="text-xs text-muted-foreground text-center">+{product.variants.length - 3} seçenek daha</p>
+                              {product.variants.filter(v => v.isActive).length > 3 && (
+                                <p className="text-xs text-muted-foreground text-center">+{product.variants.filter(v => v.isActive).length - 3} seçenek daha</p>
                               )}
                             </div>
                           </div>
@@ -1114,7 +1351,7 @@ function CustomerPanel({
                       <SelectValue placeholder="Seçenek seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedProduct.variants.map(variant => (
+                      {selectedProduct.variants.filter(v => v.isActive).map(variant => (
                         <SelectItem key={variant.id} value={variant.id}>
                           {variant.name} - {variant.unitPrice} ₺ (Min: {variant.minOrderQuantity} {selectedProduct.unit})
                         </SelectItem>

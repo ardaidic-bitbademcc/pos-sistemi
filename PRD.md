@@ -421,10 +421,10 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Hibrit (Hem Müşteri Hem Tedarikçi)**: Kafe sahibi hem ürün sipariş edebilir, hem de kendi ürettiği ürünleri (kahve, pasta vb.) satabilir.
 
 #### Tedarikçi Ürün Yönetimi (Opsiyonel Panel)
-- **İşlevsellik**: Ürün katalog oluşturma, min. sipariş adedi, fiyat, numune durumu belirleme, anonim olarak yayınlama
-- **Amaç**: Tedarikçilerin ürünlerini detaylı şekilde sunması, müşterilerden kimliklerini gizlemesi
+- **İşlevsellik**: Ürün katalog oluşturma, min. sipariş adedi, fiyat, numune durumu belirleme, anonim olarak yayınlama, ürün aktif/pasif kontrolü, varyant yönetimi, panel durumu yönetimi
+- **Amaç**: Tedarikçilerin ürünlerini detaylı şekilde sunması, müşterilerden kimliklerini gizlemesi, ürün ve panel kontrolünü sağlaması
 - **Tetikleyici**: Kullanıcı "Tedarikçi Panelini Aç" butonuna tıklar (ilk kez)
-- **Akış**: Tedarikçi panelini aktifleştir → Şirket bilgileri gir (sadece platform için) → Ürün bilgileri gir → Görsel yükle → Min. sipariş adedi belirle → Birim fiyat gir → "Numune Verilebilir" toggle → Baskılı ürün ise işaretle → Kargo koşulları belirle → Kaydet → Ürün anonim kodla yayınlanır
+- **Akış**: Tedarikçi panelini aktifleştir → Şirket bilgileri gir (sadece platform için) → Ürün bilgileri gir → Görsel yükle → Min. sipariş adedi belirle → Birim fiyat gir → "Numune Verilebilir" toggle → Baskılı ürün ise işaretle → Kargo koşulları belirle → Varyantlı ürün ise varyantlar ekle → Kaydet → Ürün anonim kodla yayınlanır → İstediğinde ürünleri aktif/pasif yap → Panel durumunu yönet (aktif/duraklatıldı/tatil)
 - **Başarı Kriterleri**:
   - Tedarikçi paneli varsayılan olarak kapalıdır
   - Kullanıcı isteğe bağlı olarak tedarikçi panelini aktifleştirir
@@ -433,6 +433,60 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Numune durumu açıkça belirtilir
   - Baskılı/tasarım gerektiren ürünler işaretlenir
   - Kargo koşulları (ücretsiz/alıcı ödemeli) seçilebilir
+  - Ürünler tek tıkla aktif/pasif yapılabilir
+  - Pasif ürünler müşterilere gösterilmez
+  - Varyantlar ayrı ayrı aktif/pasif yapılabilir
+  - Varyantlı ürünlerde her varyant için farklı fiyat, stok ve min. sipariş adedi belirlenebilir
+  - Panel durumu (aktif/duraklatıldı/tatil) yönetilebilir
+  - Duraklatıldı veya tatil modunda yeni sipariş alınamaz
+  - Tatil modunda dönüş tarihi belirlenebilir
+
+#### Ürün Varyant Yönetimi
+- **İşlevsellik**: Her ürün için çoklu seçenekler (gramaj, boyut vb.) oluşturma, varyanta özel fiyat, stok ve min. sipariş belirleme
+- **Amaç**: Aynı ürünün farklı gramaj veya boyutlarını ayrı fiyatlarla satabilme
+- **Tetikleyici**: Tedarikçi ürün eklerken "Varyantlı Ürün" seçeneğini aktifleştirir
+- **Akış**: Ürün ekle → Varyantlı Ürün toggle'ı aç → Varyant adı gir (örn: "250 gram") → Varyant fiyatı belirle → Stok ve min. sipariş adedi gir → Varyant ekle → Daha fazla varyant ekle → Kaydet → Her varyant müşterilere seçenek olarak gösterilir
+- **Başarı Kriterleri**:
+  - Varyant ekleme arayüzü kolay kullanılabilir
+  - Her varyant için ayrı fiyat, stok ve min. sipariş adedi belirlenebilir
+  - Varyantlar müşteri panelinde seçenek olarak listelenir
+  - Müşteri sipariş verirken varyant seçebilir
+  - Her varyant ayrı ayrı aktif/pasif yapılabilir
+  - Pasif varyantlar müşterilere gösterilmez
+  - Sipariş detaylarında varyant bilgisi görünür
+  - Varyantlı ürünlerde ana ürün fiyatı kullanılmaz, sadece varyant fiyatları geçerlidir
+  - Örnek: "Kahve" ürünü için "250gr - 500₺", "500gr - 850₺", "1kg - 1000₺" varyantları
+
+#### Ürün Aktif/Pasif Kontrolü
+- **İşlevsellik**: Tedarikçi her ürünü ve varyantı tek tıkla aktif veya pasif yapabilir
+- **Amaç**: Stokta olmayan veya satışa kapalı ürünleri geçici olarak gizlemek
+- **Tetikleyici**: Tedarikçi ürün listesinde aktif/pasif butonu tıklar
+- **Akış**: Ürün listesi → Ürünün yanındaki aktif/pasif butonuna tıkla → Durum anında güncellenir → Pasif ürünler müşteri kataloğundan gizlenir → Aktif yapınca tekrar gösterilir
+- **Başarı Kriterleri**:
+  - Tek tıkla ürün durumu değiştirilebilir
+  - Pasif ürünler müşteri kataloğunda görünmez
+  - Aktif ürünler anında müşteri kataloğuna eklenir
+  - Varyantlı ürünlerde her varyant ayrı kontrol edilebilir
+  - Pasif varyantlar sipariş seçeneklerinde görünmez
+  - Ürün durumu badge ile açıkça gösterilir
+  - Müşteri sadece aktif ürünleri ve aktif varyantları görebilir
+
+#### Tedarikçi Panel Durumu Yönetimi
+- **İşlevsellik**: Tedarikçi panelini tamamen aktif, duraklatılmış veya tatil moduna alma
+- **Amaç**: Tedarikçinin geçici olarak sipariş almayı durdurabilmesi, tatil dönemlerini yönetebilmesi
+- **Tetikleyici**: Tedarikçi "Durumu Değiştir" butonuna tıklar
+- **Akış**: 
+  - **Aktif**: Normal şekilde sipariş alınır, tüm ürünler görünür
+  - **Duraklatıldı**: Geçici olarak sipariş alınmaz, ürünler müşterilere gösterilmez
+  - **Tatil Modu**: Belirli bir tarihe kadar sipariş alınmaz, tatil bitiş tarihi gösterilir → Tarih gir → Tatil modunu aktifleştir
+- **Başarı Kriterleri**:
+  - Panel durumu kolayca değiştirilebilir
+  - Duraklatıldı veya tatil modunda ürünler müşteri kataloğunda görünmez
+  - Tatil modunda dönüş tarihi belirlenebilir
+  - Tatil bitiş tarihi tedarikçi panelinde görünür
+  - Panel durumu badge ile açıkça gösterilir (aktif/duraklatıldı/tatil)
+  - Aktif moda döndüğünde ürünler tekrar görünür hale gelir
+  - Durum değişiklikleri anında uygulanır
 
 #### Müşteri Ürün Görüntüleme (Anonim Tedarikçi)
 - **İşlevsellik**: Ürünleri kategorize ederek listeleme, tedarikçi isimlerini gizleme
