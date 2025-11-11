@@ -499,6 +499,15 @@ export interface B2BSupplier {
   logo?: string;
 }
 
+export interface ProductVariant {
+  id: string;
+  name: string;
+  unitPrice: number;
+  stock: number;
+  minOrderQuantity: number;
+  isActive: boolean;
+}
+
 export interface B2BProduct {
   id: string;
   supplierId: string;
@@ -518,6 +527,8 @@ export interface B2BProduct {
   isActive: boolean;
   createdAt: string;
   specifications?: Record<string, string>;
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
 }
 
 export interface SampleRequest {
@@ -573,6 +584,8 @@ export interface B2BOrderItem {
   unitPrice: number;
   totalPrice: number;
   requiresDesign: boolean;
+  variantId?: string;
+  variantName?: string;
 }
 
 export interface DesignFile {

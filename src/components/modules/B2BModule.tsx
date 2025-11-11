@@ -11,9 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash } from '@phosphor-icons/react';
+import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus } from '@/lib/types';
+import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant } from '@/lib/types';
 
 interface B2BModuleProps {
   onBack: () => void;
@@ -81,11 +81,22 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
     toast.success(`Numune talebi ${status === 'approved' ? 'onaylandı' : 'reddedildi'}`);
   };
 
-  const createOrder = (productId: string, quantity: number) => {
+  const createOrder = (productId: string, quantity: number, variantId?: string) => {
     const product = (products || []).find(p => p.id === productId);
     if (!product) return;
 
-    const subtotal = product.unitPrice * quantity;
+    let unitPrice = product.unitPrice;
+    let variantName: string | undefined = undefined;
+    
+    if (variantId && product.hasVariants && product.variants) {
+      const variant = product.variants.find(v => v.id === variantId);
+      if (variant) {
+        unitPrice = variant.unitPrice;
+        variantName = variant.name;
+      }
+    }
+
+    const subtotal = unitPrice * quantity;
     const shippingCost = product.shippingMethod === 'free' ? 0 : 150;
     const taxAmount = subtotal * 0.18;
     const totalAmount = subtotal + shippingCost + taxAmount;
@@ -102,9 +113,11 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName }: 
         productId: product.id,
         productName: product.name,
         quantity,
-        unitPrice: product.unitPrice,
+        unitPrice,
         totalPrice: subtotal,
         requiresDesign: product.requiresDesign,
+        variantId,
+        variantName,
       }],
       subtotal,
       shippingCost,
@@ -264,11 +277,55 @@ function SupplierPanel({
     shippingMethod: 'buyer_pays' as ShippingMethod,
     stock: 0,
     isActive: true,
+    hasVariants: false,
+    variants: [] as ProductVariant[],
+  });
+  const [newVariant, setNewVariant] = useState({
+    name: '',
+    unitPrice: 0,
+    stock: 0,
+    minOrderQuantity: 1,
   });
 
+  const handleAddVariant = () => {
+    if (!newVariant.name || newVariant.unitPrice <= 0) {
+      toast.error('Lütfen varyant adı ve fiyat girin');
+      return;
+    }
+    const variant: ProductVariant = {
+      id: `variant-${Date.now()}-${Math.random()}`,
+      name: newVariant.name,
+      unitPrice: newVariant.unitPrice,
+      stock: newVariant.stock,
+      minOrderQuantity: newVariant.minOrderQuantity,
+      isActive: true,
+    };
+    setNewProduct(prev => ({
+      ...prev,
+      variants: [...prev.variants, variant],
+    }));
+    setNewVariant({ name: '', unitPrice: 0, stock: 0, minOrderQuantity: 1 });
+    toast.success('Varyant eklendi');
+  };
+
+  const handleRemoveVariant = (variantId: string) => {
+    setNewProduct(prev => ({
+      ...prev,
+      variants: prev.variants.filter(v => v.id !== variantId),
+    }));
+  };
+
   const handleAddProduct = () => {
-    if (!newProduct.name || !newProduct.category || newProduct.unitPrice <= 0) {
-      toast.error('Lütfen tüm zorunlu alanları doldurun');
+    if (!newProduct.name || !newProduct.category) {
+      toast.error('Lütfen ürün adı ve kategori girin');
+      return;
+    }
+    if (newProduct.hasVariants && newProduct.variants.length === 0) {
+      toast.error('Varyantlı ürün için en az bir varyant ekleyin');
+      return;
+    }
+    if (!newProduct.hasVariants && newProduct.unitPrice <= 0) {
+      toast.error('Lütfen geçerli bir fiyat girin');
       return;
     }
     onAddProduct(newProduct);
@@ -285,6 +342,8 @@ function SupplierPanel({
       shippingMethod: 'buyer_pays',
       stock: 0,
       isActive: true,
+      hasVariants: false,
+      variants: [],
     });
   };
 
@@ -397,34 +456,132 @@ function SupplierPanel({
                       rows={3}
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Birim Fiyat (₺) *</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={newProduct.unitPrice || ''}
-                        onChange={(e) => setNewProduct({ ...newProduct, unitPrice: parseFloat(e.target.value) || 0 })}
-                      />
+                  
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <Label>Varyantlı Ürün</Label>
+                      <p className="text-xs text-muted-foreground">Farklı gramaj/boyut seçenekleri var mı? (Örn: 250gr, 500gr, 1kg)</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Min. Sipariş Adedi *</Label>
-                      <Input
-                        type="number"
-                        value={newProduct.minOrderQuantity || ''}
-                        onChange={(e) => setNewProduct({ ...newProduct, minOrderQuantity: parseInt(e.target.value) || 1 })}
-                      />
+                    <Switch
+                      checked={newProduct.hasVariants}
+                      onCheckedChange={(checked) => setNewProduct({ ...newProduct, hasVariants: checked })}
+                    />
+                  </div>
+
+                  {newProduct.hasVariants ? (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                      <h3 className="font-semibold text-sm">Varyantlar</h3>
+                      
+                      {newProduct.variants.length > 0 && (
+                        <div className="space-y-2">
+                          {newProduct.variants.map((variant) => (
+                            <div key={variant.id} className="flex items-center gap-2 p-3 border rounded-lg bg-background">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{variant.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {variant.unitPrice} ₺ - Min: {variant.minOrderQuantity} {newProduct.unit} - Stok: {variant.stock}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveVariant(variant.id)}
+                              >
+                                <Trash className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="space-y-3 p-3 border rounded-lg bg-background">
+                        <Label className="text-sm">Yeni Varyant Ekle</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Varyant Adı *</Label>
+                            <Input
+                              placeholder="Örn: 250 gram"
+                              value={newVariant.name}
+                              onChange={(e) => setNewVariant({ ...newVariant, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Fiyat (₺) *</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={newVariant.unitPrice || ''}
+                              onChange={(e) => setNewVariant({ ...newVariant, unitPrice: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Stok</Label>
+                            <Input
+                              type="number"
+                              value={newVariant.stock || ''}
+                              onChange={(e) => setNewVariant({ ...newVariant, stock: parseInt(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Min. Sipariş</Label>
+                            <Input
+                              type="number"
+                              value={newVariant.minOrderQuantity || ''}
+                              onChange={(e) => setNewVariant({ ...newVariant, minOrderQuantity: parseInt(e.target.value) || 1 })}
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={handleAddVariant}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Varyant Ekle
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Birim Fiyat (₺) *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={newProduct.unitPrice || ''}
+                          onChange={(e) => setNewProduct({ ...newProduct, unitPrice: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Min. Sipariş Adedi *</Label>
+                        <Input
+                          type="number"
+                          value={newProduct.minOrderQuantity || ''}
+                          onChange={(e) => setNewProduct({ ...newProduct, minOrderQuantity: parseInt(e.target.value) || 1 })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Stok</Label>
+                        <Input
+                          type="number"
+                          value={newProduct.stock || ''}
+                          onChange={(e) => setNewProduct({ ...newProduct, stock: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Birim</Label>
                       <Input
                         value={newProduct.unit}
                         onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
-                        placeholder="adet, kg, litre"
+                        placeholder="adet, kg, gram, litre"
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Kargo Koşulu</Label>
                       <Select
@@ -439,14 +596,6 @@ function SupplierPanel({
                           <SelectItem value="buyer_pays">Alıcı Ödemeli</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Stok</Label>
-                      <Input
-                        type="number"
-                        value={newProduct.stock || ''}
-                        onChange={(e) => setNewProduct({ ...newProduct, stock: parseInt(e.target.value) || 0 })}
-                      />
                     </div>
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -495,13 +644,36 @@ function SupplierPanel({
                           <Badge variant={product.isActive ? 'default' : 'secondary'}>
                             {product.isActive ? 'Aktif' : 'Pasif'}
                           </Badge>
+                          {product.hasVariants && (
+                            <Badge variant="outline">Varyantlı</Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">{product.description}</p>
-                        <div className="flex gap-4 text-sm">
-                          <span>Fiyat: <strong>{product.unitPrice} ₺/{product.unit}</strong></span>
-                          <span>Min. Sipariş: <strong>{product.minOrderQuantity} {product.unit}</strong></span>
-                          <span>Stok: <strong>{product.stock}</strong></span>
-                        </div>
+                        
+                        {product.hasVariants && product.variants && product.variants.length > 0 ? (
+                          <div className="space-y-2 mt-3">
+                            <p className="text-xs font-medium text-muted-foreground">Varyantlar:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {product.variants.map(variant => (
+                                <div key={variant.id} className="flex items-center justify-between p-2 border rounded-md text-sm">
+                                  <span className="font-medium">{variant.name}</span>
+                                  <div className="flex gap-3 text-xs">
+                                    <span><strong>{variant.unitPrice} ₺</strong></span>
+                                    <span className="text-muted-foreground">Min: {variant.minOrderQuantity}</span>
+                                    <span className="text-muted-foreground">Stok: {variant.stock}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-4 text-sm">
+                            <span>Fiyat: <strong>{product.unitPrice} ₺/{product.unit}</strong></span>
+                            <span>Min. Sipariş: <strong>{product.minOrderQuantity} {product.unit}</strong></span>
+                            <span>Stok: <strong>{product.stock}</strong></span>
+                          </div>
+                        )}
+                        
                         <div className="flex gap-2">
                           {product.canProvideSample && (
                             <Badge variant="outline">Numune Verilebilir</Badge>
@@ -548,7 +720,7 @@ function SupplierPanel({
                         <div className="text-sm space-y-1">
                           {order.items.map(item => (
                             <div key={item.id}>
-                              {item.productName} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
+                              {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
                             </div>
                           ))}
                         </div>
@@ -650,7 +822,7 @@ function CustomerPanel({
   orders: B2BOrder[];
   sampleRequests: SampleRequest[];
   onRequestSample: (productId: string) => void;
-  onCreateOrder: (productId: string, quantity: number) => void;
+  onCreateOrder: (productId: string, quantity: number, variantId?: string) => void;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
   getAnonymousSupplierName: (supplierId: string) => string;
   commissionRate: number;
@@ -658,6 +830,7 @@ function CustomerPanel({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<B2BProduct | null>(null);
   const [orderQuantity, setOrderQuantity] = useState(1);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
@@ -667,19 +840,47 @@ function CustomerPanel({
 
   const handleOrderClick = (product: B2BProduct) => {
     setSelectedProduct(product);
-    setOrderQuantity(product.minOrderQuantity);
+    if (product.hasVariants && product.variants && product.variants.length > 0) {
+      const firstVariant = product.variants[0];
+      setSelectedVariantId(firstVariant.id);
+      setOrderQuantity(firstVariant.minOrderQuantity);
+    } else {
+      setSelectedVariantId(undefined);
+      setOrderQuantity(product.minOrderQuantity);
+    }
     setShowOrderDialog(true);
+  };
+
+  const getSelectedVariant = () => {
+    if (!selectedProduct || !selectedVariantId || !selectedProduct.hasVariants || !selectedProduct.variants) {
+      return null;
+    }
+    return selectedProduct.variants.find(v => v.id === selectedVariantId);
+  };
+
+  const getCurrentPrice = () => {
+    if (!selectedProduct) return 0;
+    const variant = getSelectedVariant();
+    return variant ? variant.unitPrice : selectedProduct.unitPrice;
+  };
+
+  const getMinOrderQuantity = () => {
+    if (!selectedProduct) return 1;
+    const variant = getSelectedVariant();
+    return variant ? variant.minOrderQuantity : selectedProduct.minOrderQuantity;
   };
 
   const handleCreateOrder = () => {
     if (!selectedProduct) return;
-    if (orderQuantity < selectedProduct.minOrderQuantity) {
-      toast.error(`Minimum sipariş miktarı: ${selectedProduct.minOrderQuantity}`);
+    const minQty = getMinOrderQuantity();
+    if (orderQuantity < minQty) {
+      toast.error(`Minimum sipariş miktarı: ${minQty}`);
       return;
     }
-    onCreateOrder(selectedProduct.id, orderQuantity);
+    onCreateOrder(selectedProduct.id, orderQuantity, selectedVariantId);
     setShowOrderDialog(false);
     setSelectedProduct(null);
+    setSelectedVariantId(undefined);
   };
 
   return (
@@ -756,19 +957,37 @@ function CustomerPanel({
                           <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
                         </div>
 
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span>Fiyat:</span>
-                            <strong>{product.unitPrice} ₺/{product.unit}</strong>
+                        {product.hasVariants && product.variants && product.variants.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">Seçenekler:</p>
+                            <div className="space-y-1">
+                              {product.variants.slice(0, 3).map((variant) => (
+                                <div key={variant.id} className="flex justify-between text-xs p-2 border rounded">
+                                  <span className="font-medium">{variant.name}</span>
+                                  <span className="text-primary font-semibold">{variant.unitPrice} ₺</span>
+                                </div>
+                              ))}
+                              {product.variants.length > 3 && (
+                                <p className="text-xs text-muted-foreground text-center">+{product.variants.length - 3} seçenek daha</p>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Min. Sipariş:</span>
-                            <strong>{product.minOrderQuantity} {product.unit}</strong>
+                        ) : (
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>Fiyat:</span>
+                              <strong>{product.unitPrice} ₺/{product.unit}</strong>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Min. Sipariş:</span>
+                              <strong>{product.minOrderQuantity} {product.unit}</strong>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Kargo:</span>
-                            <span>{product.shippingMethod === 'free' ? 'Ücretsiz' : 'Alıcı Ödemeli'}</span>
-                          </div>
+                        )}
+
+                        <div className="flex justify-between text-sm">
+                          <span>Kargo:</span>
+                          <span>{product.shippingMethod === 'free' ? 'Ücretsiz' : 'Alıcı Ödemeli'}</span>
                         </div>
 
                         <div className="flex gap-2 flex-wrap">
@@ -777,6 +996,9 @@ function CustomerPanel({
                           )}
                           {product.requiresDesign && (
                             <Badge variant="outline" className="text-xs">Tasarım Gerekir</Badge>
+                          )}
+                          {product.hasVariants && (
+                            <Badge variant="outline" className="text-xs">Çoklu Seçenek</Badge>
                           )}
                         </div>
 
@@ -834,7 +1056,7 @@ function CustomerPanel({
                         <div className="text-sm space-y-1">
                           {order.items.map(item => (
                             <div key={item.id}>
-                              {item.productName} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
+                              {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
                             </div>
                           ))}
                         </div>
@@ -874,30 +1096,58 @@ function CustomerPanel({
                 <h3 className="font-semibold">{selectedProduct.name}</h3>
                 <p className="text-sm text-muted-foreground">Tedarikçi: {getAnonymousSupplierName(selectedProduct.supplierId)}</p>
               </div>
+              
+              {selectedProduct.hasVariants && selectedProduct.variants && selectedProduct.variants.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Seçenek</Label>
+                  <Select
+                    value={selectedVariantId}
+                    onValueChange={(v) => {
+                      setSelectedVariantId(v);
+                      const variant = selectedProduct.variants?.find(variant => variant.id === v);
+                      if (variant) {
+                        setOrderQuantity(variant.minOrderQuantity);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seçenek seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedProduct.variants.map(variant => (
+                        <SelectItem key={variant.id} value={variant.id}>
+                          {variant.name} - {variant.unitPrice} ₺ (Min: {variant.minOrderQuantity} {selectedProduct.unit})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label>Miktar ({selectedProduct.unit})</Label>
                 <Input
                   type="number"
-                  min={selectedProduct.minOrderQuantity}
+                  min={getMinOrderQuantity()}
                   value={orderQuantity}
-                  onChange={(e) => setOrderQuantity(parseInt(e.target.value) || selectedProduct.minOrderQuantity)}
+                  onChange={(e) => setOrderQuantity(parseInt(e.target.value) || getMinOrderQuantity())}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Min. sipariş: {selectedProduct.minOrderQuantity} {selectedProduct.unit}
+                  Min. sipariş: {getMinOrderQuantity()} {selectedProduct.unit}
                 </p>
               </div>
               <div className="space-y-2 border-t pt-4">
                 <div className="flex justify-between text-sm">
                   <span>Birim Fiyat:</span>
-                  <span>{selectedProduct.unitPrice} ₺</span>
+                  <span>{getCurrentPrice()} ₺</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Ara Toplam:</span>
-                  <span>{(selectedProduct.unitPrice * orderQuantity).toFixed(2)} ₺</span>
+                  <span>{(getCurrentPrice() * orderQuantity).toFixed(2)} ₺</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>KDV (%18):</span>
-                  <span>{(selectedProduct.unitPrice * orderQuantity * 0.18).toFixed(2)} ₺</span>
+                  <span>{(getCurrentPrice() * orderQuantity * 0.18).toFixed(2)} ₺</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Kargo:</span>
@@ -907,7 +1157,7 @@ function CustomerPanel({
                   <span>Toplam:</span>
                   <span>
                     {(
-                      selectedProduct.unitPrice * orderQuantity * 1.18 +
+                      getCurrentPrice() * orderQuantity * 1.18 +
                       (selectedProduct.shippingMethod === 'free' ? 0 : 150)
                     ).toFixed(2)} ₺
                   </span>
