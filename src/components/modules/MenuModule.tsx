@@ -86,6 +86,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     unit: 'adet',
     minStockLevel: 10,
     trackStock: true,
+    imageUrl: '',
   });
   
   const [newMenuItem, setNewMenuItem] = useState({
@@ -870,6 +871,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       unit: 'adet',
       minStockLevel: 10,
       trackStock: true,
+      imageUrl: '',
     });
   };
 
@@ -912,6 +914,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       unit: product.unit,
       minStockLevel: product.minStockLevel,
       trackStock: product.trackStock !== false,
+      imageUrl: product.imageUrl || '',
     });
     setShowEditProductDialog(true);
   };
@@ -939,6 +942,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             unit: newProduct.unit,
             minStockLevel: newProduct.minStockLevel,
             trackStock: newProduct.trackStock,
+            imageUrl: newProduct.imageUrl || undefined,
           };
         }
         return p;
@@ -959,6 +963,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
       unit: 'adet',
       minStockLevel: 10,
       trackStock: true,
+      imageUrl: '',
     });
   };
 
@@ -1131,6 +1136,18 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                 
                 return (
                   <Card key={item.id} className={`hover:shadow-md transition-shadow ${item.hasActiveCampaign ? 'ring-2 ring-accent' : ''}`}>
+                    {item.imageUrl && (
+                      <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted">
+                        <img 
+                          src={item.imageUrl} 
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="space-y-1 flex-1">
@@ -1271,6 +1288,18 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                     return (
                       <div key={item.id} className={`p-4 hover:bg-muted/50 transition-colors ${item.hasActiveCampaign ? 'bg-accent/5' : ''}`}>
                         <div className="flex items-center gap-4">
+                          {item.imageUrl && (
+                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
+                              <img 
+                                src={item.imageUrl} 
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-semibold truncate">{item.name}</h3>
@@ -1437,6 +1466,18 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProducts.map((product) => (
                 <Card key={product.id} className="hover:shadow-md transition-shadow">
+                  {product.imageUrl && (
+                    <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted">
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="space-y-1 flex-1">
@@ -1520,6 +1561,18 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                       className="p-4 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-4">
+                        {product.imageUrl && (
+                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
+                            <img 
+                              src={product.imageUrl} 
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold truncate">{product.name}</h3>
@@ -2211,10 +2264,22 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
               <Input
                 value={newMenuItem.imageUrl}
                 onChange={(e) => setNewMenuItem({ ...newMenuItem, imageUrl: e.target.value })}
-                placeholder="https://example.com/image.jpg"
+                placeholder="https://images.unsplash.com/photo-..."
               />
+              {newMenuItem.imageUrl && (
+                <div className="mt-2 rounded-lg overflow-hidden border">
+                  <img 
+                    src={newMenuItem.imageUrl} 
+                    alt="Önizleme"
+                    className="w-full h-32 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3EGörsel Yüklenemedi%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                💡 Ürün görseli QR menüde müşterilere gösterilecektir
+                💡 Ürün görseli QR menüde ve müşteri ekranlarında gösterilecektir. Unsplash, Pexels gibi ücretsiz görsel sitelerinden URL kullanabilirsiniz.
               </p>
             </div>
             <div className="space-y-2">
@@ -2608,6 +2673,29 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                   placeholder="Ürün açıklaması..."
                   rows={2}
                 />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Görsel URL (Opsiyonel)</Label>
+                <Input
+                  value={newProduct.imageUrl}
+                  onChange={(e) => setNewProduct({...newProduct, imageUrl: e.target.value})}
+                  placeholder="https://images.unsplash.com/photo-..."
+                />
+                {newProduct.imageUrl && (
+                  <div className="mt-2 rounded-lg overflow-hidden border">
+                    <img 
+                      src={newProduct.imageUrl} 
+                      alt="Önizleme"
+                      className="w-full h-32 object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3EGörsel Yüklenemedi%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  💡 Ürün görseli menüde ve satış ekranında görünür. Unsplash veya Pexels'den ücretsiz görseller kullanabilirsiniz.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Birim</Label>
@@ -3014,6 +3102,29 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                   placeholder="Ürün açıklaması..."
                   rows={2}
                 />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Görsel URL (Opsiyonel)</Label>
+                <Input
+                  value={newProduct.imageUrl}
+                  onChange={(e) => setNewProduct({...newProduct, imageUrl: e.target.value})}
+                  placeholder="https://images.unsplash.com/photo-..."
+                />
+                {newProduct.imageUrl && (
+                  <div className="mt-2 rounded-lg overflow-hidden border">
+                    <img 
+                      src={newProduct.imageUrl} 
+                      alt="Önizleme"
+                      className="w-full h-32 object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3EGörsel Yüklenemedi%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  💡 Ürün görseli menüde ve satış ekranında görünür. Unsplash veya Pexels'den ücretsiz görseller kullanabilirsiniz.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Birim</Label>

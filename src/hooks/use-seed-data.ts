@@ -474,6 +474,7 @@ export function useSeedData() {
           profitMargin: 0.67,
           servingSize: 1,
           isProduced: false,
+          imageUrl: 'https://images.unsplash.com/photo-1564890369478-c89ca6d9cda9?w=400',
         },
         {
           id: 'menu-002',
@@ -488,6 +489,7 @@ export function useSeedData() {
           profitMargin: 0.67,
           servingSize: 1,
           isProduced: false,
+          imageUrl: 'https://images.unsplash.com/photo-1610889556528-9a770e32642f?w=400',
         },
         {
           id: 'menu-003',
@@ -502,6 +504,7 @@ export function useSeedData() {
           profitMargin: 0.70,
           servingSize: 1,
           isProduced: false,
+          imageUrl: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400',
         },
         {
           id: 'menu-004',
@@ -516,6 +519,7 @@ export function useSeedData() {
           profitMargin: 0.64,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1561047029-3000c68339ca?w=400',
         },
         {
           id: 'menu-005',
@@ -530,6 +534,7 @@ export function useSeedData() {
           profitMargin: 0.64,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400',
         },
         {
           id: 'menu-006',
@@ -544,6 +549,7 @@ export function useSeedData() {
           profitMargin: 0.68,
           servingSize: 1,
           isProduced: false,
+          imageUrl: 'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?w=400',
         },
         {
           id: 'menu-007',
@@ -558,6 +564,7 @@ export function useSeedData() {
           profitMargin: 0.63,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
         },
         {
           id: 'menu-008',
@@ -572,6 +579,7 @@ export function useSeedData() {
           profitMargin: 0.64,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400',
         },
         {
           id: 'menu-009',
@@ -586,6 +594,7 @@ export function useSeedData() {
           profitMargin: 0.67,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400',
         },
         {
           id: 'menu-010',
@@ -600,6 +609,7 @@ export function useSeedData() {
           profitMargin: 0.65,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1598110750624-207050c4f28c?w=400',
         },
         {
           id: 'menu-011',
@@ -614,6 +624,7 @@ export function useSeedData() {
           profitMargin: 0.64,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
         },
         {
           id: 'menu-012',
@@ -628,6 +639,7 @@ export function useSeedData() {
           profitMargin: 0.70,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1524351199678-941a58a3df50?w=400',
         },
         {
           id: 'menu-013',
@@ -642,6 +654,7 @@ export function useSeedData() {
           profitMargin: 0.68,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400',
         },
         {
           id: 'menu-014',
@@ -656,6 +669,7 @@ export function useSeedData() {
           profitMargin: 0.71,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400',
         },
         {
           id: 'menu-015',
@@ -670,6 +684,7 @@ export function useSeedData() {
           profitMargin: 0.66,
           servingSize: 1,
           isProduced: true,
+          imageUrl: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400',
         },
       ];
       
@@ -690,6 +705,7 @@ export function useSeedData() {
         stock: 999999,
         minStockLevel: 0,
         trackStock: false,
+        imageUrl: item.imageUrl,
       }));
       
       setProducts((current) => [...(current || []), ...menuProducts]);
