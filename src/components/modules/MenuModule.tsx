@@ -49,11 +49,16 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [showPriceEditDialog, setShowPriceEditDialog] = useState(false);
   const [showPriceProposalDialog, setShowPriceProposalDialog] = useState(false);
   const [showCampaignDialog, setShowCampaignDialog] = useState(false);
+  const [showEditProductDialog, setShowEditProductDialog] = useState(false);
+  const [showStockCountDialog, setShowStockCountDialog] = useState(false);
   
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productForCount, setProductForCount] = useState<Product | null>(null);
+  const [countedStock, setCountedStock] = useState<string>('');
   const [newPrice, setNewPrice] = useState<string>('');
   const [priceProposal, setPriceProposal] = useState<PriceChangeProposal | null>(null);
   
@@ -834,6 +839,109 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
     }
   };
 
+  const openEditProductDialog = (product: Product) => {
+    setEditingProduct(product);
+    setNewProduct({
+      sku: product.sku,
+      name: product.name,
+      description: product.description || '',
+      categoryId: product.categoryId,
+      basePrice: product.basePrice,
+      costPrice: product.costPrice,
+      taxRate: product.taxRate,
+      unit: product.unit,
+      minStockLevel: product.minStockLevel,
+      trackStock: product.trackStock !== false,
+    });
+    setShowEditProductDialog(true);
+  };
+
+  const saveProductEdit = () => {
+    if (!editingProduct) return;
+    
+    if (!newProduct.name.trim() || !newProduct.sku.trim()) {
+      toast.error('Ürün adı ve SKU gerekli');
+      return;
+    }
+
+    setProducts((current) =>
+      (current || []).map((p) => {
+        if (p.id === editingProduct.id) {
+          return {
+            ...p,
+            sku: newProduct.sku,
+            name: newProduct.name,
+            description: newProduct.description,
+            categoryId: newProduct.categoryId,
+            basePrice: newProduct.basePrice,
+            costPrice: newProduct.costPrice,
+            taxRate: newProduct.taxRate,
+            unit: newProduct.unit,
+            minStockLevel: newProduct.minStockLevel,
+            trackStock: newProduct.trackStock,
+          };
+        }
+        return p;
+      })
+    );
+
+    toast.success(`${newProduct.name} güncellendi`);
+    setShowEditProductDialog(false);
+    setEditingProduct(null);
+    setNewProduct({
+      sku: '',
+      name: '',
+      description: '',
+      categoryId: 'cat-1',
+      basePrice: 0,
+      costPrice: 0,
+      taxRate: 18,
+      unit: 'adet',
+      minStockLevel: 10,
+      trackStock: true,
+    });
+  };
+
+  const openStockCountDialog = (product: Product) => {
+    setProductForCount(product);
+    setCountedStock('');
+    setShowStockCountDialog(true);
+  };
+
+  const saveStockCount = () => {
+    if (!productForCount) return;
+    
+    const newStock = parseFloat(countedStock);
+    if (isNaN(newStock) || newStock < 0) {
+      toast.error('Geçerli bir stok miktarı girin');
+      return;
+    }
+
+    const oldStock = productForCount.stock;
+    const difference = newStock - oldStock;
+
+    setProducts((current) =>
+      (current || []).map((p) => {
+        if (p.id === productForCount.id) {
+          return { ...p, stock: newStock };
+        }
+        return p;
+      })
+    );
+
+    if (difference > 0) {
+      toast.success(`${productForCount.name} stoğu güncellendi: +${difference.toFixed(2)} ${productForCount.unit}`);
+    } else if (difference < 0) {
+      toast.success(`${productForCount.name} stoğu güncellendi: ${difference.toFixed(2)} ${productForCount.unit}`);
+    } else {
+      toast.success(`${productForCount.name} stoğu doğrulandı`);
+    }
+
+    setShowStockCountDialog(false);
+    setProductForCount(null);
+    setCountedStock('');
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6">
       <header className="flex items-center gap-4">
@@ -1052,6 +1160,14 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openEditProductDialog(product)}
+                        >
+                          <PencilSimple className="h-4 w-4 mr-1" />
+                          Düzenle
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => toggleProductStockTracking(product.id)}
                         >
                           {product.trackStock !== false ? 'Stok Takibini Kapat' : 'Stok Takibini Aç'}
@@ -1175,6 +1291,18 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                               <p className="text-muted-foreground">Toplam Değer</p>
                               <p className="font-semibold font-tabular-nums">{formatCurrency(product.stock * product.costPrice)}</p>
                             </div>
+                          </div>
+
+                          <div className="mt-3 pt-3 border-t">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="w-full"
+                              onClick={() => openStockCountDialog(product)}
+                            >
+                              <Package className="h-4 w-4 mr-2" weight="bold" />
+                              Sayım Yap
+                            </Button>
                           </div>
                         </div>
                       );
@@ -2434,6 +2562,206 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             <Button onClick={applyCampaign} variant="default">
               <Sparkle className="h-4 w-4 mr-2" weight="fill" />
               Kampanyayı Başlat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditProductDialog} onOpenChange={setShowEditProductDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Ürün Düzenle</DialogTitle>
+            <DialogDescription>
+              Ürün bilgilerini güncelleyin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ürün Adı *</Label>
+                <Input
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                  placeholder="Cheesecake"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>SKU *</Label>
+                <Input
+                  value={newProduct.sku}
+                  onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
+                  placeholder="CAKE-001"
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Açıklama</Label>
+                <Textarea
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                  placeholder="Ürün açıklaması..."
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Birim</Label>
+                <Input
+                  value={newProduct.unit}
+                  onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
+                  placeholder="adet, kg, lt"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Minimum Stok Seviyesi</Label>
+                <Input
+                  type="number"
+                  value={newProduct.minStockLevel}
+                  onChange={(e) => setNewProduct({...newProduct, minStockLevel: Number(e.target.value)})}
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Satış Fiyatı (₺)</Label>
+                <Input
+                  type="number"
+                  value={newProduct.basePrice}
+                  onChange={(e) => setNewProduct({...newProduct, basePrice: Number(e.target.value)})}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Maliyet Fiyatı (₺)</Label>
+                <Input
+                  type="number"
+                  value={newProduct.costPrice}
+                  onChange={(e) => setNewProduct({...newProduct, costPrice: Number(e.target.value)})}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>KDV Oranı (%)</Label>
+                <Input
+                  type="number"
+                  value={newProduct.taxRate}
+                  onChange={(e) => setNewProduct({...newProduct, taxRate: Number(e.target.value)})}
+                  min="0"
+                  max="100"
+                />
+              </div>
+              <div className="col-span-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="editTrackStock"
+                  checked={newProduct.trackStock}
+                  onChange={(e) => setNewProduct({...newProduct, trackStock: e.target.checked})}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="editTrackStock" className="cursor-pointer">
+                  Stok takibi yap
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditProductDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={saveProductEdit}>
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Güncelle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showStockCountDialog} onOpenChange={setShowStockCountDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Stok Sayım</DialogTitle>
+            <DialogDescription>
+              {productForCount?.name} için fiziksel sayım yapın
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Mevcut Stok (Sistemde)</p>
+                  <p className="text-3xl font-bold font-tabular-nums">
+                    {productForCount?.stock.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{productForCount?.unit}</p>
+                </div>
+                <Package className="h-12 w-12 text-primary opacity-50" weight="duotone" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sayılan Miktar ({productForCount?.unit})</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={countedStock}
+                onChange={(e) => setCountedStock(e.target.value)}
+                placeholder="Fiziksel sayım sonucu..."
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                💡 Rafta/depoda saydığınız gerçek ürün miktarını girin
+              </p>
+            </div>
+
+            {countedStock && parseFloat(countedStock) >= 0 && productForCount && (
+              <>
+                <Separator />
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Fark</span>
+                    <span className={`text-lg font-bold font-tabular-nums ${
+                      parseFloat(countedStock) - productForCount.stock > 0 
+                        ? 'text-accent' 
+                        : parseFloat(countedStock) - productForCount.stock < 0 
+                        ? 'text-destructive' 
+                        : 'text-foreground'
+                    }`}>
+                      {parseFloat(countedStock) - productForCount.stock > 0 ? '+' : ''}
+                      {(parseFloat(countedStock) - productForCount.stock).toFixed(2)} {productForCount.unit}
+                    </span>
+                  </div>
+                  {Math.abs(parseFloat(countedStock) - productForCount.stock) > 0 && (
+                    <div className="pt-2 border-t text-xs text-muted-foreground">
+                      {parseFloat(countedStock) > productForCount.stock ? (
+                        <p>✅ Sistemde eksik kayıt var, stok artırılacak</p>
+                      ) : parseFloat(countedStock) < productForCount.stock ? (
+                        <p>⚠️ Fire/kayıp tespit edildi, stok düşürülecek</p>
+                      ) : (
+                        <p>✓ Sistemle uyumlu, değişiklik yok</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs text-amber-900 leading-relaxed">
+                ⚠️ Bu işlem stok miktarını doğrudan güncelleyecektir. 
+                Sayım sonucundan emin olduğunuzda onaylayın.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStockCountDialog(false)}>
+              <X className="h-4 w-4 mr-2" />
+              İptal
+            </Button>
+            <Button onClick={saveStockCount} variant="default" disabled={!countedStock || parseFloat(countedStock) < 0}>
+              <Check className="h-4 w-4 mr-2" weight="bold" />
+              Sayımı Onayla
             </Button>
           </DialogFooter>
         </DialogContent>
