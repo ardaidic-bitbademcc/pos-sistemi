@@ -62,6 +62,8 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
       { method: 'cash', displayName: 'Nakit', isActive: true, icon: 'Money' },
       { method: 'card', displayName: 'Kredi Kartı', isActive: true, icon: 'CreditCard' },
       { method: 'mobile', displayName: 'Mobil Ödeme', isActive: true, icon: 'DeviceMobile' },
+      { method: 'transfer', displayName: 'Havale/EFT', isActive: true, icon: 'Bank' },
+      { method: 'multinet', displayName: 'Multinet Açık Hesap', isActive: true, icon: 'Ticket' },
     ],
     stockAlerts: true,
     autoCalculateSalary: false,

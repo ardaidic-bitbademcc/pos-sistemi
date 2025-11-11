@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ChartLine, TrendUp, TrendDown, Users, Package, Calendar, Buildings } from '@phosphor-icons/react';
+import { ArrowLeft, ChartLine, TrendUp, TrendDown, Users, Package, Calendar, Buildings, CreditCard, Money, DeviceMobile, Bank, Ticket } from '@phosphor-icons/react';
 import type { Sale, Employee, Product, Branch, BranchComparison, WaiterSalesReport, ProductSalesReport } from '@/lib/types';
 import { formatCurrency, formatNumber } from '@/lib/helpers';
 
@@ -164,11 +164,39 @@ export default function ReportsModule({ onBack }: ReportsModuleProps) {
     const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
     const totalItems = filteredSales.reduce((sum, s) => sum + s.items.reduce((iSum, i) => iSum + i.quantity, 0), 0);
 
+    const paymentMethodBreakdown = {
+      cash: 0,
+      card: 0,
+      mobile: 0,
+      transfer: 0,
+      multinet: 0,
+    };
+
+    filteredSales.forEach(sale => {
+      if (sale.notes?.includes('Parçalı ödeme:')) {
+        const matches = sale.notes.match(/(cash|card|mobile|transfer|multinet)=([\d.]+)/g);
+        if (matches) {
+          matches.forEach(match => {
+            const [method, amount] = match.split('=');
+            if (method in paymentMethodBreakdown) {
+              paymentMethodBreakdown[method as keyof typeof paymentMethodBreakdown] += parseFloat(amount.replace(/[^0-9.]/g, ''));
+            }
+          });
+        }
+      } else {
+        const method = sale.paymentMethod;
+        if (method in paymentMethodBreakdown) {
+          paymentMethodBreakdown[method] += sale.totalAmount;
+        }
+      }
+    });
+
     return {
       totalRevenue,
       totalTransactions,
       averageTransaction,
       totalItems,
+      paymentMethodBreakdown,
     };
   }, [sales, selectedBranch, selectedPeriod]);
 
@@ -284,9 +312,71 @@ export default function ReportsModule({ onBack }: ReportsModuleProps) {
       <Tabs defaultValue="branches" className="space-y-4">
         <TabsList>
           <TabsTrigger value="branches">Şube Karşılaştırma</TabsTrigger>
+          <TabsTrigger value="payments">Ödeme Yöntemleri</TabsTrigger>
           <TabsTrigger value="waiters">Garson Satışları</TabsTrigger>
           <TabsTrigger value="products">Ürün Satışları</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="payments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Ödeme Yöntemi Dağılımı</CardTitle>
+              <CardDescription>
+                Seçili dönemde ödeme yöntemlerine göre satış dağılımı
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[
+                  { method: 'cash', label: 'Nakit', icon: Money, color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
+                  { method: 'card', label: 'Kredi Kartı', icon: CreditCard, color: 'text-blue-600', bgColor: 'bg-blue-100' },
+                  { method: 'mobile', label: 'Mobil Ödeme', icon: DeviceMobile, color: 'text-purple-600', bgColor: 'bg-purple-100' },
+                  { method: 'transfer', label: 'Havale/EFT', icon: Bank, color: 'text-orange-600', bgColor: 'bg-orange-100' },
+                  { method: 'multinet', label: 'Multinet Açık Hesap', icon: Ticket, color: 'text-pink-600', bgColor: 'bg-pink-100' },
+                ].map(({ method, label, icon: Icon, color, bgColor }) => {
+                  const amount = overallStats.paymentMethodBreakdown[method as keyof typeof overallStats.paymentMethodBreakdown] || 0;
+                  const percentage = overallStats.totalRevenue > 0 ? (amount / overallStats.totalRevenue) * 100 : 0;
+                  
+                  if (amount === 0) return null;
+                  
+                  return (
+                    <div key={method} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-3 rounded-lg ${bgColor}`}>
+                            <Icon className={`h-6 w-6 ${color}`} weight="bold" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Toplam satışın %{percentage.toFixed(1)}'i
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold font-tabular-nums">
+                            {formatCurrency(amount)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`absolute h-full ${bgColor} transition-all duration-300`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {Object.values(overallStats.paymentMethodBreakdown).every(v => v === 0) && (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Seçili dönemde ödeme yok
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="branches" className="space-y-4">
           <Card>

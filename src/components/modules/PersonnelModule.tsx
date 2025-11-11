@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple, Receipt, Money, CreditCard, Bank, DeviceMobile } from '@phosphor-icons/react';
+import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple, Receipt, Money, CreditCard, Bank, DeviceMobile, Ticket } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole, CustomerAccount, CustomerTransaction } from '@/lib/types';
 import { formatCurrency, formatDateTime, calculateHoursWorked, generateId, formatDate } from '@/lib/helpers';
@@ -47,7 +47,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
   const [showSalaryDetailDialog, setShowSalaryDetailDialog] = useState(false);
   const [salaryDetailForView, setSalaryDetailForView] = useState<SalaryCalculation | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'transfer'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'transfer' | 'multinet'>('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
   
   const [newEmployee, setNewEmployee] = useState({
@@ -1432,7 +1432,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                               className="h-16 sm:h-20 flex flex-col gap-1"
                             >
                               <Bank className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
-                              <span className="text-xs sm:text-sm">Havale</span>
+                              <span className="text-xs sm:text-sm">Havale/EFT</span>
                             </Button>
                             <Button
                               type="button"
@@ -1442,6 +1442,15 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                             >
                               <DeviceMobile className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
                               <span className="text-xs sm:text-sm">Mobil Ödeme</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={paymentMethod === 'multinet' ? 'default' : 'outline'}
+                              onClick={() => setPaymentMethod('multinet')}
+                              className="h-16 sm:h-20 flex flex-col gap-1 col-span-2"
+                            >
+                              <Ticket className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                              <span className="text-xs sm:text-sm">Multinet Açık Hesap</span>
                             </Button>
                           </div>
                         </div>
@@ -1488,8 +1497,9 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                                     <Badge variant="outline" className="text-[10px] sm:text-xs">
                                       {transaction.paymentMethod === 'cash' && 'Nakit'}
                                       {transaction.paymentMethod === 'card' && 'Kart'}
-                                      {transaction.paymentMethod === 'transfer' && 'Havale'}
+                                      {transaction.paymentMethod === 'transfer' && 'Havale/EFT'}
                                       {transaction.paymentMethod === 'mobile' && 'Mobil'}
+                                      {transaction.paymentMethod === 'multinet' && 'Multinet'}
                                     </Badge>
                                   )}
                                 </div>

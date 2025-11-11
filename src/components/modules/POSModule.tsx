@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle } from '@phosphor-icons/react';
+import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle, Bank, Ticket } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import Numpad from '@/components/Numpad';
 import ProductOptionsSelector from '@/components/ProductOptionsSelector';
@@ -70,6 +70,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     totalCashSales: 0,
     totalCardSales: 0,
     totalMobileSales: 0,
+    totalTransferSales: 0,
+    totalMultinetSales: 0,
     totalSales: 0,
     lastUpdated: new Date().toISOString(),
   });
@@ -79,6 +81,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       { method: 'cash', displayName: 'Nakit', isActive: true, icon: 'Money' },
       { method: 'card', displayName: 'Kredi Kartı', isActive: true, icon: 'CreditCard' },
       { method: 'mobile', displayName: 'Mobil Ödeme', isActive: true, icon: 'DeviceMobile' },
+      { method: 'transfer', displayName: 'Havale/EFT', isActive: true, icon: 'Bank' },
+      { method: 'multinet', displayName: 'Multinet Açık Hesap', isActive: true, icon: 'Ticket' },
     ],
     stockAlerts: true,
     autoCalculateSalary: false,
@@ -807,7 +811,21 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     const partialTotals = calculatePartialTotals();
     const finalPaymentMethod = splitPayments.length > 0 ? 'card' : paymentMethod;
 
+    const selectedPaymentMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === finalPaymentMethod);
+    if (!selectedPaymentMethodSetting || !selectedPaymentMethodSetting.isActive) {
+      toast.error(`${finalPaymentMethod} ödeme yöntemi şu anda pasif durumda. Lütfen başka bir yöntem seçin.`);
+      return;
+    }
+
     if (splitPayments.length > 0) {
+      for (const split of splitPayments) {
+        const splitMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === split.method);
+        if (!splitMethodSetting || !splitMethodSetting.isActive) {
+          toast.error(`${split.method} ödeme yöntemi şu anda pasif durumda. Lütfen parçalı ödemeleri kontrol edin.`);
+          return;
+        }
+      }
+
       const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
       if (Math.abs(totalPaid - partialTotals.total) > 0.01) {
         toast.error(`Toplam ödeme ${formatCurrency(totalPaid)} - Kalan: ${formatCurrency(partialTotals.total - totalPaid)}`);
@@ -958,9 +976,23 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       return;
     }
 
+    const selectedPaymentMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === paymentMethod);
+    if (!selectedPaymentMethodSetting || !selectedPaymentMethodSetting.isActive) {
+      toast.error(`${paymentMethod} ödeme yöntemi şu anda pasif durumda. Lütfen başka bir yöntem seçin.`);
+      return;
+    }
+
     const totals = calculateTotals();
 
     if (splitPayments.length > 0) {
+      for (const split of splitPayments) {
+        const splitMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === split.method);
+        if (!splitMethodSetting || !splitMethodSetting.isActive) {
+          toast.error(`${split.method} ödeme yöntemi şu anda pasif durumda. Lütfen parçalı ödemeleri kontrol edin.`);
+          return;
+        }
+      }
+
       const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
       if (Math.abs(totalPaid - totals.total) > 0.01) {
         toast.error(`Toplam ödeme ${formatCurrency(totalPaid)} - Kalan: ${formatCurrency(totals.total - totalPaid)}`);
@@ -1195,6 +1227,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           totalCashSales: 0,
           totalCardSales: 0,
           totalMobileSales: 0,
+          totalTransferSales: 0,
+          totalMultinetSales: 0,
           totalSales: 0,
           lastUpdated: new Date().toISOString(),
         };
@@ -1204,17 +1238,23 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       let cashAmount = 0;
       let cardAmount = 0;
       let mobileAmount = 0;
+      let transferAmount = 0;
+      let multinetAmount = 0;
 
       if (splits.length > 0) {
         splits.forEach(split => {
           if (split.method === 'cash') cashAmount += split.amount;
           else if (split.method === 'card') cardAmount += split.amount;
           else if (split.method === 'mobile') mobileAmount += split.amount;
+          else if (split.method === 'transfer') transferAmount += split.amount;
+          else if (split.method === 'multinet') multinetAmount += split.amount;
         });
       } else {
         if (method === 'cash') cashAmount = amount;
         else if (method === 'card') cardAmount = amount;
         else if (method === 'mobile') mobileAmount = amount;
+        else if (method === 'transfer') transferAmount = amount;
+        else if (method === 'multinet') multinetAmount = amount;
       }
 
       return {
@@ -1223,6 +1263,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         totalCashSales: current.totalCashSales + cashAmount,
         totalCardSales: current.totalCardSales + cardAmount,
         totalMobileSales: current.totalMobileSales + mobileAmount,
+        totalTransferSales: current.totalTransferSales + transferAmount,
+        totalMultinetSales: current.totalMultinetSales + multinetAmount,
         totalSales: current.totalSales + amount,
         lastUpdated: new Date().toISOString(),
       };
@@ -1988,9 +2030,9 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
               <TabsContent value="payment" className="space-y-4">
                 <div className="space-y-3">
                   <Label>Ödeme Yöntemi</Label>
-                  <div className={`grid gap-3 ${activePaymentMethods.length === 3 ? 'grid-cols-3' : activePaymentMethods.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  <div className={`grid gap-3 ${activePaymentMethods.length >= 5 ? 'grid-cols-2' : activePaymentMethods.length === 4 ? 'grid-cols-2' : activePaymentMethods.length === 3 ? 'grid-cols-3' : activePaymentMethods.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {activePaymentMethods.map((pm) => {
-                      const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
+                      const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : pm.method === 'mobile' ? DeviceMobile : pm.method === 'transfer' ? Bank : Ticket;
                       return (
                         <Button
                           key={pm.method}
@@ -1999,7 +2041,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           onClick={() => setPaymentMethod(pm.method)}
                         >
                           <Icon className="h-8 w-8" weight="bold" />
-                          <span>{pm.displayName}</span>
+                          <span className="text-xs sm:text-sm">{pm.displayName}</span>
                         </Button>
                       );
                     })}
@@ -2181,7 +2223,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                 <Label>Yeni Ödeme Ekle</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {activePaymentMethods.map((pm) => {
-                    const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : DeviceMobile;
+                    const Icon = pm.method === 'cash' ? Money : pm.method === 'card' ? CreditCard : pm.method === 'mobile' ? DeviceMobile : pm.method === 'transfer' ? Bank : Ticket;
                     return (
                       <Button
                         key={pm.method}
