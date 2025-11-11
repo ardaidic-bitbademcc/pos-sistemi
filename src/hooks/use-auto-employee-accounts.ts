@@ -47,5 +47,5 @@ export function useAutoEmployeeAccounts() {
     };
 
     checkAndCreateAccounts();
-  }, [employees]);
+  }, [employees, accounts, setAccounts]);
 }

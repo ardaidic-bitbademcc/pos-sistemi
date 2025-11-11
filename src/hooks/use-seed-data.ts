@@ -994,7 +994,7 @@ export function useSeedData() {
     }
 
     setSeeded(true);
-  }, [employees, products, categories, tables, menuItems, branches, sales, seeded]);
+  }, [seeded, admins, setAdmins, employees, setEmployees, products, setProducts, categories, setCategories, tables, setTables, menuItems, setMenuItems, branches, setBranches, sales, setSales, b2bSuppliers, setB2BSuppliers, b2bProducts, setB2BProducts]);
 
   return { seeded };
 }
