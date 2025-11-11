@@ -54,7 +54,7 @@ interface SelectedPaymentItem {
 }
 
 export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSModuleProps) {
-  const [products] = useKV<Product[]>('products', []);
+  const [products, setProducts] = useKV<Product[]>('products', []);
   const [categories] = useKV<Category[]>('categories', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
@@ -789,6 +789,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     setSales((currentSales) => [...(currentSales || []), newSale]);
     updateCashRegister(finalPaymentMethod, partialTotals.total, splitPayments);
 
+    deductStock(paidItems);
+
     setCart(remainingItems);
 
     if (selectedTable && remainingItems.length === 0) {
@@ -923,6 +925,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
 
     updateCashRegister(finalPaymentMethod, totals.total, splitPayments);
 
+    deductStock(cart);
+
     if (selectedTable) {
       setTables((current) =>
         (current || []).map(t =>
@@ -952,6 +956,27 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     setOrderDiscount(0);
     setPaymentMethod('cash');
     setActiveTab('tables');
+  };
+
+  const deductStock = (items: CartItem[]) => {
+    items.forEach(item => {
+      if (!item.isComplimentary) {
+        setProducts((currentProducts) =>
+          (currentProducts || []).map((p) => {
+            if (p.id === item.productId && p.trackStock !== false) {
+              const newStock = Math.max(0, p.stock - item.quantity);
+              if (newStock === 0) {
+                toast.warning(`⚠️ ${p.name} stokta kalmadı!`);
+              } else if (newStock <= p.minStockLevel) {
+                toast.warning(`⚠️ ${p.name} stok seviyesi düşük (${newStock} ${p.unit})`);
+              }
+              return { ...p, stock: newStock };
+            }
+            return p;
+          })
+        );
+      }
+    });
   };
 
   const updateCashRegister = (method: PaymentMethod, amount: number, splits: SplitPayment[]) => {

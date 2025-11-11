@@ -523,11 +523,11 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
       </Tabs>
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Personel Giriş/Çıkış</DialogTitle>
             <DialogDescription>
-              PIN kodu veya QR kod ile vardiyaya giriş/çıkış yapın
+              PIN kodu girin veya aşağıdaki QR kodunuzu mobil cihazınızla okutun
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -535,10 +535,11 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
               <Label>PIN Kodu</Label>
               <Input
                 type="password"
-                placeholder="PIN kodunuzu girin"
+                placeholder="PIN kodunuzu girin (6 haneli)"
                 value={loginPin}
                 onChange={(e) => setLoginPin(e.target.value)}
                 maxLength={6}
+                autoFocus
               />
             </div>
             <div className="flex items-center gap-4">
@@ -546,24 +547,36 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
               <span className="text-sm text-muted-foreground">veya</span>
               <Separator className="flex-1" />
             </div>
-            <div className="space-y-2">
-              <Label>QR Kod</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="QR kod okutun"
-                  value={loginQr}
-                  onChange={(e) => setLoginQr(e.target.value)}
-                />
-                <QrCode className="h-6 w-6 text-muted-foreground" weight="bold" />
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <QrCode className="h-5 w-5" weight="bold" />
+                QR Kodunuzu Telefonunuzla Okutun
+              </Label>
+              <div className="grid grid-cols-4 gap-3">
+                {activeEmployees.slice(0, 8).map((emp) => (
+                  <Card key={emp.id} className="p-3 cursor-pointer hover:bg-accent transition-colors" onClick={() => {
+                    setLoginQr(emp.qrCode || '');
+                    setTimeout(() => employeeLogin(), 100);
+                  }}>
+                    <div className="aspect-square bg-background border-2 rounded-lg p-2 flex flex-col items-center justify-center gap-1">
+                      <QrCode className="h-8 w-8 text-primary" weight="fill" />
+                      <div className="text-[8px] text-center font-medium leading-tight">{emp.fullName.split(' ')[0]}</div>
+                    </div>
+                  </Card>
+                ))}
               </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Bu QR kodlar simülasyondur. Gerçek uygulamada mobil cihazınızla okutacaksınız.
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLoginDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowLoginDialog(false);
+              setLoginPin('');
+              setLoginQr('');
+            }}>
               İptal
-            </Button>
-            <Button onClick={employeeLogin}>
-              Giriş/Çıkış Yap
             </Button>
           </DialogFooter>
         </DialogContent>

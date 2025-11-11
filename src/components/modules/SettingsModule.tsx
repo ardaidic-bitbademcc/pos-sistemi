@@ -72,41 +72,12 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
   
   const [settings, setSettings] = useKV<AppSettings>('appSettings', defaultSettings);
 
-  const [showStockDialog, setShowStockDialog] = useState(false);
   const [showTaxDialog, setShowTaxDialog] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [stockQuantity, setStockQuantity] = useState(0);
   const [newTaxName, setNewTaxName] = useState('');
   const [newTaxRate, setNewTaxRate] = useState(18);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDescription, setNewCategoryDescription] = useState('');
-
-  const openStockDialog = (product: Product) => {
-    setSelectedProduct(product);
-    setStockQuantity(0);
-    setShowStockDialog(true);
-  };
-
-  const addStock = () => {
-    if (!selectedProduct || stockQuantity <= 0) {
-      toast.error('Geçersiz miktar');
-      return;
-    }
-
-    setProducts((current) =>
-      (current || []).map((p) =>
-        p.id === selectedProduct.id
-          ? { ...p, stock: p.stock + stockQuantity }
-          : p
-      )
-    );
-
-    toast.success(`${selectedProduct.name} stoğuna ${stockQuantity} adet eklendi`);
-    setShowStockDialog(false);
-    setSelectedProduct(null);
-    setStockQuantity(0);
-  };
 
   const togglePaymentMethod = (method: PaymentMethod) => {
     setSettings((current) => {
@@ -261,70 +232,14 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
         </div>
       </header>
 
-      <Tabs defaultValue="stock" className="space-y-4">
+      <Tabs defaultValue="categories" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="stock">Stok Yönetimi</TabsTrigger>
           <TabsTrigger value="categories">Kategori Yönetimi</TabsTrigger>
           <TabsTrigger value="tax">KDV Ayarları</TabsTrigger>
           <TabsTrigger value="payment">Ödeme Yöntemleri</TabsTrigger>
           <TabsTrigger value="theme">Sistem Teması</TabsTrigger>
           <TabsTrigger value="general">Genel</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="stock" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Stok Girişi</CardTitle>
-                  <CardDescription>Ürün stoklarını güncelleyin</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {(products || []).length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-4">
-                    Henüz ürün yok
-                  </p>
-                ) : (
-                  (products || []).map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="space-y-1 flex-1">
-                        <p className="font-medium">{product.name}</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>SKU: {product.sku}</span>
-                          <span className="font-tabular-nums">
-                            Mevcut Stok: {product.stock} {product.unit}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          product.stock <= product.minStockLevel
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-accent/10 text-accent'
-                        }`}>
-                          {product.stock <= product.minStockLevel ? 'Düşük' : 'Yeterli'}
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => openStockDialog(product)}
-                        >
-                          <Package className="h-4 w-4 mr-2" />
-                          Stok Ekle
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="categories" className="space-y-4">
           <Card>
@@ -837,49 +752,6 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={showStockDialog} onOpenChange={setShowStockDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Stok Ekle</DialogTitle>
-            <DialogDescription>
-              {selectedProduct?.name} için stok miktarı ekleyin
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Mevcut Stok</Label>
-              <Input
-                value={`${selectedProduct?.stock || 0} ${selectedProduct?.unit || ''}`}
-                disabled
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Eklenecek Miktar</Label>
-              <Input
-                type="number"
-                min="0"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(Number(e.target.value))}
-                placeholder="0"
-              />
-            </div>
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">
-                Yeni Stok: {(selectedProduct?.stock || 0) + stockQuantity} {selectedProduct?.unit}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStockDialog(false)}>
-              İptal
-            </Button>
-            <Button onClick={addStock}>
-              Ekle
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={showTaxDialog} onOpenChange={setShowTaxDialog}>
         <DialogContent>

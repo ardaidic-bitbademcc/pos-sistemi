@@ -796,11 +796,23 @@ export default function TaskManagementModule({
 
               <div className="space-y-2">
                 <Label>Kategori</Label>
-                <Input
+                <Select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="Ör: Temizlik, Bakım"
-                />
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kategori seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="temizlik">Temizlik</SelectItem>
+                    <SelectItem value="bakim">Bakım-Onarım</SelectItem>
+                    <SelectItem value="mutfak">Mutfak</SelectItem>
+                    <SelectItem value="servis">Servis</SelectItem>
+                    <SelectItem value="stok">Stok Yönetimi</SelectItem>
+                    <SelectItem value="finans">Finans</SelectItem>
+                    <SelectItem value="diger">Diğer</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -914,11 +926,23 @@ export default function TaskManagementModule({
 
               <div className="space-y-2">
                 <Label>Kategori</Label>
-                <Input
+                <Select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="Ör: Temizlik, Bakım"
-                />
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kategori seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="temizlik">Temizlik</SelectItem>
+                    <SelectItem value="bakim">Bakım-Onarım</SelectItem>
+                    <SelectItem value="mutfak">Mutfak</SelectItem>
+                    <SelectItem value="servis">Servis</SelectItem>
+                    <SelectItem value="stok">Stok Yönetimi</SelectItem>
+                    <SelectItem value="finans">Finans</SelectItem>
+                    <SelectItem value="diger">Diğer</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

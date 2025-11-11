@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale } from '@/lib/types';
+import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
 
 interface MenuModuleProps {
@@ -32,6 +32,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
   const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const [recipes, setRecipes] = useKV<Recipe[]>('recipes', []);
   const [products, setProducts] = useKV<Product[]>('products', []);
+  const [categories] = useKV<Category[]>('categories', []);
   const [invoices, setInvoices] = useKV<Invoice[]>('invoices', []);
   const [sales] = useKV<Sale[]>('sales', []);
   
@@ -859,6 +860,7 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
         <TabsList>
           <TabsTrigger value="menu">Menü Öğeleri</TabsTrigger>
           <TabsTrigger value="products">Ürünler</TabsTrigger>
+          <TabsTrigger value="stock">Stok Yönetimi</TabsTrigger>
           <TabsTrigger value="recipes">Reçeteler</TabsTrigger>
           <TabsTrigger value="invoices">Faturalar</TabsTrigger>
           <TabsTrigger value="analysis">AI Analizi</TabsTrigger>
@@ -1067,6 +1069,117 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
                       </div>
                     </div>
                   ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="stock" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Stok Sayım ve Yönetim</CardTitle>
+              <CardDescription>Stok seviyelerini kontrol edin ve sayım yapın</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Toplam Ürün</p>
+                        <p className="text-3xl font-bold font-tabular-nums">
+                          {(products || []).filter(p => p.isActive && p.trackStock !== false).length}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Düşük Stok</p>
+                        <p className="text-3xl font-bold font-tabular-nums text-destructive">
+                          {(products || []).filter(p => p.isActive && p.trackStock !== false && p.stock <= p.minStockLevel).length}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Toplam Stok Değeri</p>
+                        <p className="text-3xl font-bold font-tabular-nums">
+                          {formatCurrency((products || []).filter(p => p.isActive && p.trackStock !== false).reduce((sum, p) => sum + (p.stock * p.costPrice), 0))}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {(products || []).filter(p => p.isActive && p.trackStock !== false).length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Stok takipli ürün yok.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {(products || []).filter(p => p.isActive && p.trackStock !== false).map((product) => {
+                      const isLowStock = product.stock <= product.minStockLevel;
+                      const stockPercentage = (product.stock / (product.minStockLevel * 3)) * 100;
+
+                      return (
+                        <div
+                          key={product.id}
+                          className={`p-4 border rounded-lg ${isLowStock ? 'border-destructive bg-destructive/5' : ''}`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3">
+                                <h3 className="font-medium">{product.name}</h3>
+                                {isLowStock && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    ⚠️ Düşük Stok
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                SKU: {product.sku} • Birim: {product.unit}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold font-tabular-nums">
+                                {product.stock}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Min: {product.minStockLevel}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Stok Durumu</span>
+                              <span>{stockPercentage.toFixed(0)}%</span>
+                            </div>
+                            <Progress 
+                              value={Math.min(stockPercentage, 100)} 
+                              className={isLowStock ? '[&>div]:bg-destructive' : ''}
+                            />
+                          </div>
+
+                          <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Birim Maliyet</p>
+                              <p className="font-semibold font-tabular-nums">{formatCurrency(product.costPrice)}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Toplam Değer</p>
+                              <p className="font-semibold font-tabular-nums">{formatCurrency(product.stock * product.costPrice)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -1528,11 +1641,21 @@ export default function MenuModule({ onBack }: MenuModuleProps) {
             </div>
             <div className="space-y-2">
               <Label>Kategori</Label>
-              <Input
+              <Select
                 value={newMenuItem.category}
-                onChange={(e) => setNewMenuItem({ ...newMenuItem, category: e.target.value })}
-                placeholder="Örn: Tatlılar"
-              />
+                onValueChange={(value) => setNewMenuItem({ ...newMenuItem, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategori seçin..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(categories || []).map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Açıklama</Label>

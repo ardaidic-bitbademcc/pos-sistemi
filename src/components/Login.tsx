@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Backspace, X } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { UserCredential, UserRole } from '@/lib/types';
+import type { UserCredential, UserRole, Employee } from '@/lib/types';
 
 interface LoginProps {
   onLogin: (role: UserRole, userName: string) => void;
@@ -13,19 +13,36 @@ interface LoginProps {
 
 const DEFAULT_USERS: UserCredential[] = [
   { id: '1', name: 'Admin', pin: '3010', role: 'owner', isActive: true },
-  { id: '2', name: 'Yönetici', pin: '1234', role: 'manager', isActive: true },
-  { id: '3', name: 'Kasiyer', pin: '5678', role: 'cashier', isActive: true },
-  { id: '4', name: 'Garson', pin: '9999', role: 'waiter', isActive: true },
 ];
 
 export default function Login({ onLogin }: LoginProps) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
-  const [users] = useKV<UserCredential[]>('userCredentials', DEFAULT_USERS);
+  const [users, setUsers] = useKV<UserCredential[]>('userCredentials', DEFAULT_USERS);
+  const [employees] = useKV<Employee[]>('employees', []);
   const [shake, setShake] = useState(false);
 
   useEffect(() => {
-    if (pin.length === 4) {
+    if (employees && employees.length > 0) {
+      const employeeCredentials: UserCredential[] = employees
+        .filter(emp => emp.isActive)
+        .map(emp => ({
+          id: emp.id,
+          name: emp.fullName,
+          pin: emp.employeePin,
+          role: emp.role,
+          employeeId: emp.id,
+          isActive: true,
+        }));
+
+      const adminUser = DEFAULT_USERS[0];
+      const allUsers = [adminUser, ...employeeCredentials];
+      setUsers(allUsers);
+    }
+  }, [employees, setUsers]);
+
+  useEffect(() => {
+    if (pin.length === 4 || pin.length === 6) {
       const user = users?.find(u => u.pin === pin && u.isActive);
       if (user) {
         setError(false);
@@ -43,7 +60,7 @@ export default function Login({ onLogin }: LoginProps) {
   }, [pin, users, onLogin]);
 
   const handleNumberClick = (num: string) => {
-    if (pin.length < 4) {
+    if (pin.length < 6) {
       setPin(prev => prev + num);
     }
   };
@@ -58,15 +75,15 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   const getPinDisplay = () => {
-    return Array(4).fill(null).map((_, i) => (
+    return Array(6).fill(null).map((_, i) => (
       <motion.div
         key={i}
         initial={false}
         animate={{
-          scale: i === pin.length && pin.length < 4 ? [1, 1.2, 1] : 1,
+          scale: i === pin.length && pin.length < 6 ? [1, 1.2, 1] : 1,
         }}
         transition={{ duration: 0.2 }}
-        className={`w-12 h-12 rounded-lg border-2 flex items-center justify-center ${
+        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center ${
           error 
             ? 'border-destructive bg-destructive/10' 
             : i < pin.length 
@@ -79,7 +96,7 @@ export default function Login({ onLogin }: LoginProps) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.2 }}
-            className={`w-3 h-3 rounded-full ${error ? 'bg-destructive' : 'bg-primary'}`}
+            className={`w-2.5 h-2.5 rounded-full ${error ? 'bg-destructive' : 'bg-primary'}`}
           />
         )}
       </motion.div>
@@ -138,7 +155,7 @@ export default function Login({ onLogin }: LoginProps) {
                     variant="outline"
                     className="w-full h-16 text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
                     onClick={() => handleNumberClick(num.toString())}
-                    disabled={pin.length >= 4}
+                    disabled={pin.length >= 6}
                   >
                     {num}
                   </Button>
@@ -163,7 +180,7 @@ export default function Login({ onLogin }: LoginProps) {
                   variant="outline"
                   className="w-full h-16 text-2xl font-semibold hover:bg-primary/10 hover:border-primary"
                   onClick={() => handleNumberClick('0')}
-                  disabled={pin.length >= 4}
+                  disabled={pin.length >= 6}
                 >
                   0
                 </Button>
@@ -183,14 +200,7 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
 
             <div className="border-t pt-6 space-y-2">
-              <p className="text-xs text-center text-muted-foreground">Demo Kullanıcılar</p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEFAULT_USERS.map((user) => (
-                  <Badge key={user.id} variant="outline" className="justify-center text-xs py-1">
-                    {user.name}: {user.pin}
-                  </Badge>
-                ))}
-              </div>
+              <p className="text-xs text-center text-muted-foreground">Demo PIN Kodu: 3010 (Admin)</p>
             </div>
           </CardContent>
         </Card>
