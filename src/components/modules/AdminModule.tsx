@@ -31,7 +31,9 @@ import {
   TrendUp,
   ChartLine,
   UserCircle,
-  LockKey
+  LockKey,
+  Database,
+  Warning
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Branch, Employee, UserRole, AuthSession, RolePermissions } from '@/lib/types';
@@ -53,12 +55,22 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
   const [branches, setBranches] = useKV<Branch[]>('branches', []);
   const [employees, setEmployees] = useKV<Employee[]>('employees', []);
   const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', []);
+  const [products, setProducts] = useKV<any[]>('products', []);
+  const [categories, setCategories] = useKV<any[]>('categories', []);
+  const [orders, setOrders] = useKV<any[]>('orders', []);
+  const [transactions, setTransactions] = useKV<any[]>('transactions', []);
+  const [customers, setCustomers] = useKV<any[]>('customers', []);
+  const [tasks, setTasks] = useKV<any[]>('tasks', []);
+  const [b2bOrders, setB2bOrders] = useKV<any[]>('b2bOrders', []);
+  const [cashRegisters, setCashRegisters] = useKV<any[]>('cashRegisters', []);
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
   const [showEmployeeDialog, setShowEmployeeDialog] = useState(false);
   const [showDeleteBranchDialog, setShowDeleteBranchDialog] = useState(false);
   const [showDeleteEmployeeDialog, setShowDeleteEmployeeDialog] = useState(false);
+  const [showDeleteDataDialog, setShowDeleteDataDialog] = useState(false);
+  const [dataTypeToDelete, setDataTypeToDelete] = useState<string>('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
@@ -364,6 +376,78 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
     return roleColors[role] || 'bg-gray-500';
   };
 
+  const handleDeleteData = (dataType: string) => {
+    setDataTypeToDelete(dataType);
+    setShowDeleteDataDialog(true);
+  };
+
+  const confirmDeleteData = () => {
+    switch (dataTypeToDelete) {
+      case 'products':
+        setProducts([]);
+        toast.success('Tüm ürünler silindi');
+        break;
+      case 'employees':
+        setEmployees([]);
+        toast.success('Tüm çalışanlar silindi');
+        break;
+      case 'orders':
+        setOrders([]);
+        toast.success('Tüm siparişler silindi');
+        break;
+      case 'transactions':
+        setTransactions([]);
+        toast.success('Tüm işlemler silindi');
+        break;
+      case 'customers':
+        setCustomers([]);
+        toast.success('Tüm müşteriler silindi');
+        break;
+      case 'tasks':
+        setTasks([]);
+        toast.success('Tüm görevler silindi');
+        break;
+      case 'b2bOrders':
+        setB2bOrders([]);
+        toast.success('Tüm B2B siparişleri silindi');
+        break;
+      case 'cashRegisters':
+        setCashRegisters([]);
+        toast.success('Tüm kasa kayıtları silindi');
+        break;
+      case 'all':
+        setProducts([]);
+        setEmployees([]);
+        setOrders([]);
+        setTransactions([]);
+        setCustomers([]);
+        setTasks([]);
+        setB2bOrders([]);
+        setCashRegisters([]);
+        toast.success('Tüm veriler silindi');
+        break;
+      default:
+        break;
+    }
+    setShowDeleteDataDialog(false);
+    setDataTypeToDelete('');
+  };
+
+  const getDataTypeName = (type: string): string => {
+    const names: Record<string, string> = {
+      products: 'Ürünler',
+      employees: 'Çalışanlar',
+      orders: 'Siparişler',
+      transactions: 'İşlemler',
+      customers: 'Müşteriler',
+      tasks: 'Görevler',
+      b2bOrders: 'B2B Siparişleri',
+      cashRegisters: 'Kasa Kayıtları',
+      all: 'TÜM VERİLER',
+    };
+    return names[type] || type;
+  };
+
   return (
     <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
@@ -379,7 +463,7 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
       </header>
 
       <Tabs defaultValue="branches" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="branches" className="flex items-center gap-2">
             <Buildings className="h-4 w-4" />
             <span>Şubeler</span>
@@ -387,6 +471,10 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
           <TabsTrigger value="employees" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span>Kullanıcılar</span>
+          </TabsTrigger>
+          <TabsTrigger value="data" className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            <span>Veri Yönetimi</span>
           </TabsTrigger>
         </TabsList>
 
@@ -674,6 +762,208 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
             </Card>
           )}
         </TabsContent>
+        
+        <TabsContent value="data" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Veri Yönetimi
+              </CardTitle>
+              <CardDescription>
+                Sistemdeki verileri toplu olarak silebilirsiniz. Bu işlemler geri alınamaz!
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Ürünler</CardTitle>
+                    <CardDescription>
+                      Toplam: {(products || []).length} ürün
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('products')}
+                      disabled={(products || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm Ürünleri Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Çalışanlar</CardTitle>
+                    <CardDescription>
+                      Toplam: {(employees || []).length} çalışan
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('employees')}
+                      disabled={(employees || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm Çalışanları Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Siparişler</CardTitle>
+                    <CardDescription>
+                      Toplam: {(orders || []).length} sipariş
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('orders')}
+                      disabled={(orders || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm Siparişleri Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">İşlemler</CardTitle>
+                    <CardDescription>
+                      Toplam: {(transactions || []).length} işlem
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('transactions')}
+                      disabled={(transactions || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm İşlemleri Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Müşteriler</CardTitle>
+                    <CardDescription>
+                      Toplam: {(customers || []).length} müşteri
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('customers')}
+                      disabled={(customers || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm Müşterileri Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Görevler</CardTitle>
+                    <CardDescription>
+                      Toplam: {(tasks || []).length} görev
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('tasks')}
+                      disabled={(tasks || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm Görevleri Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">B2B Siparişleri</CardTitle>
+                    <CardDescription>
+                      Toplam: {(b2bOrders || []).length} sipariş
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('b2bOrders')}
+                      disabled={(b2bOrders || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm B2B Siparişlerini Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Kasa Kayıtları</CardTitle>
+                    <CardDescription>
+                      Toplam: {(cashRegisters || []).length} kayıt
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleDeleteData('cashRegisters')}
+                      disabled={(cashRegisters || []).length === 0}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Tüm Kasa Kayıtlarını Sil
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Separator className="my-6" />
+
+              <Card className="border-4 border-destructive">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <Warning className="h-6 w-6" weight="fill" />
+                    Tehlikeli Bölge
+                  </CardTitle>
+                  <CardDescription>
+                    Aşağıdaki işlem tüm verileri kalıcı olarak silecektir. Bu işlem geri alınamaz!
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    variant="destructive" 
+                    size="lg"
+                    className="w-full"
+                    onClick={() => handleDeleteData('all')}
+                  >
+                    <Trash className="h-5 w-5 mr-2" weight="fill" />
+                    TÜM VERİLERİ SİL
+                  </Button>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <Dialog open={showBranchDialog} onOpenChange={setShowBranchDialog}>
@@ -934,6 +1224,31 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
             </Button>
             <Button variant="destructive" onClick={confirmDeleteEmployee}>
               Sil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteDataDialog} onOpenChange={setShowDeleteDataDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Warning className="h-5 w-5" weight="fill" />
+              Veri Silme Onayı
+            </DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold">{getDataTypeName(dataTypeToDelete)}</span> kalıcı olarak silinecektir. Bu işlem geri alınamaz!
+              <br />
+              <br />
+              Devam etmek istediğinizden emin misiniz?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDataDialog(false)}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteData}>
+              Evet, Sil
             </Button>
           </DialogFooter>
         </DialogContent>
