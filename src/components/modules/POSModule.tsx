@@ -1055,11 +1055,6 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
 
     const totals = calculateTotals();
 
-    if (account.currentBalance + totals.total > account.creditLimit) {
-      toast.error(`Kredi limiti aşılıyor! Mevcut: ${formatCurrency(account.currentBalance)}, Limit: ${formatCurrency(account.creditLimit)}`);
-      return;
-    }
-
     if (cart.length === 0) {
       toast.error('Sepette ürün yok');
       return;

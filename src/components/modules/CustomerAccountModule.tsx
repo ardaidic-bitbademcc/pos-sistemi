@@ -201,11 +201,6 @@ export default function CustomerAccountModule({ onBack }: CustomerAccountModuleP
       return;
     }
 
-    if (amount > selectedAccount.currentBalance) {
-      toast.error('Ödeme tutarı bakiyeden fazla olamaz');
-      return;
-    }
-
     const balanceBefore = selectedAccount.currentBalance;
     const balanceAfter = balanceBefore - amount;
 

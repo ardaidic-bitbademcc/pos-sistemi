@@ -11,9 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple } from '@phosphor-icons/react';
+import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple, Receipt, Money, CreditCard, Bank, DeviceMobile } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole } from '@/lib/types';
+import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole, CustomerAccount, CustomerTransaction } from '@/lib/types';
 import { formatCurrency, formatDateTime, calculateHoursWorked, generateId, formatDate } from '@/lib/helpers';
 
 interface PersonnelModuleProps {
@@ -25,6 +25,8 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
   const [shifts, setShifts] = useKV<Shift[]>('shifts', []);
   const [salaries, setSalaries] = useKV<SalaryCalculation[]>('salaries', []);
   const [salarySettings, setSalarySettings] = useKV<SalaryCalculationSettings[]>('salarySettings', []);
+  const [customerAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
+  const [customerTransactions, setCustomerTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showSalaryCalc, setShowSalaryCalc] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -33,6 +35,8 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
   const [showAddEmployeeDialog, setShowAddEmployeeDialog] = useState(false);
   const [showEditEmployeeDialog, setShowEditEmployeeDialog] = useState(false);
   const [showDeleteEmployeeDialog, setShowDeleteEmployeeDialog] = useState(false);
+  const [showEmployeeAccountDialog, setShowEmployeeAccountDialog] = useState(false);
+  const [selectedEmployeeForAccount, setSelectedEmployeeForAccount] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [selectedSalary, setSelectedSalary] = useState<SalaryCalculation | null>(null);
@@ -42,6 +46,9 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
   const [editingSettings, setEditingSettings] = useState<SalaryCalculationSettings | null>(null);
   const [showSalaryDetailDialog, setShowSalaryDetailDialog] = useState(false);
   const [salaryDetailForView, setSalaryDetailForView] = useState<SalaryCalculation | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'transfer'>('cash');
+  const [paymentNotes, setPaymentNotes] = useState('');
   
   const [newEmployee, setNewEmployee] = useState({
     fullName: '',
@@ -295,6 +302,79 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
     setEmployeeToEdit(null);
   };
 
+  const openEmployeeAccount = (employee: Employee) => {
+    setSelectedEmployeeForAccount(employee);
+    setPaymentAmount('');
+    setPaymentMethod('cash');
+    setPaymentNotes('');
+    setShowEmployeeAccountDialog(true);
+  };
+
+  const getEmployeeAccount = (employeeId: string): CustomerAccount | undefined => {
+    return (customerAccounts || []).find(a => a.employeeId === employeeId && a.isEmployee);
+  };
+
+  const getAccountTransactions = (accountId: string): CustomerTransaction[] => {
+    return (customerTransactions || [])
+      .filter(t => t.customerAccountId === accountId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const handleMakePayment = () => {
+    if (!selectedEmployeeForAccount) return;
+
+    const account = getEmployeeAccount(selectedEmployeeForAccount.id);
+    if (!account) {
+      toast.error('Personel cari hesabı bulunamadı');
+      return;
+    }
+
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Geçerli bir tutar girin');
+      return;
+    }
+
+    const balanceBefore = account.currentBalance;
+    const balanceAfter = balanceBefore - amount;
+
+    const transaction: CustomerTransaction = {
+      id: generateId(),
+      customerAccountId: account.id,
+      type: 'credit',
+      amount: amount,
+      description: 'Ödeme',
+      paymentMethod: paymentMethod,
+      date: new Date().toISOString(),
+      createdBy: 'current-user',
+      createdByName: 'Kullanıcı',
+      balanceBefore: balanceBefore,
+      balanceAfter: balanceAfter,
+      notes: paymentNotes || undefined,
+    };
+
+    setCustomerTransactions((current) => [...(current || []), transaction]);
+
+    const accountsToUpdate = customerAccounts || [];
+    const updatedAccounts = accountsToUpdate.map((acc) =>
+      acc.id === account.id
+        ? {
+            ...acc,
+            currentBalance: balanceAfter,
+            totalPaid: acc.totalPaid + amount,
+          }
+        : acc
+    );
+
+    (window as any).spark.kv.set('customerAccounts', updatedAccounts);
+
+    toast.success(`${formatCurrency(amount)} ödeme alındı`);
+    setPaymentAmount('');
+    setPaymentNotes('');
+    setShowEmployeeAccountDialog(false);
+    setSelectedEmployeeForAccount(null);
+  };
+
   return (
     <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
@@ -401,6 +481,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
               const hasActiveShift = todayShifts.some(
                 (s) => s.employeeId === employee.id && s.status === 'in_progress'
               );
+              const employeeAccount = getEmployeeAccount(employee.id);
               
               return (
                 <Card key={employee.id}>
@@ -417,7 +498,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-2">
+                  <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">{employee.email}</p>
                     <p className="text-sm font-tabular-nums">
                       Saat Ücreti: {formatCurrency(employee.hourlyRate)}
@@ -425,16 +506,46 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                     <p className="text-xs text-muted-foreground">
                       PIN: {employee.employeePin}
                     </p>
-                    <div className="flex gap-2">
+                    
+                    {employeeAccount && (
+                      <div className="p-2 bg-muted rounded-lg space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground">Cari Borç:</span>
+                          <span className={`font-semibold ${employeeAccount.currentBalance > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            {formatCurrency(employeeAccount.currentBalance)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground">Limit:</span>
+                          <span className="font-semibold">{formatCurrency(employeeAccount.creditLimit)}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         disabled={hasActiveShift}
                         onClick={() => clockIn(employee.id)}
+                        className="flex-1"
                       >
-                        <ClockClockwise className="h-4 w-4 mr-2" />
-                        Vardiya Başlat
+                        <ClockClockwise className="h-4 w-4 mr-1" />
+                        Vardiya
                       </Button>
+                      {employeeAccount && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => openEmployeeAccount(employee)}
+                          className="flex-1"
+                        >
+                          <Receipt className="h-4 w-4 mr-1" />
+                          Cari
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -442,6 +553,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                           setEmployeeToEdit(employee);
                           setShowEditEmployeeDialog(true);
                         }}
+                        className="flex-1"
                       >
                         <PencilSimple className="h-4 w-4" />
                       </Button>
@@ -452,6 +564,7 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
                           setEmployeeToDelete(employee);
                           setShowDeleteEmployeeDialog(true);
                         }}
+                        className="flex-1"
                       >
                         <Trash className="h-4 w-4" />
                       </Button>
@@ -1206,6 +1319,214 @@ export default function PersonnelModule({ onBack }: PersonnelModuleProps) {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSalaryDetailDialog(false)}>
+              Kapat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEmployeeAccountDialog} onOpenChange={setShowEmployeeAccountDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg">Personel Cari Hesabı</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              {selectedEmployeeForAccount?.fullName}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEmployeeForAccount && (() => {
+            const account = getEmployeeAccount(selectedEmployeeForAccount.id);
+            if (!account) {
+              return (
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                  Cari hesap bulunamadı. Lütfen sayfayı yenileyin.
+                </div>
+              );
+            }
+            const transactions = getAccountTransactions(account.id);
+            return (
+              <div className="space-y-4 py-2 sm:py-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs sm:text-sm">Harcama Limiti</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-lg sm:text-2xl font-bold">{formatCurrency(account.creditLimit)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs sm:text-sm">Mevcut Borç</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-lg sm:text-2xl font-bold text-destructive">
+                        {formatCurrency(account.currentBalance)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs sm:text-sm">Toplam Harcama</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-lg sm:text-2xl font-bold">{formatCurrency(account.totalDebt)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs sm:text-sm">Toplam Ödeme</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-lg sm:text-2xl font-bold text-primary">
+                        {formatCurrency(account.totalPaid)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {account.currentBalance > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold">Ödeme Al</h3>
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="space-y-1.5 sm:space-y-2">
+                          <Label htmlFor="payment-amount" className="text-xs sm:text-sm">Ödeme Tutarı *</Label>
+                          <Input
+                            id="payment-amount"
+                            type="number"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                            className="h-10 sm:h-11 text-base sm:text-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 sm:space-y-2">
+                          <Label className="text-xs sm:text-sm">Ödeme Yöntemi</Label>
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                            <Button
+                              type="button"
+                              variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                              onClick={() => setPaymentMethod('cash')}
+                              className="h-16 sm:h-20 flex flex-col gap-1"
+                            >
+                              <Money className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                              <span className="text-xs sm:text-sm">Nakit</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={paymentMethod === 'card' ? 'default' : 'outline'}
+                              onClick={() => setPaymentMethod('card')}
+                              className="h-16 sm:h-20 flex flex-col gap-1"
+                            >
+                              <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                              <span className="text-xs sm:text-sm">Kredi Kartı</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
+                              onClick={() => setPaymentMethod('transfer')}
+                              className="h-16 sm:h-20 flex flex-col gap-1"
+                            >
+                              <Bank className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                              <span className="text-xs sm:text-sm">Havale</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={paymentMethod === 'mobile' ? 'default' : 'outline'}
+                              onClick={() => setPaymentMethod('mobile')}
+                              className="h-16 sm:h-20 flex flex-col gap-1"
+                            >
+                              <DeviceMobile className="h-5 w-5 sm:h-6 sm:w-6" weight="bold" />
+                              <span className="text-xs sm:text-sm">Mobil Ödeme</span>
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 sm:space-y-2">
+                          <Label htmlFor="payment-notes" className="text-xs sm:text-sm">Notlar</Label>
+                          <Textarea
+                            id="payment-notes"
+                            value={paymentNotes}
+                            onChange={(e) => setPaymentNotes(e.target.value)}
+                            placeholder="Ödeme notu..."
+                            rows={2}
+                            className="text-sm resize-none"
+                          />
+                        </div>
+
+                        <Button onClick={handleMakePayment} className="w-full" size="sm">
+                          <Money className="h-4 w-4 mr-1.5" weight="bold" />
+                          Ödeme Al
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold">Son Hareketler</h3>
+                  {transactions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      Henüz işlem bulunmuyor
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {transactions.slice(0, 10).map((transaction) => (
+                        <Card key={transaction.id}>
+                          <CardContent className="p-3 sm:p-4">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-sm">{transaction.description}</span>
+                                  {transaction.paymentMethod && (
+                                    <Badge variant="outline" className="text-[10px] sm:text-xs">
+                                      {transaction.paymentMethod === 'cash' && 'Nakit'}
+                                      {transaction.paymentMethod === 'card' && 'Kart'}
+                                      {transaction.paymentMethod === 'transfer' && 'Havale'}
+                                      {transaction.paymentMethod === 'mobile' && 'Mobil'}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  {formatDateTime(transaction.date)}
+                                </div>
+                                {transaction.saleNumber && (
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    Fiş: {transaction.saleNumber}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <div
+                                  className={`text-base sm:text-lg font-bold ${
+                                    transaction.type === 'debit' ? 'text-destructive' : 'text-primary'
+                                  }`}
+                                >
+                                  {transaction.type === 'debit' ? '+' : '-'}
+                                  {formatCurrency(transaction.amount)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Bakiye: {formatCurrency(transaction.balanceAfter)}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowEmployeeAccountDialog(false)} size="sm" className="text-sm">
               Kapat
             </Button>
           </DialogFooter>
