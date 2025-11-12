@@ -23,6 +23,29 @@ export default function Login({ onLogin }: LoginProps) {
   const [shake, setShake] = useState(false);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        if (pin.length < 4) {
+          setPin(prev => prev + e.key);
+        }
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        setPin(prev => prev.slice(0, -1));
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setPin('');
+        setError(false);
+      } else if (e.key === 'Enter' && pin.length === 4) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pin]);
+
+  useEffect(() => {
     if (employees && employees.length > 0) {
       const employeeCredentials: UserCredential[] = employees
         .filter(emp => emp.isActive)

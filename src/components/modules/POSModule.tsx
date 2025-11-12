@@ -133,6 +133,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [customerTransactions, setCustomerTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isTableLegendOpen, setIsTableLegendOpen] = useState(false);
+  const [cashReceived, setCashReceived] = useState('');
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
@@ -1126,6 +1127,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     setSplitPayments([]);
     setOrderDiscount(0);
     setPaymentMethod('cash');
+    setCashReceived('');
     setActiveTab('tables');
   };
 
@@ -2256,7 +2258,12 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+      <Dialog open={showCheckout} onOpenChange={(open) => {
+        setShowCheckout(open);
+        if (!open) {
+          setCashReceived('');
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ödeme İşlemleri</DialogTitle>
@@ -2317,7 +2324,12 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           key={pm.method}
                           variant={paymentMethod === pm.method ? 'default' : 'outline'}
                           className="h-24 flex-col gap-2"
-                          onClick={() => setPaymentMethod(pm.method)}
+                          onClick={() => {
+                            setPaymentMethod(pm.method);
+                            if (pm.method !== 'cash') {
+                              setCashReceived('');
+                            }
+                          }}
                         >
                           <Icon className="h-8 w-8" weight="bold" />
                           <span className="text-xs sm:text-sm">{pm.displayName}</span>
@@ -2337,6 +2349,30 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                     <span>Cari Hesap (Açık Hesap)</span>
                   </Button>
                 </div>
+
+                {paymentMethod === 'cash' && (
+                  <div className="space-y-2">
+                    <Label>Alınan Tutar (Opsiyonel)</Label>
+                    <Input
+                      type="number"
+                      placeholder="Müşteriden alınan nakit tutar"
+                      value={cashReceived}
+                      onChange={(e) => setCashReceived(e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                    {cashReceived && parseFloat(cashReceived) > 0 && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-emerald-700">Para Üstü</span>
+                          <span className="text-lg font-bold text-emerald-700 font-tabular-nums">
+                            {formatCurrency(Math.max(0, parseFloat(cashReceived) - totals.total))}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <Separator />
 
@@ -2552,6 +2588,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
             <Button variant="outline" onClick={() => {
               setShowCheckout(false);
               setSplitPayments([]);
+              setCashReceived('');
             }}>
               İptal
             </Button>

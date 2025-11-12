@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -14,6 +14,40 @@ interface NumpadProps {
 export default function Numpad({ value, onChange, onEnter, mode = 'number' }: NumpadProps) {
   const [isUpperCase, setIsUpperCase] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(mode === 'number' ? 'numbers' : 'letters');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handleKeyClick(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (onEnter) {
+          onEnter();
+        }
+      } else if (e.key === '.' || e.key === ',') {
+        e.preventDefault();
+        handleDecimal();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleClear();
+      } else if (mode === 'text' && e.key.length === 1 && /[a-zA-ZğüşöçıİĞÜŞÖÇ ]/.test(e.key)) {
+        e.preventDefault();
+        if (e.key === ' ') {
+          handleSpace();
+        } else {
+          handleKeyClick(e.key);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [value, isUpperCase, activeTab, mode, onEnter]);
 
   const handleKeyClick = (key: string) => {
     if (activeTab === 'letters' && key.length === 1) {
