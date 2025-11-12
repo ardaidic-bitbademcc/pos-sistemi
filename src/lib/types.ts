@@ -279,6 +279,7 @@ export interface MenuItem {
   options?: ProductOption[];
   branchId?: string;
   adminId?: string;
+  createdAt?: string;
 }
 
 export interface AppTheme {

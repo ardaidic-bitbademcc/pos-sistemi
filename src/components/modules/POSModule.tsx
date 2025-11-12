@@ -137,6 +137,14 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
 
   const visibleCategories = (categories || []).filter(cat => cat.showInPOS !== false);
 
+  const isRecentlyAdded = (createdAt?: string): boolean => {
+    if (!createdAt) return false;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const productDate = new Date(createdAt);
+    return productDate >= sevenDaysAgo;
+  };
+
   const menuItemsAsProducts = (menuItems || []).map(item => ({
     id: item.id,
     sku: item.id,
@@ -157,6 +165,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     campaignDetails: item.campaignDetails,
     hasOptions: item.hasOptions,
     options: item.options,
+    createdAt: item.createdAt,
   }));
 
   const getTimeSinceLastOrder = (table: Table): number | null => {
@@ -1446,6 +1455,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                 {filteredProducts.map((product) => {
                   const hasCampaign = product.hasActiveCampaign && product.campaignDetails;
+                  const isNew = isRecentlyAdded((product as any).createdAt);
                   return (
                     <Card
                       key={product.id}
@@ -1458,6 +1468,12 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                               {product.name}
                             </p>
                             <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                              {isNew && (
+                                <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] h-4 px-1">
+                                  <Sparkle className="h-2.5 w-2.5 mr-0.5" weight="fill" />
+                                  Yeni
+                                </Badge>
+                              )}
                               {hasCampaign && (
                                 <Badge variant="default" className="bg-accent animate-pulse text-[10px] h-4 px-1">
                                   <Gift className="h-2.5 w-2.5 mr-0.5" weight="fill" />
