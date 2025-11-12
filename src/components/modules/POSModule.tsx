@@ -1319,45 +1319,45 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
             <div className="lg:col-span-2 space-y-4">
               {campaignProducts.length > 0 && (
                 <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent">
-                  <CardHeader>
+                  <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
-                      <Sparkle className="h-5 w-5 text-accent animate-pulse" weight="fill" />
-                      <CardTitle className="text-lg text-accent">Aktif Kampanyalar - Öncelikli Satış!</CardTitle>
+                      <Sparkle className="h-4 w-4 text-accent animate-pulse" weight="fill" />
+                      <CardTitle className="text-base text-accent">Aktif Kampanyalar</CardTitle>
                     </div>
-                    <CardDescription>
-                      Bu ürünler indirimli fiyata satılıyor - müşterilere öner!
+                    <CardDescription className="text-xs">
+                      İndirimli ürünler - müşterilere öner!
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                       {campaignProducts.slice(0, 6).map((product) => (
                         <Card
                           key={product.id}
                           className="cursor-pointer hover:shadow-md transition-all border-accent/50 bg-card"
                           onClick={() => addToCart(product)}
                         >
-                          <CardContent className="p-3 space-y-2">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p className="font-semibold text-sm leading-tight">{product.name}</p>
+                          <CardContent className="p-2 space-y-1">
+                            <div className="flex items-start justify-between gap-1">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-xs leading-tight truncate">{product.name}</p>
                                 {product.hasOptions && product.options && product.options.length > 0 && (
-                                  <Badge variant="outline" className="text-xs mt-1">
+                                  <Badge variant="outline" className="text-[10px] h-4 px-1 mt-0.5">
                                     Seçenekli
                                   </Badge>
                                 )}
                               </div>
-                              <Gift className="h-4 w-4 text-accent flex-shrink-0" weight="fill" />
+                              <Gift className="h-3 w-3 text-accent flex-shrink-0" weight="fill" />
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground line-through">
+                                <span className="text-[10px] text-muted-foreground line-through">
                                   {formatCurrency(product.campaignDetails?.originalPrice || 0)}
                                 </span>
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-[10px] h-3.5 px-1">
                                   %{product.campaignDetails?.discountPercentage}
                                 </Badge>
                               </div>
-                              <div className="text-lg font-bold text-accent">
+                              <div className="text-sm font-bold text-accent">
                                 {formatCurrency(product.basePrice)}
                               </div>
                             </div>
@@ -1409,67 +1409,59 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                 {filteredProducts.map((product) => {
                   const hasCampaign = product.hasActiveCampaign && product.campaignDetails;
                   return (
                     <Card
                       key={product.id}
-                      className={`hover:shadow-md transition-shadow cursor-pointer ${hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''}`}
+                      className={`hover:shadow-md transition-shadow cursor-pointer ${hasCampaign ? 'ring-1 ring-accent bg-accent/5' : ''}`}
                       onClick={() => addToCart(product)}
                     >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <CardTitle className="text-base leading-tight">
-                                {product.name}
-                              </CardTitle>
+                      <CardContent className="p-2 space-y-1.5">
+                        <div className="flex items-start justify-between gap-1">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-xs leading-tight truncate">
+                              {product.name}
+                            </p>
+                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                               {hasCampaign && (
-                                <Badge variant="default" className="bg-accent animate-pulse">
-                                  <Gift className="h-3 w-3 mr-1" weight="fill" />
-                                  Kampanya!
+                                <Badge variant="default" className="bg-accent animate-pulse text-[10px] h-4 px-1">
+                                  <Gift className="h-2.5 w-2.5 mr-0.5" weight="fill" />
+                                  Kampanya
                                 </Badge>
                               )}
                               {product.hasOptions && product.options && product.options.length > 0 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-[10px] h-4 px-1">
                                   Seçenekli
                                 </Badge>
                               )}
                             </div>
-                            <CardDescription className="text-xs">
-                              SKU: {product.sku}
-                            </CardDescription>
                           </div>
-                          <Badge variant={product.stock > product.minStockLevel ? 'default' : 'destructive'}>
+                          <Badge variant={product.stock > product.minStockLevel ? 'default' : 'destructive'} className="text-[10px] h-4 px-1 shrink-0">
                             {product.stock}
                           </Badge>
                         </div>
+                        
                         {hasCampaign && product.campaignDetails && (
-                          <div className="pt-2 mt-2 border-t border-accent/20 space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="line-through text-muted-foreground">
+                          <div className="pt-1 mt-1 border-t border-accent/20 space-y-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className="line-through text-muted-foreground text-[10px]">
                                 {formatCurrency(product.campaignDetails.originalPrice)}
                               </span>
-                              <Badge variant="secondary" className="text-xs">
-                                %{product.campaignDetails.discountPercentage} İndirim
+                              <Badge variant="secondary" className="text-[10px] h-3.5 px-1">
+                                %{product.campaignDetails.discountPercentage}
                               </Badge>
                             </div>
-                            {product.campaignDetails.reason && (
-                              <p className="text-xs text-muted-foreground italic">
-                                💡 {product.campaignDetails.reason}
-                              </p>
-                            )}
                           </div>
                         )}
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xl font-semibold font-tabular-nums ${hasCampaign ? 'text-accent' : ''}`}>
+                        
+                        <div className="flex items-center justify-between pt-1">
+                          <span className={`text-sm font-bold font-tabular-nums ${hasCampaign ? 'text-accent' : ''}`}>
                             {formatCurrency(product.basePrice)}
                           </span>
-                          <Button size="sm" variant={hasCampaign ? 'default' : 'outline'} className={hasCampaign ? 'bg-accent' : ''}>
-                            <Plus className="h-4 w-4" />
+                          <Button size="sm" variant={hasCampaign ? 'default' : 'outline'} className={`h-6 w-6 p-0 ${hasCampaign ? 'bg-accent' : ''}`}>
+                            <Plus className="h-3 w-3" />
                           </Button>
                         </div>
                       </CardContent>
