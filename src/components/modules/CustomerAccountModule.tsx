@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { CustomerAccount, CustomerTransaction, Employee, AuthSession } from '@/lib/types';
+import type { CustomerAccount, CustomerTransaction, Employee, AuthSession, Sale } from '@/lib/types';
 import { formatCurrency, formatDateTime, generateId, generateAccountNumber } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 
@@ -32,9 +32,12 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showOrderDetailDialog, setShowOrderDetailDialog] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<CustomerAccount | null>(null);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [sales] = useKV<Sale[]>('sales', []);
   
   const [formData, setFormData] = useState({
     customerName: '',
@@ -266,6 +269,16 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
     setPaymentAmount('');
     setPaymentNotes('');
     setShowPaymentDialog(true);
+  };
+
+  const openOrderDetailDialog = (saleId: string) => {
+    const sale = (sales || []).find(s => s.id === saleId);
+    if (sale) {
+      setSelectedSale(sale);
+      setShowOrderDetailDialog(true);
+    } else {
+      toast.error('Sipariş bulunamadı');
+    }
   };
 
   const getAccountTransactions = (accountId: string) => {
@@ -902,7 +915,7 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
                         <Card key={transaction.id}>
                           <CardContent className="p-3 sm:p-4">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div className="flex items-start gap-2 sm:gap-3">
+                              <div className="flex items-start gap-2 sm:gap-3 flex-1">
                                 {transaction.type === 'debit' ? (
                                   <div className="bg-destructive/10 p-1.5 sm:p-2 rounded-lg flex-shrink-0">
                                     <TrendUp className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" weight="bold" />
@@ -932,8 +945,21 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
                                     {formatDateTime(transaction.date)}
                                   </div>
                                   {transaction.saleNumber && (
-                                    <div className="text-xs text-muted-foreground mt-0.5">
-                                      Fiş: {transaction.saleNumber}
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-xs text-muted-foreground">
+                                        Fiş: {transaction.saleNumber}
+                                      </span>
+                                      {transaction.saleId && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => openOrderDetailDialog(transaction.saleId!)}
+                                          className="h-6 px-2 text-xs"
+                                        >
+                                          <Eye className="h-3 w-3 mr-1" weight="bold" />
+                                          Detay
+                                        </Button>
+                                      )}
                                     </div>
                                   )}
                                   {transaction.notes && (
@@ -1051,6 +1077,124 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
             <Button onClick={handleMakePayment} size="sm" className="text-sm">
               <Money className="h-4 w-4 mr-1.5" weight="bold" />
               Ödeme Al
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showOrderDetailDialog} onOpenChange={setShowOrderDetailDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg">Sipariş Detayı</DialogTitle>
+            {selectedSale && (
+              <DialogDescription className="text-xs sm:text-sm">
+                Fiş No: {selectedSale.saleNumber} - {formatDateTime(selectedSale.saleDate)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {selectedSale && (
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-4 p-1">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm sm:text-base">Sipariş Bilgileri</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-xs sm:text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Fiş Numarası:</span>
+                      <span className="font-medium">{selectedSale.saleNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tarih:</span>
+                      <span className="font-medium">{formatDateTime(selectedSale.saleDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ödeme Yöntemi:</span>
+                      <span className="font-medium">
+                        {selectedSale.paymentMethod === 'cash' && 'Nakit'}
+                        {selectedSale.paymentMethod === 'card' && 'Kredi Kartı'}
+                        {selectedSale.paymentMethod === 'mobile' && 'Mobil Ödeme'}
+                        {selectedSale.paymentMethod === 'transfer' && 'Havale/EFT'}
+                        {selectedSale.paymentMethod === 'multinet' && 'Multinet'}
+                      </span>
+                    </div>
+                    {selectedSale.notes && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Not:</span>
+                        <span className="font-medium text-right">{selectedSale.notes}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm sm:text-base">Ürünler</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {selectedSale.items.map((item) => (
+                        <div key={item.id} className="flex items-start justify-between gap-2 pb-2 border-b last:border-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{item.productName}</div>
+                            {item.selectedOptions && item.selectedOptions.length > 0 && (
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {item.selectedOptions.map((opt) => (
+                                  <div key={`${opt.optionName}-${opt.choiceName}`}>
+                                    {opt.optionName}: {opt.choiceName}
+                                    {opt.priceModifier !== 0 && ` (${opt.priceModifier > 0 ? '+' : ''}${formatCurrency(opt.priceModifier)})`}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {formatCurrency(item.unitPrice)} x {item.quantity}
+                              {item.discountAmount > 0 && ` (İndirim: ${formatCurrency(item.discountAmount)})`}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="font-semibold text-sm">
+                              {formatCurrency(item.subtotal)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm sm:text-base">Özet</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-xs sm:text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ara Toplam:</span>
+                      <span className="font-medium">{formatCurrency(selectedSale.subtotal)}</span>
+                    </div>
+                    {selectedSale.discountAmount > 0 && (
+                      <div className="flex justify-between text-destructive">
+                        <span>İndirim:</span>
+                        <span className="font-medium">-{formatCurrency(selectedSale.discountAmount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">KDV:</span>
+                      <span className="font-medium">{formatCurrency(selectedSale.taxAmount)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between text-base sm:text-lg font-bold">
+                      <span>Toplam:</span>
+                      <span>{formatCurrency(selectedSale.totalAmount)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </ScrollArea>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOrderDetailDialog(false)} size="sm" className="text-sm">
+              Kapat
             </Button>
           </DialogFooter>
         </DialogContent>
