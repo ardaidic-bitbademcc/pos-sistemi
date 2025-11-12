@@ -146,6 +146,35 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     return productDate >= sevenDaysAgo;
   };
 
+  const getRippleColor = (product: Product): string => {
+    if (product.hasActiveCampaign && product.campaignDetails) {
+      return 'rgba(16, 185, 129, 0.6)';
+    }
+    
+    const categoryColors: { [key: string]: string } = {
+      'İçecekler': 'rgba(59, 130, 246, 0.6)',
+      'Yiyecekler': 'rgba(249, 115, 22, 0.6)',
+      'Tatlılar': 'rgba(236, 72, 153, 0.6)',
+      'Kahvaltı': 'rgba(234, 179, 8, 0.6)',
+      'Ana Yemek': 'rgba(239, 68, 68, 0.6)',
+      'Aperatifler': 'rgba(168, 85, 247, 0.6)',
+      'Salatalar': 'rgba(34, 197, 94, 0.6)',
+      'Alkollü İçecekler': 'rgba(190, 18, 60, 0.6)',
+      'Alkolsüz İçecekler': 'rgba(14, 165, 233, 0.6)',
+      'Sıcak İçecekler': 'rgba(217, 70, 239, 0.6)',
+    };
+    
+    const category = (categories || []).find(cat => 
+      cat.id === product.categoryId || cat.name === product.category
+    );
+    
+    if (category && categoryColors[category.name]) {
+      return categoryColors[category.name];
+    }
+    
+    return 'rgba(255, 255, 255, 0.6)';
+  };
+
   const menuItemsAsProducts = (menuItems || []).map(item => ({
     id: item.id,
     sku: item.id,
@@ -1401,6 +1430,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                                   ripple.style.width = ripple.style.height = `${size}px`;
                                   ripple.style.left = `${x}px`;
                                   ripple.style.top = `${y}px`;
+                                  ripple.style.background = getRippleColor(product);
                                   ripple.classList.add('ripple-effect');
                                   
                                   e.currentTarget.appendChild(ripple);
@@ -1426,6 +1456,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                                   ripple.style.width = ripple.style.height = `${size}px`;
                                   ripple.style.left = `${x}px`;
                                   ripple.style.top = `${y}px`;
+                                  ripple.style.background = getRippleColor(product);
                                   ripple.classList.add('ripple-effect');
                                   
                                   e.currentTarget.appendChild(ripple);
@@ -1451,6 +1482,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                                   ripple.style.width = ripple.style.height = `${size}px`;
                                   ripple.style.left = `${x}px`;
                                   ripple.style.top = `${y}px`;
+                                  ripple.style.background = getRippleColor(product);
                                   ripple.classList.add('ripple-effect');
                                   
                                   e.currentTarget.appendChild(ripple);
@@ -1533,6 +1565,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           ripple.style.width = ripple.style.height = `${size}px`;
                           ripple.style.left = `${x}px`;
                           ripple.style.top = `${y}px`;
+                          ripple.style.background = getRippleColor(product);
                           ripple.classList.add('ripple-effect');
                           
                           e.currentTarget.appendChild(ripple);
