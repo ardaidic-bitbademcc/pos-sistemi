@@ -1,4 +1,4 @@
-import type { CustomerAccount, CustomerTransaction } from './types';
+import type { CustomerAccount, CustomerTransaction, Sale, Category, Product } from './types';
 import { formatCurrency, formatDateTime } from './helpers';
 
 interface PDFStyles {
@@ -45,7 +45,10 @@ const styles: PDFStyles = {
 
 export async function exportAccountStatementToPDF(
   account: CustomerAccount,
-  transactions: CustomerTransaction[]
+  transactions: CustomerTransaction[],
+  sales?: Sale[],
+  categories?: Category[],
+  products?: Product[]
 ) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -265,13 +268,79 @@ export async function exportAccountStatementToPDF(
     return acc;
   }, {} as Record<string, number>);
 
-  if (Object.keys(paymentsByMethod).length > 0) {
-    currentYPos += 20;
+  const transactionsByType = {
+    debit: sortedTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0),
+    credit: sortedTransactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0),
+  };
+
+  const categoriesByAmount: Record<string, number> = {};
+  if (sales && categories && products) {
+    sortedTransactions.forEach(transaction => {
+      if (transaction.type === 'debit' && transaction.saleId) {
+        const sale = sales.find(s => s.id === transaction.saleId);
+        if (sale) {
+          sale.items.forEach(item => {
+            const product = products.find(p => p.id === item.productId);
+            const category = product ? categories.find(c => c.id === product.categoryId) : null;
+            const categoryName = category?.name || 'Diğer';
+            categoriesByAmount[categoryName] = (categoriesByAmount[categoryName] || 0) + item.subtotal;
+          });
+        }
+      }
+    });
+  }
+
+  if (Object.keys(paymentsByMethod).length > 0 || transactionsByType.debit > 0 || Object.keys(categoriesByAmount).length > 0) {
+    currentYPos += 25;
+    checkNewPage();
+
+    currentCtx.fillStyle = styles.colors.primary;
+    currentCtx.font = `bold ${styles.fontSize.header}px Inter, sans-serif`;
+    currentCtx.fillText('İŞLEM DAĞILIMLARI', styles.margin, currentYPos);
+    currentYPos += 25;
+  }
+
+  if (transactionsByType.debit > 0 || transactionsByType.credit > 0) {
     checkNewPage();
 
     currentCtx.fillStyle = styles.colors.text;
     currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
-    currentCtx.fillText('Ödeme Yöntemi Dağılımı:', styles.margin, currentYPos);
+    currentCtx.fillText('İşlem Türüne Göre:', styles.margin, currentYPos);
+    currentYPos += 20;
+
+    if (transactionsByType.debit > 0) {
+      currentCtx.fillStyle = styles.colors.text;
+      currentCtx.font = `${styles.fontSize.body}px Inter, sans-serif`;
+      currentCtx.fillText('Borçlandırma (Alışveriş):', styles.margin + 20, currentYPos);
+      
+      currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
+      currentCtx.fillStyle = styles.colors.danger;
+      currentCtx.fillText(formatCurrency(transactionsByType.debit), styles.margin + 200, currentYPos);
+      
+      currentYPos += 20;
+    }
+
+    if (transactionsByType.credit > 0) {
+      checkNewPage();
+      
+      currentCtx.fillStyle = styles.colors.text;
+      currentCtx.font = `${styles.fontSize.body}px Inter, sans-serif`;
+      currentCtx.fillText('Ödeme:', styles.margin + 20, currentYPos);
+      
+      currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
+      currentCtx.fillStyle = styles.colors.success;
+      currentCtx.fillText(formatCurrency(transactionsByType.credit), styles.margin + 200, currentYPos);
+      
+      currentYPos += 25;
+    }
+  }
+
+  if (Object.keys(paymentsByMethod).length > 0) {
+    checkNewPage();
+
+    currentCtx.fillStyle = styles.colors.text;
+    currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
+    currentCtx.fillText('Ödeme Yöntemine Göre:', styles.margin, currentYPos);
     currentYPos += 20;
 
     Object.entries(paymentsByMethod).forEach(([method, amount]) => {
@@ -283,13 +352,49 @@ export async function exportAccountStatementToPDF(
       const methodName = method === 'cash' ? 'Nakit' :
                         method === 'card' ? 'Kredi Kartı' :
                         method === 'transfer' ? 'Havale/EFT' :
-                        'Mobil Ödeme';
+                        method === 'mobile' ? 'Mobil Ödeme' :
+                        'Multinet';
       
       currentCtx.fillText(`${methodName}:`, styles.margin + 20, currentYPos);
       
       currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
       currentCtx.fillStyle = styles.colors.success;
-      currentCtx.fillText(formatCurrency(amount), styles.margin + 150, currentYPos);
+      currentCtx.fillText(formatCurrency(amount), styles.margin + 200, currentYPos);
+      
+      currentYPos += 20;
+    });
+    
+    currentYPos += 5;
+  }
+
+  if (Object.keys(categoriesByAmount).length > 0) {
+    currentYPos += 5;
+    checkNewPage();
+
+    currentCtx.fillStyle = styles.colors.text;
+    currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
+    currentCtx.fillText('Ürün Kategorisine Göre Alışveriş:', styles.margin, currentYPos);
+    currentYPos += 20;
+
+    const sortedCategories = Object.entries(categoriesByAmount).sort((a, b) => b[1] - a[1]);
+    
+    sortedCategories.forEach(([categoryName, amount]) => {
+      checkNewPage();
+      
+      currentCtx.fillStyle = styles.colors.text;
+      currentCtx.font = `${styles.fontSize.body}px Inter, sans-serif`;
+      
+      const truncatedName = categoryName.length > 25 ? categoryName.substring(0, 25) + '...' : categoryName;
+      currentCtx.fillText(`${truncatedName}:`, styles.margin + 20, currentYPos);
+      
+      currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
+      currentCtx.fillStyle = styles.colors.danger;
+      currentCtx.fillText(formatCurrency(amount), styles.margin + 200, currentYPos);
+      
+      const percentage = transactionsByType.debit > 0 ? (amount / transactionsByType.debit * 100) : 0;
+      currentCtx.font = `${styles.fontSize.small}px Inter, sans-serif`;
+      currentCtx.fillStyle = styles.colors.text;
+      currentCtx.fillText(`(%${percentage.toFixed(1)})`, styles.margin + 310, currentYPos);
       
       currentYPos += 20;
     });

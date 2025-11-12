@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile, FileArrowDown, Printer, FilePdf } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { CustomerAccount, CustomerTransaction, Employee, AuthSession, Sale } from '@/lib/types';
+import type { CustomerAccount, CustomerTransaction, Employee, AuthSession, Sale, Category, Product } from '@/lib/types';
 import { formatCurrency, formatDateTime, generateId, generateAccountNumber } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 import { exportAccountStatementToPDF, exportAllAccountsToPDF } from '@/lib/pdf-export';
@@ -29,6 +29,9 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
   const [accounts, setAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
   const [transactions, setTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
   const [employees] = useKV<Employee[]>('employees', []);
+  const [sales] = useKV<Sale[]>('sales', []);
+  const [categories] = useKV<Category[]>('categories', []);
+  const [products] = useKV<Product[]>('products', []);
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -39,7 +42,6 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [sales] = useKV<Sale[]>('sales', []);
   
   const [formData, setFormData] = useState({
     customerName: '',
@@ -356,7 +358,7 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
   const exportAccountStatementPDF = async (account: CustomerAccount) => {
     try {
       const accountTransactions = getAccountTransactions(account.id);
-      await exportAccountStatementToPDF(account, accountTransactions);
+      await exportAccountStatementToPDF(account, accountTransactions, sales, categories, products);
       toast.success('PDF ekstre dışa aktarıldı');
     } catch (error) {
       toast.error('PDF oluşturulurken hata oluştu');
