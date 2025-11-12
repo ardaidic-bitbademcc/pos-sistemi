@@ -216,17 +216,22 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const availableTables = (tables || []).filter(t => t.status === 'available' || t.status === 'occupied');
 
   useEffect(() => {
-    if (selectedTable && selectedTable.currentSaleId) {
-      const existingOrder = (tableOrders || []).find(o => o.saleId === selectedTable.currentSaleId);
-      if (existingOrder) {
-        const sale = (sales || []).find(s => s.id === selectedTable.currentSaleId);
-        if (sale) {
-          setCart(sale.items.map(item => ({
-            ...item,
-            productName: item.productName || (menuItemsAsProducts || []).find(p => p.id === item.productId)?.name || 'Unknown',
-          })));
-          setOrderDiscount(sale.discountAmount || 0);
+    if (selectedTable) {
+      if (selectedTable.currentSaleId) {
+        const existingOrder = (tableOrders || []).find(o => o.saleId === selectedTable.currentSaleId);
+        if (existingOrder) {
+          const sale = (sales || []).find(s => s.id === selectedTable.currentSaleId);
+          if (sale) {
+            setCart(sale.items.map(item => ({
+              ...item,
+              productName: item.productName || (menuItemsAsProducts || []).find(p => p.id === item.productId)?.name || 'Unknown',
+            })));
+            setOrderDiscount(sale.discountAmount || 0);
+          }
         }
+      } else {
+        setCart([]);
+        setOrderDiscount(0);
       }
     }
   }, [selectedTable]);
@@ -250,9 +255,20 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     if (table.currentSaleId) {
       const existingOrder = (tableOrders || []).find(o => o.saleId === table.currentSaleId);
       if (existingOrder) {
+        const sale = (sales || []).find(s => s.id === table.currentSaleId);
+        if (sale) {
+          setCart(sale.items.map(item => ({
+            ...item,
+            productName: item.productName || (menuItemsAsProducts || []).find(p => p.id === item.productId)?.name || 'Unknown',
+          })));
+          setOrderDiscount(sale.discountAmount || 0);
+        }
         toast.info(`Masa ${table.tableNumber} siparişi yüklendi`);
       }
     } else {
+      setCart([]);
+      setOrderDiscount(0);
+      
       setTables((current) =>
         (current || []).map(t =>
           t.id === table.id ? { ...t, status: 'occupied' as const } : t
