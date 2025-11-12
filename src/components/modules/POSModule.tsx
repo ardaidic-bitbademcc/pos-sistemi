@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle, Bank, Ticket } from '@phosphor-icons/react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle, Bank, Ticket, CaretDown } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import Numpad from '@/components/Numpad';
@@ -129,6 +130,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [selectedCustomerAccount, setSelectedCustomerAccount] = useState<string>('');
   const [customerAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
   const [customerTransactions, setCustomerTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
@@ -1543,62 +1545,74 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                 </CardContent>
               </Card>
 
-              <Card className="bg-muted/30">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <div className="h-4 w-4 rounded-full bg-gradient-to-br from-primary/80 to-primary" />
-                    Kategori Renk Kodu
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(16, 185, 129, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Kampanya</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(59, 130, 246, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">İçecekler</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(249, 115, 22, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Yiyecekler</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(236, 72, 153, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Tatlılar</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(234, 179, 8, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Kahvaltı</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(239, 68, 68, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Ana Yemek</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(168, 85, 247, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Aperatifler</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(34, 197, 94, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Salatalar</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(190, 18, 60, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Alkollü</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(14, 165, 233, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Alkolsüz</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(217, 70, 239, 0.8)' }} />
-                      <span className="text-xs text-muted-foreground">Sıcak İçecek</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <Collapsible open={isLegendOpen} onOpenChange={setIsLegendOpen}>
+                <Card className="bg-muted/30">
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <CardTitle className="text-sm font-medium flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 rounded-full bg-gradient-to-br from-primary/80 to-primary" />
+                          Kategori Renk Kodu
+                        </div>
+                        <CaretDown 
+                          className={`h-4 w-4 transition-transform duration-200 ${isLegendOpen ? 'rotate-180' : ''}`}
+                          weight="bold"
+                        />
+                      </CardTitle>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(16, 185, 129, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Kampanya</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(59, 130, 246, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">İçecekler</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(249, 115, 22, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Yiyecekler</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(236, 72, 153, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Tatlılar</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(234, 179, 8, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Kahvaltı</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(239, 68, 68, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Ana Yemek</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(168, 85, 247, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Aperatifler</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(34, 197, 94, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Salatalar</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(190, 18, 60, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Alkollü</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(14, 165, 233, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Alkolsüz</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'rgba(217, 70, 239, 0.8)' }} />
+                          <span className="text-xs text-muted-foreground">Sıcak İçecek</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                 {filteredProducts.map((product) => {
