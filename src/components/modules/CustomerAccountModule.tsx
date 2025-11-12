@@ -12,11 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile, FileArrowDown, Printer } from '@phosphor-icons/react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile, FileArrowDown, Printer, FilePdf } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { CustomerAccount, CustomerTransaction, Employee, AuthSession, Sale } from '@/lib/types';
 import { formatCurrency, formatDateTime, generateId, generateAccountNumber } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
+import { exportAccountStatementToPDF, exportAllAccountsToPDF } from '@/lib/pdf-export';
 
 interface CustomerAccountModuleProps {
   onBack: () => void;
@@ -305,7 +307,7 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
     }
   };
 
-  const exportAccountStatement = (account: CustomerAccount) => {
+  const exportAccountStatementCSV = (account: CustomerAccount) => {
     const accountTransactions = getAccountTransactions(account.id);
     
     let csvContent = 'Cari Hesap Ekstresi\n\n';
@@ -348,10 +350,21 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
     link.click();
     document.body.removeChild(link);
     
-    toast.success('Ekstre dışa aktarıldı');
+    toast.success('CSV ekstre dışa aktarıldı');
   };
 
-  const exportAllAccounts = () => {
+  const exportAccountStatementPDF = async (account: CustomerAccount) => {
+    try {
+      const accountTransactions = getAccountTransactions(account.id);
+      await exportAccountStatementToPDF(account, accountTransactions);
+      toast.success('PDF ekstre dışa aktarıldı');
+    } catch (error) {
+      toast.error('PDF oluşturulurken hata oluştu');
+      console.error(error);
+    }
+  };
+
+  const exportAllAccountsCSV = () => {
     let csvContent = 'Tüm Cari Hesaplar\n\n';
     csvContent += 'Hesap No,Müşteri Adı,Hesap Tipi,Telefon,E-posta,Harcama Limiti,Mevcut Borç,Toplam Harcama,Toplam Ödeme,Durum,Oluşturulma\n';
     
@@ -374,7 +387,17 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
     link.click();
     document.body.removeChild(link);
     
-    toast.success('Cari hesaplar dışa aktarıldı');
+    toast.success('CSV cari hesaplar dışa aktarıldı');
+  };
+
+  const exportAllAccountsPDF = async () => {
+    try {
+      await exportAllAccountsToPDF(filteredAccounts);
+      toast.success('PDF cari hesaplar dışa aktarıldı');
+    } catch (error) {
+      toast.error('PDF oluşturulurken hata oluştu');
+      console.error(error);
+    }
   };
 
   return (
@@ -459,12 +482,22 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={exportAllAccounts}
+                  onClick={exportAllAccountsCSV}
                   disabled={filteredAccounts.length === 0}
                   className="h-9 w-full sm:w-auto"
                 >
                   <FileArrowDown className="h-4 w-4 sm:mr-2" weight="bold" />
-                  <span className="hidden sm:inline">Dışa Aktar</span>
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={exportAllAccountsPDF}
+                  disabled={filteredAccounts.length === 0}
+                  className="h-9 w-full sm:w-auto"
+                >
+                  <FilePdf className="h-4 w-4 sm:mr-2" weight="bold" />
+                  <span className="hidden sm:inline">PDF</span>
                 </Button>
               </div>
             </div>
@@ -541,15 +574,28 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => exportAccountStatement(account)}
-                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                                  title="Ekstre İndir"
-                                >
-                                  <FileArrowDown className="h-3 w-3 sm:h-4 sm:w-4" weight="bold" />
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                                      title="Ekstre İndir"
+                                    >
+                                      <FileArrowDown className="h-3 w-3 sm:h-4 sm:w-4" weight="bold" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => exportAccountStatementCSV(account)}>
+                                      <FileArrowDown className="h-4 w-4 mr-2" weight="bold" />
+                                      CSV İndir
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => exportAccountStatementPDF(account)}>
+                                      <FilePdf className="h-4 w-4 mr-2" weight="bold" />
+                                      PDF İndir
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 {account.currentBalance > 0 && (
                                   <Button
                                     variant="default"
@@ -885,15 +931,26 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
                 </DialogDescription>
               </div>
               {selectedAccount && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => exportAccountStatement(selectedAccount)}
-                  className="h-8"
-                >
-                  <FileArrowDown className="h-4 w-4 sm:mr-1.5" weight="bold" />
-                  <span className="hidden sm:inline">Ekstre</span>
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => exportAccountStatementCSV(selectedAccount)}
+                    className="h-8"
+                  >
+                    <FileArrowDown className="h-4 w-4 sm:mr-1.5" weight="bold" />
+                    <span className="hidden sm:inline">CSV</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => exportAccountStatementPDF(selectedAccount)}
+                    className="h-8"
+                  >
+                    <FilePdf className="h-4 w-4 sm:mr-1.5" weight="bold" />
+                    <span className="hidden sm:inline">PDF</span>
+                  </Button>
+                </div>
               )}
             </div>
           </DialogHeader>
