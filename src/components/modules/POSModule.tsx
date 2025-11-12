@@ -115,6 +115,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [currentSplitMethod, setCurrentSplitMethod] = useState<PaymentMethod>('cash');
   const [currentSplitAmount, setCurrentSplitAmount] = useState('');
   const [showNumpad, setShowNumpad] = useState(false);
+  const [showCashReceivedNumpad, setShowCashReceivedNumpad] = useState(false);
   const [pendingTable, setPendingTable] = useState<Table | null>(null);
   const [guestCount, setGuestCount] = useState('');
   const [showPartialPaymentDialog, setShowPartialPaymentDialog] = useState(false);
@@ -2328,6 +2329,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                             setPaymentMethod(pm.method);
                             if (pm.method !== 'cash') {
                               setCashReceived('');
+                              setShowCashReceivedNumpad(false);
                             }
                           }}
                         >
@@ -2358,9 +2360,17 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                       placeholder="Müşteriden alınan nakit tutar"
                       value={cashReceived}
                       onChange={(e) => setCashReceived(e.target.value)}
+                      onClick={() => setShowCashReceivedNumpad(true)}
+                      readOnly
                       min="0"
                       step="0.01"
                     />
+                    {showCashReceivedNumpad && (
+                      <Numpad
+                        value={cashReceived}
+                        onChange={setCashReceived}
+                      />
+                    )}
                     {cashReceived && parseFloat(cashReceived) > 0 && (
                       <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
                         <div className="flex items-center justify-between">
@@ -2589,6 +2599,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
               setShowCheckout(false);
               setSplitPayments([]);
               setCashReceived('');
+              setShowCashReceivedNumpad(false);
             }}>
               İptal
             </Button>
