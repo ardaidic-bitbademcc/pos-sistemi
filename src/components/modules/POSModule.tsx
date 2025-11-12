@@ -1520,12 +1520,10 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <KeyboardInput
+                  <Input
                     placeholder="Ürün adı veya SKU ile ara..."
                     value={searchQuery}
-                    onChange={setSearchQuery}
-                    type="text"
-                    label="Ürün Ara"
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                   <div className="flex gap-2 flex-wrap">
                     <Button
@@ -2401,12 +2399,13 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
               </div>
               <div className="space-y-2">
                 <Label>İndirim {discountType === 'percentage' ? 'Yüzdesi' : 'Tutarı'}</Label>
-                <KeyboardInput
+                <Input
                   type="number"
                   value={discountValue}
-                  onChange={setDiscountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
                   placeholder={discountType === 'percentage' ? '0' : '0.00'}
-                  label={`İndirim ${discountType === 'percentage' ? 'Yüzdesi' : 'Tutarı'}`}
+                  min="0"
+                  max={discountType === 'percentage' ? '100' : totals.subtotal.toString()}
                 />
               </div>
               <div className="p-3 bg-muted rounded-lg space-y-2">
@@ -2519,21 +2518,31 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                 </div>
                 <div className="space-y-2">
                   <div className="flex gap-2">
-                    <KeyboardInput
+                    <Input
                       type="number"
                       placeholder="Tutar"
                       value={currentSplitAmount}
-                      onChange={setCurrentSplitAmount}
-                      label="Ödeme Tutarı"
+                      onChange={(e) => setCurrentSplitAmount(e.target.value)}
+                      onClick={() => setShowNumpad(true)}
+                      readOnly
+                      min="0"
+                      step="0.01"
                     />
-                    <Button variant="outline" onClick={fillRemainingAmount} className="shrink-0">
+                    <Button variant="outline" onClick={fillRemainingAmount}>
                       Kalan
                     </Button>
-                    <Button onClick={addSplitPayment} className="shrink-0">
+                    <Button onClick={addSplitPayment}>
                       <Plus className="h-4 w-4 mr-2" />
                       Ekle
                     </Button>
                   </div>
+                  {showNumpad && (
+                    <Numpad
+                      value={currentSplitAmount}
+                      onChange={setCurrentSplitAmount}
+                      onEnter={addSplitPayment}
+                    />
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -2583,13 +2592,18 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Kişi Sayısı</Label>
-              <KeyboardInput
+              <Input
                 type="number"
+                min="1"
                 value={guestCount}
-                onChange={setGuestCount}
+                onChange={(e) => setGuestCount(e.target.value)}
                 placeholder="Örn: 4"
-                label="Kişi Sayısı"
-                onEnter={confirmGuestCount}
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmGuestCount();
+                  }
+                }}
               />
             </div>
           </div>
@@ -2623,13 +2637,19 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Çıkarılacak Miktar</Label>
-              <KeyboardInput
+              <Input
                 type="number"
+                min="1"
+                max={quantityDialogItem?.quantity}
                 value={quantityToProcess}
-                onChange={setQuantityToProcess}
+                onChange={(e) => setQuantityToProcess(e.target.value)}
                 placeholder={`1 - ${quantityDialogItem?.quantity}`}
-                label="Çıkarılacak Miktar"
-                onEnter={confirmRemoveQuantity}
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmRemoveQuantity();
+                  }
+                }}
               />
               <div className="flex gap-2">
                 {[1, 2, 3, 5].filter(n => (quantityDialogItem?.quantity || 0) >= n).map(num => (
@@ -2682,13 +2702,19 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>İkram Edilecek Miktar</Label>
-              <KeyboardInput
+              <Input
                 type="number"
+                min="1"
+                max={quantityDialogItem?.quantity}
                 value={quantityToProcess}
-                onChange={setQuantityToProcess}
+                onChange={(e) => setQuantityToProcess(e.target.value)}
                 placeholder={`1 - ${quantityDialogItem?.quantity}`}
-                label="İkram Edilecek Miktar"
-                onEnter={confirmComplimentaryQuantity}
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmComplimentaryQuantity();
+                  }
+                }}
               />
               <div className="flex gap-2">
                 {[1, 2, 3, 5].filter(n => (quantityDialogItem?.quantity || 0) >= n).map(num => (
@@ -2752,19 +2778,17 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
             </div>
             <div className="space-y-2">
               <Label>veya Özel Sayı</Label>
-              <KeyboardInput
+              <Input
                 type="number"
+                min="2"
                 placeholder="Özel bir sayı girin"
-                value={typeof cartSplitCount === 'number' && cartSplitCount >= 2 ? cartSplitCount.toString() : ''}
-                onChange={(val) => {
-                  const num = parseInt(val);
-                  if (num && num >= 2) {
-                    setCartSplitCount(num);
-                  } else if (val === '') {
-                    setCartSplitCount('custom');
+                onFocus={() => setCartSplitCount('custom')}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (val && val >= 2) {
+                    setCartSplitCount(val);
                   }
                 }}
-                label="Özel Sayı"
               />
             </div>
             {typeof cartSplitCount === 'number' && cartSplitCount >= 2 && (
