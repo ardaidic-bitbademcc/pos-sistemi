@@ -66,11 +66,26 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
 - **Garson (PIN: 9999)** - Waiter rolü, sadece POS erişimi, ödeme alamaz
 
 ### 1. POS (Satış Noktası) Modülü
-- **İşlevsellik**: Hızlı ürün satışı, masa yönetimi, ödeme işlemleri
-- **Amaç**: Kasiyer işlemlerini hızlandırmak, masa bazlı sipariş yönetimi sağlamak ve satış verilerini otomatik kaydetmek
+- **İşlevsellik**: Hızlı ürün satışı, masa yönetimi, ödeme işlemleri, ekran klavyesi ile metin ve sayı girişi
+- **Amaç**: Kasiyer işlemlerini hızlandırmak, masa bazlı sipariş yönetimi sağlamak, satış verilerini otomatik kaydetmek ve dokunmatik ekranlarda kolay veri girişi
 - **Tetikleyici**: Kasiyer masa seçer veya doğrudan ürün ekler
-- **Akış**: Masa seç (opsiyonel) → Ürün ara/seç → Sepete ekle → Miktarı ayarla → Ödeme butonlarından birini seç (Nakit/Kart/Mobil) → Tamamla
-- **Başarı Kriterleri**: 30 saniye içinde satış tamamlanır, masa durumu otomatik güncellenir, fatura oluşturulur
+- **Akış**: Masa seç (opsiyonel) → Ürün ara/seç (ekran klavyesi ile) → Sepete ekle → Miktarı ayarla → Ödeme butonlarından birini seç (Nakit/Kart/Mobil) → Tamamla
+- **Başarı Kriterleri**: 30 saniye içinde satış tamamlanır, masa durumu otomatik güncellenir, fatura oluşturulur, dokunmatik ekranda kolay veri girişi
+
+#### Numpad ve Klavye Girişi
+- **İşlevsellik**: Ekran klavyesi (numpad + Türkçe Q klavye), input alanlarında klavye butonu, modal popup klavye
+- **Amaç**: Tablet ve dokunmatik ekranlarda kolay veri girişi, fiziksel klavye olmadan kullanım
+- **Tetikleyici**: Input alanının yanındaki klavye ikonu veya input'a tıklama
+- **Akış**: Input alanı → Klavye ikonu → Modal açılır → Harfler/Rakamlar sekmesi → Tuşlara tıkla → Tamam
+- **Başarı Kriterleri**: 
+  - Ürün arama kutusunda ekran klavyesi kullanılabilir
+  - İndirim ve tutar girişlerinde sayısal klavye kullanılabilir
+  - Misafir sayısı ve miktar girişlerinde sayısal klavye kullanılabilir
+  - Türkçe karakterler (ğ, ü, ş, ı, ö, ç) desteklenir
+  - Büyük/küçük harf geçişi çalışır
+  - Boşluk, silme ve temizleme tuşları çalışır
+  - Harfler ve rakamlar arasında kolay geçiş
+  - Enter/Tamam ile onaylama
 
 #### Masa Yönetimi
 - **İşlevsellik**: Masa durumu takibi (Boş/Dolu/Rezerve), masa kapasitesi görüntüleme, sipariş zamanı takibi, tembel masa uyarıları
