@@ -1475,7 +1475,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                   return (
                     <Card
                       key={product.id}
-                      className={`hover:shadow-md transition-shadow ${hasCampaign ? 'ring-1 ring-accent bg-accent/5' : ''}`}
+                      className={`hover:shadow-lg transition-all cursor-pointer active:scale-95 ${hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''}`}
+                      onClick={() => addToCart(product, 1)}
                     >
                       <CardContent className="p-2 space-y-1.5">
                         <div className="flex items-start justify-between gap-1">
@@ -1521,22 +1522,10 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           </div>
                         )}
                         
-                        <div className="flex items-center justify-between pt-1">
-                          <span className={`text-sm font-bold font-tabular-nums ${hasCampaign ? 'text-accent' : ''}`}>
+                        <div className="pt-1 text-center">
+                          <span className={`text-lg font-bold font-tabular-nums block ${hasCampaign ? 'text-accent' : ''}`}>
                             {formatCurrency(product.basePrice)}
                           </span>
-                          <Button 
-                            size="sm" 
-                            variant={hasCampaign ? 'default' : 'outline'} 
-                            className={`h-7 px-3 text-xs ${hasCampaign ? 'bg-accent' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addToCart(product, 1);
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5 mr-1" />
-                            Ekle
-                          </Button>
                         </div>
                       </CardContent>
                     </Card>
