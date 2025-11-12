@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile } from '@phosphor-icons/react';
+import { ArrowLeft, Plus, PencilSimple, Trash, Eye, User, Buildings, Warning, CheckCircle, XCircle, CreditCard, Money, TrendUp, TrendDown, Receipt, Bank, DeviceMobile, FileArrowDown, Printer } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { CustomerAccount, CustomerTransaction, Employee, AuthSession, Sale } from '@/lib/types';
 import { formatCurrency, formatDateTime, generateId, generateAccountNumber } from '@/lib/helpers';
@@ -305,6 +305,78 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
     }
   };
 
+  const exportAccountStatement = (account: CustomerAccount) => {
+    const accountTransactions = getAccountTransactions(account.id);
+    
+    let csvContent = 'Cari Hesap Ekstresi\n\n';
+    csvContent += `Hesap No:,${account.accountNumber}\n`;
+    csvContent += `Müşteri:,${account.customerName}\n`;
+    csvContent += `Hesap Tipi:,${account.accountType === 'corporate' ? 'Tüzel' : 'Şahıs'}\n`;
+    csvContent += `Telefon:,${account.phone}\n`;
+    if (account.email) csvContent += `E-posta:,${account.email}\n`;
+    if (account.address) csvContent += `Adres:,${account.address}\n`;
+    csvContent += `\nHarcama Limiti:,${account.creditLimit}\n`;
+    csvContent += `Mevcut Borç:,${account.currentBalance}\n`;
+    csvContent += `Toplam Harcama:,${account.totalDebt}\n`;
+    csvContent += `Toplam Ödeme:,${account.totalPaid}\n`;
+    csvContent += `Durum:,${account.status === 'active' ? 'Aktif' : account.status === 'suspended' ? 'Askıda' : 'Kapalı'}\n`;
+    csvContent += `\n\nTarih,İşlem,Tutar,Ödeme Yöntemi,Bakiye,Fiş No,Not\n`;
+    
+    accountTransactions.forEach(transaction => {
+      const date = formatDateTime(transaction.date);
+      const type = transaction.type === 'debit' ? 'Borç' : 'Ödeme';
+      const amount = transaction.type === 'debit' ? `+${transaction.amount}` : `-${transaction.amount}`;
+      const paymentMethod = transaction.paymentMethod 
+        ? (transaction.paymentMethod === 'cash' ? 'Nakit' : 
+           transaction.paymentMethod === 'card' ? 'Kart' : 
+           transaction.paymentMethod === 'transfer' ? 'Havale' : 'Mobil')
+        : '';
+      const balance = transaction.balanceAfter;
+      const saleNumber = transaction.saleNumber || '';
+      const notes = (transaction.notes || '').replace(/,/g, ';');
+      
+      csvContent += `${date},${type},${amount},${paymentMethod},${balance},${saleNumber},"${notes}"\n`;
+    });
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `cari-ekstre-${account.accountNumber}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Ekstre dışa aktarıldı');
+  };
+
+  const exportAllAccounts = () => {
+    let csvContent = 'Tüm Cari Hesaplar\n\n';
+    csvContent += 'Hesap No,Müşteri Adı,Hesap Tipi,Telefon,E-posta,Harcama Limiti,Mevcut Borç,Toplam Harcama,Toplam Ödeme,Durum,Oluşturulma\n';
+    
+    filteredAccounts.forEach(account => {
+      const accountType = account.accountType === 'corporate' ? 'Tüzel' : 'Şahıs';
+      const email = account.email || '';
+      const status = account.status === 'active' ? 'Aktif' : account.status === 'suspended' ? 'Askıda' : 'Kapalı';
+      const createdDate = formatDateTime(account.createdAt);
+      
+      csvContent += `${account.accountNumber},${account.customerName},${accountType},${account.phone},${email},${account.creditLimit},${account.currentBalance},${account.totalDebt},${account.totalPaid},${status},${createdDate}\n`;
+    });
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `cari-hesaplar-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Cari hesaplar dışa aktarıldı');
+  };
+
   return (
     <div className="min-h-screen bg-background p-2 sm:p-4 md:p-6 pb-16 sm:pb-20">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
@@ -384,6 +456,16 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
                     <SelectItem value="closed">Kapalı</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={exportAllAccounts}
+                  disabled={filteredAccounts.length === 0}
+                  className="h-9 w-full sm:w-auto"
+                >
+                  <FileArrowDown className="h-4 w-4 sm:mr-2" weight="bold" />
+                  <span className="hidden sm:inline">Dışa Aktar</span>
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -459,6 +541,15 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => exportAccountStatement(account)}
+                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                                  title="Ekstre İndir"
+                                >
+                                  <FileArrowDown className="h-3 w-3 sm:h-4 sm:w-4" weight="bold" />
+                                </Button>
                                 {account.currentBalance > 0 && (
                                   <Button
                                     variant="default"
@@ -786,10 +877,25 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">Hesap Detayları</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              {selectedAccount?.accountNumber} - {selectedAccount?.customerName}
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-base sm:text-lg">Hesap Detayları</DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm">
+                  {selectedAccount?.accountNumber} - {selectedAccount?.customerName}
+                </DialogDescription>
+              </div>
+              {selectedAccount && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => exportAccountStatement(selectedAccount)}
+                  className="h-8"
+                >
+                  <FileArrowDown className="h-4 w-4 sm:mr-1.5" weight="bold" />
+                  <span className="hidden sm:inline">Ekstre</span>
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           {selectedAccount && (
             <Tabs defaultValue="info" className="w-full">
