@@ -131,6 +131,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const [customerAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
   const [customerTransactions, setCustomerTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isTableLegendOpen, setIsTableLegendOpen] = useState(false);
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
@@ -1893,6 +1894,58 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         </TabsContent>
 
         <TabsContent value="tables" className="space-y-4">
+          <Collapsible open={isTableLegendOpen} onOpenChange={setIsTableLegendOpen}>
+            <Card className="bg-muted/30">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <CardTitle className="text-sm font-medium flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TableIcon className="h-4 w-4" weight="fill" />
+                      Masa Durumu Açıklaması
+                    </div>
+                    <CaretDown 
+                      className={`h-4 w-4 transition-transform duration-200 ${isTableLegendOpen ? 'rotate-180' : ''}`}
+                      weight="bold"
+                    />
+                  </CardTitle>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-emerald-50/50 border border-emerald-500/30">
+                      <div className="h-8 w-8 rounded-md bg-emerald-500 flex items-center justify-center">
+                        <TableIcon className="h-5 w-5 text-white" weight="bold" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Boş Masa</p>
+                        <p className="text-xs text-muted-foreground">Hazır ve müsait</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-amber-50/50 border border-amber-500/30">
+                      <div className="h-8 w-8 rounded-md bg-amber-500 flex items-center justify-center">
+                        <TableIcon className="h-5 w-5 text-white" weight="bold" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Dolu Masa</p>
+                        <p className="text-xs text-muted-foreground">Aktif sipariş var</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+                      <div className="h-8 w-8 rounded-md bg-destructive flex items-center justify-center">
+                        <Warning className="h-5 w-5 text-white" weight="bold" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Tembel Masa</p>
+                        <p className="text-xs text-muted-foreground">{lazyTableWarningMinutes}+ dk bekleme</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
           <Card>
             <CardHeader>
               <CardTitle>Masa Yönetimi</CardTitle>
