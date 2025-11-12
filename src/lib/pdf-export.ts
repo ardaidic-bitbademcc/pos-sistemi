@@ -165,12 +165,13 @@ export async function exportAccountStatementToPDF(
   currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
   
   const headers = [
-    { text: 'Tarih', x: styles.margin + 5, width: 85 },
-    { text: 'İşlem', x: styles.margin + 95, width: 60 },
-    { text: 'Tutar', x: styles.margin + 160, width: 70 },
-    { text: 'Ödeme', x: styles.margin + 235, width: 60 },
-    { text: 'Bakiye', x: styles.margin + 300, width: 70 },
-    { text: 'Fiş No', x: styles.margin + 375, width: 60 },
+    { text: 'Tarih', x: styles.margin + 5, width: 80 },
+    { text: 'İşlem', x: styles.margin + 90, width: 50 },
+    { text: 'Tutar', x: styles.margin + 145, width: 60 },
+    { text: 'Ödeme', x: styles.margin + 210, width: 50 },
+    { text: 'Bakiye', x: styles.margin + 265, width: 60 },
+    { text: 'Fiş No', x: styles.margin + 330, width: 55 },
+    { text: 'Not', x: styles.margin + 390, width: 125 },
   ];
   
   headers.forEach(header => {
@@ -189,7 +190,18 @@ export async function exportAccountStatementToPDF(
   sortedTransactions.forEach((transaction, index) => {
     checkNewPage();
     
-    const rowHeight = 30;
+    const notes = transaction.notes || '';
+    const hasNotes = notes.length > 0;
+    const maxNoteLength = 28;
+    const noteLines: string[] = [];
+    
+    if (hasNotes) {
+      for (let i = 0; i < notes.length; i += maxNoteLength) {
+        noteLines.push(notes.substring(i, i + maxNoteLength));
+      }
+    }
+    
+    const rowHeight = hasNotes ? 30 + (noteLines.length - 1) * 12 : 30;
     
     if (index % 2 === 0) {
       currentCtx.fillStyle = styles.colors.background;
@@ -233,21 +245,73 @@ export async function exportAccountStatementToPDF(
     const truncatedSaleNumber = saleNumber.length > 8 ? saleNumber.substring(0, 8) + '...' : saleNumber;
     currentCtx.fillText(truncatedSaleNumber, headers[5].x, currentYPos + 18);
     
+    if (hasNotes) {
+      currentCtx.fillStyle = '#555555';
+      currentCtx.font = `italic ${styles.fontSize.small}px Inter, sans-serif`;
+      noteLines.forEach((line, lineIndex) => {
+        currentCtx.fillText(line, headers[6].x, currentYPos + 18 + lineIndex * 12);
+      });
+    } else {
+      currentCtx.fillText('-', headers[6].x, currentYPos + 18);
+    }
+    
     currentYPos += rowHeight;
   });
 
-  currentCtx.fillStyle = styles.colors.text;
-  currentCtx.font = `${styles.fontSize.small}px Inter, sans-serif`;
-  currentCtx.fillText(
-    `Oluşturulma: ${new Date().toLocaleString('tr-TR')}`,
-    styles.margin,
-    currentCanvas.height - 20
-  );
-  currentCtx.fillText(
-    `Sayfa ${pages.length}`,
-    currentCanvas.width - styles.margin - 50,
-    currentCanvas.height - 20
-  );
+  const paymentsByMethod = sortedTransactions.reduce((acc, t) => {
+    if (t.type === 'credit' && t.paymentMethod) {
+      acc[t.paymentMethod] = (acc[t.paymentMethod] || 0) + t.amount;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  if (Object.keys(paymentsByMethod).length > 0) {
+    currentYPos += 20;
+    checkNewPage();
+
+    currentCtx.fillStyle = styles.colors.text;
+    currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
+    currentCtx.fillText('Ödeme Yöntemi Dağılımı:', styles.margin, currentYPos);
+    currentYPos += 20;
+
+    Object.entries(paymentsByMethod).forEach(([method, amount]) => {
+      checkNewPage();
+      
+      currentCtx.fillStyle = styles.colors.text;
+      currentCtx.font = `${styles.fontSize.body}px Inter, sans-serif`;
+      
+      const methodName = method === 'cash' ? 'Nakit' :
+                        method === 'card' ? 'Kredi Kartı' :
+                        method === 'transfer' ? 'Havale/EFT' :
+                        'Mobil Ödeme';
+      
+      currentCtx.fillText(`${methodName}:`, styles.margin + 20, currentYPos);
+      
+      currentCtx.font = `bold ${styles.fontSize.body}px Inter, sans-serif`;
+      currentCtx.fillStyle = styles.colors.success;
+      currentCtx.fillText(formatCurrency(amount), styles.margin + 150, currentYPos);
+      
+      currentYPos += 20;
+    });
+  }
+
+  pages.forEach((page, index) => {
+    const pageCtx = page.getContext('2d');
+    if (!pageCtx) return;
+    
+    pageCtx.fillStyle = styles.colors.text;
+    pageCtx.font = `${styles.fontSize.small}px Inter, sans-serif`;
+    pageCtx.fillText(
+      `Oluşturulma: ${new Date().toLocaleString('tr-TR')}`,
+      styles.margin,
+      page.height - 20
+    );
+    pageCtx.fillText(
+      `Sayfa ${index + 1} / ${pages.length}`,
+      page.width - styles.margin - 70,
+      page.height - 20
+    );
+  });
 
   const pdf = {
     pages: pages.map(p => p.toDataURL('image/png')),
