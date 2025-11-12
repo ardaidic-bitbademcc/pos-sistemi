@@ -278,7 +278,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     }
   };
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, quantity: number = 1) => {
     if (product.hasOptions && product.options && product.options.length > 0) {
       setSelectedProductForOptions(product);
       setShowOptionsSelector(true);
@@ -288,18 +288,18 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     const existingItem = cart.find((item) => item.productId === product.id && !item.isComplimentary && !item.selectedOptions);
 
     let unitPrice = product.basePrice;
-    let subtotal = unitPrice;
+    let subtotal = unitPrice * quantity;
 
     if (pricesIncludeVAT) {
       unitPrice = product.basePrice / (1 + product.taxRate / 100);
-      subtotal = unitPrice;
+      subtotal = unitPrice * quantity;
     }
 
     if (existingItem) {
       setCart(
         cart.map((item) =>
           item.id === existingItem.id
-            ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.unitPrice }
+            ? { ...item, quantity: item.quantity + quantity, subtotal: (item.quantity + quantity) * item.unitPrice }
             : item
         )
       );
@@ -308,7 +308,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         id: generateId(),
         productId: product.id,
         productName: product.name,
-        quantity: 1,
+        quantity: quantity,
         unitPrice: unitPrice,
         taxRate: product.taxRate,
         discountAmount: 0,
@@ -317,7 +317,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       };
       setCart([...cart, newItem]);
     }
-    toast.success(`${product.name} sepete eklendi`);
+    toast.success(`${quantity} adet ${product.name} sepete eklendi`);
   };
 
   const addToCartWithOptions = (
@@ -1333,8 +1333,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                       {campaignProducts.slice(0, 6).map((product) => (
                         <Card
                           key={product.id}
-                          className="cursor-pointer hover:shadow-md transition-all border-accent/50 bg-card"
-                          onClick={() => addToCart(product)}
+                          className="hover:shadow-md transition-all border-accent/50 bg-card"
                         >
                           <CardContent className="p-2 space-y-1">
                             <div className="flex items-start justify-between gap-1">
@@ -1360,6 +1359,41 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                               <div className="text-sm font-bold text-accent">
                                 {formatCurrency(product.basePrice)}
                               </div>
+                            </div>
+                            <div className="flex items-center gap-0.5 pt-1">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="flex-1 h-5 text-[9px] px-0.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(product, 1);
+                                }}
+                              >
+                                +1
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="flex-1 h-5 text-[9px] px-0.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(product, 2);
+                                }}
+                              >
+                                +2
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="flex-1 h-5 text-[9px] px-0.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(product, 3);
+                                }}
+                              >
+                                +3
+                              </Button>
                             </div>
                           </CardContent>
                         </Card>
@@ -1415,8 +1449,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                   return (
                     <Card
                       key={product.id}
-                      className={`hover:shadow-md transition-shadow cursor-pointer ${hasCampaign ? 'ring-1 ring-accent bg-accent/5' : ''}`}
-                      onClick={() => addToCart(product)}
+                      className={`hover:shadow-md transition-shadow ${hasCampaign ? 'ring-1 ring-accent bg-accent/5' : ''}`}
                     >
                       <CardContent className="p-2 space-y-1.5">
                         <div className="flex items-start justify-between gap-1">
@@ -1460,7 +1493,51 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           <span className={`text-sm font-bold font-tabular-nums ${hasCampaign ? 'text-accent' : ''}`}>
                             {formatCurrency(product.basePrice)}
                           </span>
-                          <Button size="sm" variant={hasCampaign ? 'default' : 'outline'} className={`h-6 w-6 p-0 ${hasCampaign ? 'bg-accent' : ''}`}>
+                        </div>
+
+                        <div className="flex items-center gap-1 pt-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1 h-6 text-[10px] px-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product, 1);
+                            }}
+                          >
+                            +1
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1 h-6 text-[10px] px-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product, 2);
+                            }}
+                          >
+                            +2
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1 h-6 text-[10px] px-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product, 3);
+                            }}
+                          >
+                            +3
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant={hasCampaign ? 'default' : 'outline'} 
+                            className={`h-6 w-6 p-0 ${hasCampaign ? 'bg-accent' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product, 5);
+                            }}
+                          >
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
