@@ -1493,52 +1493,17 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                           <span className={`text-sm font-bold font-tabular-nums ${hasCampaign ? 'text-accent' : ''}`}>
                             {formatCurrency(product.basePrice)}
                           </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 pt-1">
                           <Button 
                             size="sm" 
-                            variant="outline" 
-                            className="flex-1 h-6 text-[10px] px-1"
+                            variant={hasCampaign ? 'default' : 'outline'} 
+                            className={`h-7 px-3 text-xs ${hasCampaign ? 'bg-accent' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               addToCart(product, 1);
                             }}
                           >
-                            +1
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1 h-6 text-[10px] px-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addToCart(product, 2);
-                            }}
-                          >
-                            +2
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1 h-6 text-[10px] px-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addToCart(product, 3);
-                            }}
-                          >
-                            +3
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant={hasCampaign ? 'default' : 'outline'} 
-                            className={`h-6 w-6 p-0 ${hasCampaign ? 'bg-accent' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addToCart(product, 5);
-                            }}
-                          >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Ekle
                           </Button>
                         </div>
                       </CardContent>
