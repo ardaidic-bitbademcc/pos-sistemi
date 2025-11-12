@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash, Check, Table as TableIcon, CreditCard, Money, DeviceMobile, Users, FloppyDisk, Gift, Percent, ArrowsLeftRight, X, Eye, Warning, Clock, Sparkle, Bank, Ticket } from '@phosphor-icons/react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 import Numpad from '@/components/Numpad';
 import ProductOptionsSelector from '@/components/ProductOptionsSelector';
 import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem, CustomerAccount, CustomerTransaction, AuthSession } from '@/lib/types';
@@ -1358,7 +1359,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                       {campaignProducts.slice(0, 6).map((product) => (
                         <Card
                           key={product.id}
-                          className="hover:shadow-md transition-all border-accent/50 bg-card"
+                          className="hover:shadow-md transition-all border-accent/50 bg-card relative overflow-hidden"
                         >
                           <CardContent className="p-2 space-y-1">
                             <div className="flex items-start justify-between gap-1">
@@ -1389,8 +1390,22 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="flex-1 h-5 text-[9px] px-0.5"
+                                className="flex-1 h-5 text-[9px] px-0.5 relative overflow-hidden"
                                 onClick={(e) => {
+                                  const ripple = document.createElement('span');
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const size = Math.max(rect.width, rect.height);
+                                  const x = e.clientX - rect.left - size / 2;
+                                  const y = e.clientY - rect.top - size / 2;
+                                  
+                                  ripple.style.width = ripple.style.height = `${size}px`;
+                                  ripple.style.left = `${x}px`;
+                                  ripple.style.top = `${y}px`;
+                                  ripple.classList.add('ripple-effect');
+                                  
+                                  e.currentTarget.appendChild(ripple);
+                                  
+                                  setTimeout(() => ripple.remove(), 600);
                                   e.stopPropagation();
                                   addToCart(product, 1);
                                 }}
@@ -1400,8 +1415,22 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="flex-1 h-5 text-[9px] px-0.5"
+                                className="flex-1 h-5 text-[9px] px-0.5 relative overflow-hidden"
                                 onClick={(e) => {
+                                  const ripple = document.createElement('span');
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const size = Math.max(rect.width, rect.height);
+                                  const x = e.clientX - rect.left - size / 2;
+                                  const y = e.clientY - rect.top - size / 2;
+                                  
+                                  ripple.style.width = ripple.style.height = `${size}px`;
+                                  ripple.style.left = `${x}px`;
+                                  ripple.style.top = `${y}px`;
+                                  ripple.classList.add('ripple-effect');
+                                  
+                                  e.currentTarget.appendChild(ripple);
+                                  
+                                  setTimeout(() => ripple.remove(), 600);
                                   e.stopPropagation();
                                   addToCart(product, 2);
                                 }}
@@ -1411,8 +1440,22 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="flex-1 h-5 text-[9px] px-0.5"
+                                className="flex-1 h-5 text-[9px] px-0.5 relative overflow-hidden"
                                 onClick={(e) => {
+                                  const ripple = document.createElement('span');
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const size = Math.max(rect.width, rect.height);
+                                  const x = e.clientX - rect.left - size / 2;
+                                  const y = e.clientY - rect.top - size / 2;
+                                  
+                                  ripple.style.width = ripple.style.height = `${size}px`;
+                                  ripple.style.left = `${x}px`;
+                                  ripple.style.top = `${y}px`;
+                                  ripple.classList.add('ripple-effect');
+                                  
+                                  e.currentTarget.appendChild(ripple);
+                                  
+                                  setTimeout(() => ripple.remove(), 600);
                                   e.stopPropagation();
                                   addToCart(product, 3);
                                 }}
@@ -1473,62 +1516,83 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
                   const hasCampaign = product.hasActiveCampaign && product.campaignDetails;
                   const isNew = isRecentlyAdded((product as any).createdAt);
                   return (
-                    <Card
+                    <motion.div
                       key={product.id}
-                      className={`hover:shadow-lg transition-all cursor-pointer active:scale-95 ${hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''}`}
-                      onClick={() => addToCart(product, 1)}
+                      whileTap={{ scale: 0.95 }}
+                      className="relative overflow-hidden"
                     >
-                      <CardContent className="p-2 space-y-1.5">
-                        <div className="flex items-start justify-between gap-1">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-xs leading-tight truncate">
-                              {product.name}
-                            </p>
-                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                              {isNew && (
-                                <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] h-4 px-1">
-                                  <Sparkle className="h-2.5 w-2.5 mr-0.5" weight="fill" />
-                                  Yeni
-                                </Badge>
-                              )}
-                              {hasCampaign && (
-                                <Badge variant="default" className="bg-accent animate-pulse text-[10px] h-4 px-1">
-                                  <Gift className="h-2.5 w-2.5 mr-0.5" weight="fill" />
-                                  Kampanya
-                                </Badge>
-                              )}
-                              {product.hasOptions && product.options && product.options.length > 0 && (
-                                <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                                  Seçenekli
-                                </Badge>
-                              )}
+                      <Card
+                        className={`hover:shadow-lg transition-all cursor-pointer relative overflow-hidden ${hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''}`}
+                        onClick={(e) => {
+                          const ripple = document.createElement('span');
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const size = Math.max(rect.width, rect.height);
+                          const x = e.clientX - rect.left - size / 2;
+                          const y = e.clientY - rect.top - size / 2;
+                          
+                          ripple.style.width = ripple.style.height = `${size}px`;
+                          ripple.style.left = `${x}px`;
+                          ripple.style.top = `${y}px`;
+                          ripple.classList.add('ripple-effect');
+                          
+                          e.currentTarget.appendChild(ripple);
+                          
+                          setTimeout(() => ripple.remove(), 600);
+                          addToCart(product, 1);
+                        }}
+                      >
+                        <CardContent className="p-2 space-y-1.5">
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-xs leading-tight truncate">
+                                {product.name}
+                              </p>
+                              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                {isNew && (
+                                  <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] h-4 px-1">
+                                    <Sparkle className="h-2.5 w-2.5 mr-0.5" weight="fill" />
+                                    Yeni
+                                  </Badge>
+                                )}
+                                {hasCampaign && (
+                                  <Badge variant="default" className="bg-accent animate-pulse text-[10px] h-4 px-1">
+                                    <Gift className="h-2.5 w-2.5 mr-0.5" weight="fill" />
+                                    Kampanya
+                                  </Badge>
+                                )}
+                                {product.hasOptions && product.options && product.options.length > 0 && (
+                                  <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                                    Seçenekli
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
+                            <Badge variant={product.stock > product.minStockLevel ? 'default' : 'destructive'} className="text-[10px] h-4 px-1 shrink-0">
+                              {product.stock}
+                            </Badge>
                           </div>
-                          <Badge variant={product.stock > product.minStockLevel ? 'default' : 'destructive'} className="text-[10px] h-4 px-1 shrink-0">
-                            {product.stock}
-                          </Badge>
-                        </div>
-                        
-                        {hasCampaign && product.campaignDetails && (
-                          <div className="pt-1 mt-1 border-t border-accent/20 space-y-0.5">
-                            <div className="flex items-center justify-between">
-                              <span className="line-through text-muted-foreground text-[10px]">
-                                {formatCurrency(product.campaignDetails.originalPrice)}
-                              </span>
-                              <Badge variant="secondary" className="text-[10px] h-3.5 px-1">
-                                %{product.campaignDetails.discountPercentage}
-                              </Badge>
+                          
+                          {hasCampaign && product.campaignDetails && (
+                            <div className="pt-1 mt-1 border-t border-accent/20 space-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <span className="line-through text-muted-foreground text-[10px]">
+                                  {formatCurrency(product.campaignDetails.originalPrice)}
+                                </span>
+                                <Badge variant="secondary" className="text-[10px] h-3.5 px-1">
+                                  %{product.campaignDetails.discountPercentage}
+                                </Badge>
+                              </div>
                             </div>
+                          )}
+                          
+                          <div className="pt-1 text-center">
+                            <span className={`text-lg font-bold font-tabular-nums block ${hasCampaign ? 'text-accent' : ''}`}>
+                              {formatCurrency(product.basePrice)}
+                            </span>
                           </div>
-                        )}
-                        
-                        <div className="pt-1 text-center">
-                          <span className={`text-lg font-bold font-tabular-nums block ${hasCampaign ? 'text-accent' : ''}`}>
-                            {formatCurrency(product.basePrice)}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   );
                 })}
               </div>
