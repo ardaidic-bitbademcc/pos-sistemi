@@ -6,10 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ChartLine, TrendUp, TrendDown, Users, Package, Calendar, Buildings, CreditCard, Money, DeviceMobile, Bank, Ticket } from '@phosphor-icons/react';
+import { ArrowLeft, ChartLine, TrendUp, TrendDown, Users, Package, Calendar, Buildings, CreditCard, Money, DeviceMobile, Bank, Ticket, Clock } from '@phosphor-icons/react';
 import type { Sale, Employee, Product, Branch, BranchComparison, WaiterSalesReport, ProductSalesReport, AuthSession } from '@/lib/types';
 import { formatCurrency, formatNumber } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, Area, AreaChart } from 'recharts';
 
 interface ReportsModuleProps {
   onBack: () => void;
@@ -202,6 +203,54 @@ export default function ReportsModule({ onBack, authSession }: ReportsModuleProp
     };
   }, [sales, selectedBranch, selectedPeriod]);
 
+  const hourlyPatterns = useMemo(() => {
+    const dateRange = getDateRange(selectedPeriod);
+    const filteredSales = (sales || []).filter(s => {
+      const saleDate = new Date(s.saleDate);
+      const matchesBranch = selectedBranch === 'all' || s.branchId === selectedBranch;
+      const matchesDate = saleDate >= dateRange.start && saleDate <= dateRange.end;
+      return matchesBranch && matchesDate;
+    });
+
+    const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      hourLabel: `${hour.toString().padStart(2, '0')}:00`,
+      revenue: 0,
+      transactions: 0,
+      items: 0,
+      averageTransaction: 0,
+    }));
+
+    filteredSales.forEach(sale => {
+      const saleDate = new Date(sale.saleDate);
+      const hour = saleDate.getHours();
+      
+      hourlyData[hour].revenue += sale.totalAmount;
+      hourlyData[hour].transactions += 1;
+      hourlyData[hour].items += sale.items.reduce((sum, item) => sum + item.quantity, 0);
+    });
+
+    hourlyData.forEach(data => {
+      if (data.transactions > 0) {
+        data.averageTransaction = data.revenue / data.transactions;
+      }
+    });
+
+    const peakHour = hourlyData.reduce((max, current) => 
+      current.revenue > max.revenue ? current : max
+    );
+
+    const busiestHour = hourlyData.reduce((max, current) => 
+      current.transactions > max.transactions ? current : max
+    );
+
+    return {
+      hourlyData,
+      peakHour,
+      busiestHour,
+    };
+  }, [sales, selectedBranch, selectedPeriod]);
+
   return (
     <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
       <header className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
@@ -311,13 +360,312 @@ export default function ReportsModule({ onBack, authSession }: ReportsModuleProp
         </Card>
       </div>
 
-      <Tabs defaultValue="branches" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="branches">Şube Karşılaştırma</TabsTrigger>
-          <TabsTrigger value="payments">Ödeme Yöntemleri</TabsTrigger>
-          <TabsTrigger value="waiters">Garson Satışları</TabsTrigger>
-          <TabsTrigger value="products">Ürün Satışları</TabsTrigger>
+      <Tabs defaultValue="hourly" className="space-y-4">
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="hourly" className="text-xs sm:text-sm">Saatlik Analiz</TabsTrigger>
+          <TabsTrigger value="branches" className="text-xs sm:text-sm">Şube Karşılaştırma</TabsTrigger>
+          <TabsTrigger value="payments" className="text-xs sm:text-sm">Ödeme Yöntemleri</TabsTrigger>
+          <TabsTrigger value="waiters" className="text-xs sm:text-sm">Garson Satışları</TabsTrigger>
+          <TabsTrigger value="products" className="text-xs sm:text-sm">Ürün Satışları</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="hourly" className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">En Yüksek Ciro Saati</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-3xl font-bold">{hourlyPatterns.peakHour.hourLabel}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatNumber(hourlyPatterns.peakHour.transactions)} işlem
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary font-tabular-nums">
+                      {formatCurrency(hourlyPatterns.peakHour.revenue)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ort: {formatCurrency(hourlyPatterns.peakHour.averageTransaction)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">En Yoğun Saat</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-3xl font-bold">{hourlyPatterns.busiestHour.hourLabel}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatNumber(hourlyPatterns.busiestHour.items)} ürün satıldı
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-accent font-tabular-nums">
+                      {formatNumber(hourlyPatterns.busiestHour.transactions)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      işlem sayısı
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Saatlik Ciro Grafiği</CardTitle>
+              <CardDescription>
+                Satışların saatlere göre dağılımı ve trend analizi
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={hourlyPatterns.hourlyData}>
+                  <defs>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="hourLabel" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '0.5rem',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: number) => [formatCurrency(value), 'Ciro']}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    fill="url(#revenueGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Saatlik İşlem Sayısı</CardTitle>
+              <CardDescription>
+                Müşteri yoğunluğunun saatlere göre dağılımı
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={hourlyPatterns.hourlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="hourLabel" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '0.5rem',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: number) => [formatNumber(value), 'İşlem']}
+                  />
+                  <Bar 
+                    dataKey="transactions" 
+                    fill="hsl(var(--accent))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Ciro & İşlem Karşılaştırması</CardTitle>
+              <CardDescription>
+                Saatlik ciro ve işlem sayısı paralel karşılaştırma
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={hourlyPatterns.hourlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="hourLabel" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '0.5rem',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '12px' }}
+                    formatter={(value) => value === 'revenue' ? 'Ciro (₺)' : 'İşlem Sayısı'}
+                  />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--primary))', r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line 
+                    yAxisId="right"
+                    type="monotone" 
+                    dataKey="transactions" 
+                    stroke="hsl(var(--accent))" 
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--accent))', r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Saatlik Ortalama Sepet Tutarı</CardTitle>
+              <CardDescription>
+                Her saatte gerçekleşen ortalama işlem tutarı
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={hourlyPatterns.hourlyData.filter(d => d.transactions > 0)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="hourLabel" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    tickFormatter={(value) => `₺${value.toFixed(0)}`}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '0.5rem',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: number) => [formatCurrency(value), 'Ortalama Sepet']}
+                  />
+                  <Bar 
+                    dataKey="averageTransaction" 
+                    fill="hsl(var(--primary))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Saatlik Detay Raporu</CardTitle>
+              <CardDescription>
+                Her saatin detaylı satış istatistikleri
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {hourlyPatterns.hourlyData
+                  .filter(d => d.transactions > 0)
+                  .sort((a, b) => b.revenue - a.revenue)
+                  .map((data, index) => (
+                    <div key={data.hour} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                          <span className="font-bold text-primary text-xs">#{index + 1}</span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" weight="bold" />
+                            <span className="font-semibold">{data.hourLabel}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatNumber(data.transactions)} işlem • {formatNumber(data.items)} ürün
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold font-tabular-nums">
+                          {formatCurrency(data.revenue)}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-tabular-nums">
+                          Ort: {formatCurrency(data.averageTransaction)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                {hourlyPatterns.hourlyData.every(d => d.transactions === 0) && (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Seçili dönemde işlem yok
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="payments" className="space-y-4">
           <Card>
