@@ -87,27 +87,75 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
   const currentSettings = (salarySettings || [])[0] || defaultSettings;
 
   const employeeLogin = () => {
+    console.log('=== PIN Doğrulama Başladı ===');
+    console.log('Girilen PIN:', loginPin);
+    console.log('PIN uzunluğu:', loginPin?.length);
+    
     let employee: Employee | undefined;
 
     if (loginPin) {
       const trimmedPin = loginPin.trim();
-      employee = (employees || []).find(e => 
-        e.employeePin && 
-        e.employeePin.trim() === trimmedPin && 
-        e.isActive &&
-        (!authSession?.branchId || e.branchId === authSession.branchId)
-      );
+      console.log('Temizlenmiş PIN:', trimmedPin);
+      console.log('Temizlenmiş PIN uzunluğu:', trimmedPin.length);
+      
+      console.log('Mevcut çalışanlar:', (employees || []).length);
+      console.log('Aktif şube ID:', authSession?.branchId);
+      
+      const allEmployees = employees || [];
+      console.log('Tüm çalışan bilgileri:');
+      allEmployees.forEach((e, index) => {
+        console.log(`  Çalışan ${index + 1}:`, {
+          id: e.id,
+          fullName: e.fullName,
+          employeePin: e.employeePin,
+          employeePinLength: e.employeePin?.length,
+          isActive: e.isActive,
+          branchId: e.branchId,
+          branchMatch: !authSession?.branchId || e.branchId === authSession.branchId
+        });
+      });
+      
+      employee = allEmployees.find(e => {
+        const hasPin = !!e.employeePin;
+        const trimmedEmployeePin = e.employeePin?.trim();
+        const pinMatch = trimmedEmployeePin === trimmedPin;
+        const isActiveEmployee = e.isActive;
+        const branchMatch = !authSession?.branchId || e.branchId === authSession.branchId;
+        
+        console.log(`Çalışan "${e.fullName}" kontrol ediliyor:`, {
+          hasPin,
+          trimmedEmployeePin,
+          pinMatch,
+          isActiveEmployee,
+          branchMatch,
+          overall: hasPin && pinMatch && isActiveEmployee && branchMatch
+        });
+        
+        return hasPin && pinMatch && isActiveEmployee && branchMatch;
+      });
+      
+      console.log('Bulunan çalışan:', employee ? {
+        id: employee.id,
+        fullName: employee.fullName,
+        branchId: employee.branchId
+      } : 'Bulunamadı');
     }
 
     if (!employee) {
+      console.log('❌ PIN Doğrulama Başarısız');
       toast.error('Geçersiz PIN kodu veya bu şubede yetkiniz yok');
       setLoginPin('');
       return;
     }
 
+    console.log('✅ PIN Doğrulama Başarılı');
+    console.log('Giriş yapan çalışan:', employee.fullName);
+
     const activeShift = (shifts || []).find(
       s => s.employeeId === employee.id && s.status === 'in_progress'
     );
+
+    console.log('Aktif vardiya:', activeShift ? 'Var (Çıkış yapılacak)' : 'Yok (Giriş yapılacak)');
 
     if (activeShift) {
       clockOut(activeShift.id);
@@ -117,6 +165,7 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
 
     setLoginPin('');
     setShowLoginDialog(false);
+    console.log('=== PIN Doğrulama Tamamlandı ===');
   };
 
   const clockIn = (employeeId: string) => {
