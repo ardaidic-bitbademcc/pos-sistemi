@@ -11,11 +11,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, QrCode, User, Gear, Plus, Trash, PencilSimple, Receipt, Money, CreditCard, Bank, DeviceMobile, Ticket } from '@phosphor-icons/react';
+import { ArrowLeft, ClockClockwise, Check, CurrencyCircleDollar, X, User, Gear, Plus, Trash, PencilSimple, Receipt, Money, CreditCard, Bank, DeviceMobile, Ticket } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, UserRole, CustomerAccount, CustomerTransaction, AuthSession } from '@/lib/types';
 import { formatCurrency, formatDateTime, calculateHoursWorked, generateId, formatDate } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
+import Numpad from '@/components/Numpad';
 
 interface PersonnelModuleProps {
   onBack: () => void;
@@ -44,7 +45,6 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
   const [selectedSalary, setSelectedSalary] = useState<SalaryCalculation | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [loginPin, setLoginPin] = useState('');
-  const [loginQr, setLoginQr] = useState('');
   const [editingSettings, setEditingSettings] = useState<SalaryCalculationSettings | null>(null);
   const [showSalaryDetailDialog, setShowSalaryDetailDialog] = useState(false);
   const [salaryDetailForView, setSalaryDetailForView] = useState<SalaryCalculation | null>(null);
@@ -87,12 +87,10 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
 
     if (loginPin) {
       employee = (employees || []).find(e => e.employeePin === loginPin && e.isActive);
-    } else if (loginQr) {
-      employee = (employees || []).find(e => e.qrCode === loginQr && e.isActive);
     }
 
     if (!employee) {
-      toast.error('Geçersiz giriş bilgisi');
+      toast.error('Geçersiz PIN kodu');
       return;
     }
 
@@ -107,7 +105,6 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
     }
 
     setLoginPin('');
-    setLoginQr('');
     setShowLoginDialog(false);
   };
 
@@ -697,58 +694,40 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
       </Tabs>
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Personel Giriş/Çıkış</DialogTitle>
             <DialogDescription>
-              PIN kodu girin veya aşağıdaki QR kodunuzu mobil cihazınızla okutun
+              4 haneli PIN kodunuzu girin
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>PIN Kodu</Label>
-              <Input
-                type="password"
-                placeholder="PIN kodunuzu girin (4 haneli)"
-                value={loginPin}
-                onChange={(e) => setLoginPin(e.target.value)}
-                maxLength={4}
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <Separator className="flex-1" />
-              <span className="text-sm text-muted-foreground">veya</span>
-              <Separator className="flex-1" />
-            </div>
-            <div className="space-y-3">
-              <Label className="flex items-center gap-2">
-                <QrCode className="h-5 w-5" weight="bold" />
-                QR Kodunuzu Telefonunuzla Okutun
-              </Label>
-              <div className="grid grid-cols-4 gap-3">
-                {activeEmployees.slice(0, 8).map((emp) => (
-                  <Card key={emp.id} className="p-3 cursor-pointer hover:bg-accent transition-colors" onClick={() => {
-                    setLoginQr(emp.qrCode || '');
-                    setTimeout(() => employeeLogin(), 100);
-                  }}>
-                    <div className="aspect-square bg-background border-2 rounded-lg p-2 flex flex-col items-center justify-center gap-1">
-                      <QrCode className="h-8 w-8 text-primary" weight="fill" />
-                      <div className="text-[8px] text-center font-medium leading-tight">{emp.fullName.split(' ')[0]}</div>
-                    </div>
-                  </Card>
-                ))}
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-3xl font-bold font-tabular-nums tracking-widest min-h-[48px] flex items-center justify-center">
+                  {loginPin ? '•'.repeat(loginPin.length) : '----'}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Bu QR kodlar simülasyondur. Gerçek uygulamada mobil cihazınızla okutacaksınız.
-              </p>
             </div>
+            <Numpad 
+              value={loginPin} 
+              onChange={(val) => {
+                if (val.length <= 4) {
+                  setLoginPin(val);
+                  if (val.length === 4) {
+                    setTimeout(() => {
+                      employeeLogin();
+                    }, 300);
+                  }
+                }
+              }}
+              mode="number"
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowLoginDialog(false);
               setLoginPin('');
-              setLoginQr('');
             }}>
               İptal
             </Button>
