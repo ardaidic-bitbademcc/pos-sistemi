@@ -20,7 +20,9 @@ import {
   ArrowsClockwise,
   Calendar,
   Code,
-  Eye
+  Eye,
+  CurrencyCircleDollar,
+  Wallet
 } from '@phosphor-icons/react';
 import { Logger, type LogEntry, type LogLevel } from '@/lib/logger';
 import { formatDateTime } from '@/lib/helpers';
@@ -36,6 +38,7 @@ export default function LogViewer() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [showPaymentLogsOnly, setShowPaymentLogsOnly] = useState(false);
 
   const loadLogs = async () => {
     setIsLoading(true);
@@ -64,6 +67,14 @@ export default function LogViewer() {
   useEffect(() => {
     let filtered = [...logs];
 
+    if (showPaymentLogsOnly) {
+      filtered = filtered.filter(log => 
+        log.category === 'payment' || 
+        log.category === 'transaction' ||
+        log.category === 'cash-register'
+      );
+    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -84,7 +95,7 @@ export default function LogViewer() {
     }
 
     setFilteredLogs(filtered);
-  }, [logs, searchQuery, levelFilter, categoryFilter]);
+  }, [logs, searchQuery, levelFilter, categoryFilter, showPaymentLogsOnly]);
 
   const handleClearLogs = async () => {
     if (window.confirm('Tüm logları silmek istediğinizden emin misiniz?')) {
@@ -174,6 +185,9 @@ export default function LogViewer() {
     warn: logs.filter(l => l.level === 'warn').length,
     error: logs.filter(l => l.level === 'error').length,
     success: logs.filter(l => l.level === 'success').length,
+    payments: logs.filter(l => l.category === 'payment').length,
+    transactions: logs.filter(l => l.category === 'transaction').length,
+    cashRegister: logs.filter(l => l.category === 'cash-register').length,
   };
 
   return (
@@ -258,6 +272,30 @@ export default function LogViewer() {
             </Card>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <Card className="p-3 bg-blue-50 border-blue-200">
+              <div className="text-xs text-blue-700 flex items-center gap-1 font-medium">
+                <CurrencyCircleDollar className="h-3 w-3" />
+                Ödeme Logları
+              </div>
+              <div className="text-2xl font-bold text-blue-900">{stats.payments}</div>
+            </Card>
+            <Card className="p-3 bg-purple-50 border-purple-200">
+              <div className="text-xs text-purple-700 flex items-center gap-1 font-medium">
+                <ArrowsClockwise className="h-3 w-3" />
+                İşlem Logları
+              </div>
+              <div className="text-2xl font-bold text-purple-900">{stats.transactions}</div>
+            </Card>
+            <Card className="p-3 bg-green-50 border-green-200">
+              <div className="text-xs text-green-700 flex items-center gap-1 font-medium">
+                <Wallet className="h-3 w-3" />
+                Kasa Logları
+              </div>
+              <div className="text-2xl font-bold text-green-900">{stats.cashRegister}</div>
+            </Card>
+          </div>
+
           <Separator />
 
           <div className="flex flex-col sm:flex-row gap-2">
@@ -270,6 +308,15 @@ export default function LogViewer() {
                 className="pl-9"
               />
             </div>
+            <Button
+              variant={showPaymentLogsOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowPaymentLogsOnly(!showPaymentLogsOnly)}
+              className="shrink-0"
+            >
+              <CurrencyCircleDollar className="h-4 w-4 mr-2" />
+              {showPaymentLogsOnly ? 'Tüm Loglar' : 'Sadece Ödemeler'}
+            </Button>
             <Select value={levelFilter} onValueChange={(value: any) => setLevelFilter(value)}>
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Seviye" />

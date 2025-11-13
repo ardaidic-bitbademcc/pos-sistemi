@@ -20,6 +20,7 @@ import ProductOptionsSelector from '@/components/ProductOptionsSelector';
 import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem, CustomerAccount, CustomerTransaction, AuthSession } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
+import { Logger } from '@/lib/logger';
 
 interface POSModuleProps {
   onBack: () => void;
@@ -59,7 +60,7 @@ interface SelectedPaymentItem {
   quantity: number;
 }
 
-export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSModuleProps) {
+export default function POSModule({ onBack, currentUserRole = 'cashier', authSession }: POSModuleProps) {
   const [products, setProducts] = useKV<Product[]>('products', []);
   const [menuItems] = useKV<MenuItem[]>('menuItems', []);
   const [categories] = useKV<Category[]>('categories', []);
@@ -868,6 +869,9 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const completePartialPayment = () => {
     if (selectedPaymentItems.length === 0) {
       toast.error('Ödeme için ürün seçin');
+      Logger.logPaymentError('Partial payment failed - no items selected', {
+        userId: authSession?.userId,
+      });
       return;
     }
 
@@ -877,6 +881,10 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     const selectedPaymentMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === finalPaymentMethod);
     if (!selectedPaymentMethodSetting || !selectedPaymentMethodSetting.isActive) {
       toast.error(`${finalPaymentMethod} ödeme yöntemi şu anda pasif durumda. Lütfen başka bir yöntem seçin.`);
+      Logger.logPaymentError('Partial payment method inactive', {
+        paymentMethod: finalPaymentMethod,
+        userId: authSession?.userId,
+      });
       return;
     }
 
@@ -885,6 +893,11 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         const splitMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === split.method);
         if (!splitMethodSetting || !splitMethodSetting.isActive) {
           toast.error(`${split.method} ödeme yöntemi şu anda pasif durumda. Lütfen parçalı ödemeleri kontrol edin.`);
+          Logger.logPaymentError('Partial split payment method inactive', {
+            paymentMethod: split.method,
+            amount: split.amount,
+            userId: authSession?.userId,
+          });
           return;
         }
       }
@@ -892,6 +905,12 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
       if (Math.abs(totalPaid - partialTotals.total) > 0.01) {
         toast.error(`Toplam ödeme ${formatCurrency(totalPaid)} - Kalan: ${formatCurrency(partialTotals.total - totalPaid)}`);
+        Logger.logPaymentError('Partial payment amount mismatch', {
+          totalPaid,
+          expectedAmount: partialTotals.total,
+          difference: partialTotals.total - totalPaid,
+          splitPayments,
+        });
         return;
       }
     }
@@ -925,8 +944,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     const saleId = generateId();
     const newSale: Sale = {
       id: saleId,
-      branchId: 'branch-1',
-      cashierId: 'cashier-1',
+      branchId: authSession?.branchId || 'branch-1',
+      cashierId: authSession?.userId || 'cashier-1',
       saleNumber: generateSaleNumber(),
       saleDate: new Date().toISOString(),
       subtotal: partialTotals.subtotal,
@@ -944,6 +963,27 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
           ? `Masa ${selectedTable.tableNumber} - Parçalı ödeme` 
           : 'Parçalı ödeme',
     };
+
+    Logger.logPayment('Partial payment completed successfully', {
+      paymentMethod: finalPaymentMethod,
+      amount: partialTotals.total,
+      saleNumber: newSale.saleNumber,
+      saleId: newSale.id,
+      tableNumber: selectedTable?.tableNumber,
+      splitPayments: splitPayments.length > 0 ? splitPayments : undefined,
+      subtotal: partialTotals.subtotal,
+      taxAmount: partialTotals.taxAmount,
+      totalAmount: partialTotals.total,
+      items: paidItems.map(item => ({
+        name: item.productName,
+        quantity: item.quantity,
+        price: item.unitPrice,
+      })),
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
 
     setSales((currentSales) => [...(currentSales || []), newSale]);
     updateCashRegister(finalPaymentMethod, partialTotals.total, splitPayments);
@@ -1036,12 +1076,22 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const completeSale = () => {
     if (cart.length === 0) {
       toast.error('Sepette ürün yok');
+      Logger.logPaymentError('Sale completion failed - empty cart', {
+        userId: authSession?.userId,
+        userName: authSession?.userName,
+        branchId: authSession?.branchId,
+      });
       return;
     }
 
     const selectedPaymentMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === paymentMethod);
     if (!selectedPaymentMethodSetting || !selectedPaymentMethodSetting.isActive) {
       toast.error(`${paymentMethod} ödeme yöntemi şu anda pasif durumda. Lütfen başka bir yöntem seçin.`);
+      Logger.logPaymentError('Payment method inactive', {
+        paymentMethod,
+        userId: authSession?.userId,
+        userName: authSession?.userName,
+      });
       return;
     }
 
@@ -1052,6 +1102,11 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         const splitMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === split.method);
         if (!splitMethodSetting || !splitMethodSetting.isActive) {
           toast.error(`${split.method} ödeme yöntemi şu anda pasif durumda. Lütfen parçalı ödemeleri kontrol edin.`);
+          Logger.logPaymentError('Split payment method inactive', {
+            paymentMethod: split.method,
+            amount: split.amount,
+            userId: authSession?.userId,
+          });
           return;
         }
       }
@@ -1059,6 +1114,12 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
       if (Math.abs(totalPaid - totals.total) > 0.01) {
         toast.error(`Toplam ödeme ${formatCurrency(totalPaid)} - Kalan: ${formatCurrency(totals.total - totalPaid)}`);
+        Logger.logPaymentError('Split payment amount mismatch', {
+          totalPaid,
+          expectedAmount: totals.total,
+          difference: totals.total - totalPaid,
+          splitPayments,
+        });
         return;
       }
     }
@@ -1072,8 +1133,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     
     const newSale: Sale = {
       id: saleId,
-      branchId: 'branch-1',
-      cashierId: 'cashier-1',
+      branchId: authSession?.branchId || 'branch-1',
+      cashierId: authSession?.userId || 'cashier-1',
       saleNumber: generateSaleNumber(),
       saleDate: new Date().toISOString(),
       subtotal: totals.subtotal,
@@ -1087,6 +1148,30 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       remainingAmount: 0,
       notes: splitPayments.length > 0 ? `Parçalı ödeme: ${splitPayments.map(p => `${p.method}=${formatCurrency(p.amount)}`).join(', ')}` : undefined,
     };
+
+    Logger.logPayment('Sale completed successfully', {
+      paymentMethod: finalPaymentMethod,
+      amount: totals.total,
+      saleNumber: newSale.saleNumber,
+      saleId: newSale.id,
+      tableNumber: selectedTable?.tableNumber,
+      splitPayments: splitPayments.length > 0 ? splitPayments : undefined,
+      cashReceived: cashReceived ? parseFloat(cashReceived) : undefined,
+      changeGiven: cashReceived ? parseFloat(cashReceived) - totals.total : undefined,
+      discount: orderDiscount,
+      subtotal: totals.subtotal,
+      taxAmount: totals.taxAmount,
+      totalAmount: totals.total,
+      items: cart.map(item => ({
+        name: item.productName,
+        quantity: item.quantity,
+        price: item.unitPrice,
+      })),
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
 
     if (selectedTable?.currentSaleId) {
       setSales((currentSales) => 
@@ -1135,17 +1220,30 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
   const completeCustomerAccountSale = () => {
     if (!selectedCustomerAccount) {
       toast.error('Lütfen bir cari hesap seçin');
+      Logger.logPaymentError('Customer account sale failed - no account selected', {
+        userId: authSession?.userId,
+      });
       return;
     }
 
     const account = (customerAccounts || []).find(a => a.id === selectedCustomerAccount);
     if (!account) {
       toast.error('Seçili hesap bulunamadı');
+      Logger.logPaymentError('Customer account not found', {
+        customerAccountId: selectedCustomerAccount,
+        userId: authSession?.userId,
+      });
       return;
     }
 
     if (account.status !== 'active') {
       toast.error('Bu hesap aktif değil');
+      Logger.logPaymentError('Customer account inactive', {
+        customerAccountId: account.id,
+        customerName: account.customerName,
+        status: account.status,
+        userId: authSession?.userId,
+      });
       return;
     }
 
@@ -1153,6 +1251,10 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
 
     if (cart.length === 0) {
       toast.error('Sepette ürün yok');
+      Logger.logPaymentError('Customer account sale failed - empty cart', {
+        customerAccountId: account.id,
+        userId: authSession?.userId,
+      });
       return;
     }
 
@@ -1164,8 +1266,8 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
     
     const newSale: Sale = {
       id: saleId,
-      branchId: 'branch-1',
-      cashierId: 'cashier-1',
+      branchId: authSession?.branchId || 'branch-1',
+      cashierId: authSession?.userId || 'cashier-1',
       saleNumber: generateSaleNumber(),
       saleDate: new Date().toISOString(),
       subtotal: totals.subtotal,
@@ -1200,12 +1302,50 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       saleId: saleId,
       saleNumber: newSale.saleNumber,
       date: new Date().toISOString(),
-      createdBy: 'current-user',
-      createdByName: 'Kullanıcı',
+      createdBy: authSession?.userId || 'current-user',
+      createdByName: authSession?.userName || 'Kullanıcı',
       balanceBefore: balanceBefore,
       balanceAfter: balanceAfter,
       notes: selectedTable ? `Masa ${selectedTable.tableNumber}` : undefined,
     };
+
+    Logger.logTransaction('Customer account sale completed', {
+      transactionId: transaction.id,
+      transactionType: 'sale',
+      amount: totals.total,
+      balanceBefore,
+      balanceAfter,
+      customerAccountId: account.id,
+      customerName: account.customerName,
+      paymentMethod: 'account',
+      notes: newSale.notes,
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
+
+    Logger.logPayment('Customer account payment recorded', {
+      paymentMethod: 'account',
+      amount: totals.total,
+      saleNumber: newSale.saleNumber,
+      saleId: newSale.id,
+      customerAccount: `${account.customerName} (${account.accountNumber})`,
+      tableNumber: selectedTable?.tableNumber,
+      discount: orderDiscount,
+      subtotal: totals.subtotal,
+      taxAmount: totals.taxAmount,
+      totalAmount: totals.total,
+      items: cart.map(item => ({
+        name: item.productName,
+        quantity: item.quantity,
+        price: item.unitPrice,
+      })),
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
 
     setCustomerTransactions((current) => [...(current || []), transaction]);
 
@@ -1284,7 +1424,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
       if (!current || current.date !== today) {
         const newRegister: CashRegister = {
           id: generateId(),
-          branchId: 'branch-1',
+          branchId: authSession?.branchId || 'branch-1',
           date: today,
           openingBalance: current?.currentBalance || 0,
           currentBalance: current?.currentBalance || 0,
@@ -1321,7 +1461,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         else if (method === 'multinet') multinetAmount = amount;
       }
 
-      return {
+      const updatedRegister = {
         ...current,
         currentBalance: current.currentBalance + cashAmount,
         totalCashSales: current.totalCashSales + cashAmount,
@@ -1332,6 +1472,28 @@ export default function POSModule({ onBack, currentUserRole = 'cashier' }: POSMo
         totalSales: current.totalSales + amount,
         lastUpdated: new Date().toISOString(),
       };
+
+      Logger.info('cash-register', 'Cash register updated', {
+        registerId: updatedRegister.id,
+        date: updatedRegister.date,
+        paymentMethod: method,
+        amount,
+        cashAmount,
+        cardAmount,
+        mobileAmount,
+        transferAmount,
+        multinetAmount,
+        splitPayments: splits.length > 0 ? splits : undefined,
+        previousBalance: current.currentBalance,
+        newBalance: updatedRegister.currentBalance,
+        totalSales: updatedRegister.totalSales,
+      }, {
+        userId: authSession?.userId,
+        userName: authSession?.userName,
+        branchId: authSession?.branchId,
+      });
+
+      return updatedRegister;
     });
   };
 

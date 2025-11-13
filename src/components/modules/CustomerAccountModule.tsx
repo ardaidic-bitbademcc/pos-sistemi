@@ -19,6 +19,7 @@ import type { CustomerAccount, CustomerTransaction, Employee, AuthSession, Sale,
 import { formatCurrency, formatDateTime, generateId, generateAccountNumber } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 import { exportAccountStatementToPDF, exportAllAccountsToPDF } from '@/lib/pdf-export';
+import { Logger } from '@/lib/logger';
 
 interface CustomerAccountModuleProps {
   onBack: () => void;
@@ -207,6 +208,11 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Geçerli bir tutar girin');
+      Logger.logPaymentError('Invalid payment amount', {
+        amount: paymentAmount,
+        customerAccountId: selectedAccount.id,
+        userId: authSession?.userId,
+      });
       return;
     }
 
@@ -221,12 +227,38 @@ export default function CustomerAccountModule({ onBack, authSession }: CustomerA
       description: 'Ödeme',
       paymentMethod: paymentMethod,
       date: new Date().toISOString(),
-      createdBy: 'current-user',
-      createdByName: 'Kullanıcı',
+      createdBy: authSession?.userId || 'current-user',
+      createdByName: authSession?.userName || 'Kullanıcı',
       balanceBefore: balanceBefore,
       balanceAfter: balanceAfter,
       notes: paymentNotes || undefined,
     };
+
+    Logger.logTransaction('Customer account payment received', {
+      transactionId: transaction.id,
+      transactionType: 'payment',
+      amount: amount,
+      balanceBefore,
+      balanceAfter,
+      customerAccountId: selectedAccount.id,
+      customerName: selectedAccount.customerName,
+      paymentMethod: paymentMethod,
+      notes: paymentNotes || undefined,
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
+
+    Logger.logPayment('Customer payment recorded', {
+      paymentMethod: paymentMethod,
+      amount: amount,
+      customerAccount: `${selectedAccount.customerName} (${selectedAccount.accountNumber})`,
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
 
     setTransactions((current) => [...(current || []), transaction]);
     setAccounts((current) =>

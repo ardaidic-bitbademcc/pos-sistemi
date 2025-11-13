@@ -14,6 +14,35 @@ export interface LogEntry {
   sessionId?: string;
 }
 
+export interface PaymentLogData {
+  paymentMethod: string;
+  amount: number;
+  saleNumber?: string;
+  saleId?: string;
+  tableNumber?: string;
+  customerAccount?: string;
+  splitPayments?: Array<{ method: string; amount: number }>;
+  cashReceived?: number;
+  changeGiven?: number;
+  discount?: number;
+  subtotal?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  items?: Array<{ name: string; quantity: number; price: number }>;
+}
+
+export interface TransactionLogData {
+  transactionId: string;
+  transactionType: 'sale' | 'refund' | 'payment' | 'transfer' | 'adjustment';
+  amount: number;
+  balanceBefore?: number;
+  balanceAfter?: number;
+  customerAccountId?: string;
+  customerName?: string;
+  paymentMethod?: string;
+  notes?: string;
+}
+
 export class Logger {
   private static readonly MAX_LOGS = 1000;
   private static readonly STORAGE_KEY = 'systemLogs';
@@ -121,5 +150,46 @@ export class Logger {
   static async exportLogs(): Promise<string> {
     const logs = await this.getLogs();
     return JSON.stringify(logs, null, 2);
+  }
+
+  static async getPaymentLogs(): Promise<LogEntry[]> {
+    const logs = await this.getLogs();
+    return logs.filter(log => 
+      log.category === 'payment' || 
+      log.category === 'transaction' ||
+      log.category === 'cash-register'
+    );
+  }
+
+  static logPayment(
+    message: string,
+    paymentData: PaymentLogData,
+    context?: Partial<LogEntry>
+  ): void {
+    this.info('payment', message, paymentData, context);
+  }
+
+  static logTransaction(
+    message: string,
+    transactionData: TransactionLogData,
+    context?: Partial<LogEntry>
+  ): void {
+    this.info('transaction', message, transactionData, context);
+  }
+
+  static logPaymentError(
+    message: string,
+    errorData: any,
+    context?: Partial<LogEntry>
+  ): void {
+    this.error('payment', message, errorData, context);
+  }
+
+  static logTransactionError(
+    message: string,
+    errorData: any,
+    context?: Partial<LogEntry>
+  ): void {
+    this.error('transaction', message, errorData, context);
   }
 }

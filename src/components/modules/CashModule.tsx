@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 import { formatCurrency, getStartOfDay } from '@/lib/helpers';
 import type { CashTransaction, CashRegisterStatus, Branch, Sale, UserRole, RolePermissions, AuthSession } from '@/lib/types';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
+import { Logger } from '@/lib/logger';
 
 interface CashModuleProps {
   onBack: () => void;
@@ -129,7 +130,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   },
 ];
 
-export default function CashModule({ onBack, currentUserRole = 'owner' }: CashModuleProps) {
+export default function CashModule({ onBack, currentUserRole = 'owner', authSession }: CashModuleProps) {
   const [branches] = useKV<Branch[]>('branches', []);
   const [sales] = useKV<Sale[]>('sales', []);
   const [cashRegisters, setCashRegisters] = useKV<CashRegisterStatus[]>('cashRegisters', []);
@@ -241,6 +242,18 @@ export default function CashModule({ onBack, currentUserRole = 'owner' }: CashMo
       isOpen: true,
     };
 
+    Logger.info('cash-register', 'Cash register opened', {
+      registerId: newRegister.id,
+      branchId: activeBranch.id,
+      branchName: activeBranch.name,
+      openingBalance: 0,
+      openedAt: newRegister.openedAt,
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
+
     setCashRegisters((prev) => [...(prev || []), newRegister]);
     toast.success('Kasa açıldı');
   };
@@ -248,6 +261,10 @@ export default function CashModule({ onBack, currentUserRole = 'owner' }: CashMo
   const closeCashRegister = () => {
     if (!canCloseCash) {
       toast.error('Kasayı kapatma yetkiniz bulunmamakta');
+      Logger.warn('cash-register', 'Unauthorized cash register close attempt', {
+        userId: authSession?.userId,
+        userRole: currentUserRole,
+      });
       return;
     }
 
@@ -255,6 +272,25 @@ export default function CashModule({ onBack, currentUserRole = 'owner' }: CashMo
       toast.error('Açık kasa bulunamadı');
       return;
     }
+
+    Logger.info('cash-register', 'Cash register closed', {
+      registerId: currentCashRegister.id,
+      branchId: currentCashRegister.branchId,
+      openingBalance: currentCashRegister.openingBalance,
+      closingBalance: currentCashRegister.currentBalance,
+      expectedBalance: stats.expectedBalance,
+      difference: stats.difference,
+      totalIn: stats.totalIn,
+      totalOut: stats.totalOut,
+      totalSales: stats.totalSales,
+      transactionCount: currentCashRegister.transactions.length,
+      openedAt: currentCashRegister.openedAt,
+      closedAt: new Date().toISOString(),
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
 
     setCashRegisters((prev) =>
       (prev || []).map((cr) =>
@@ -292,17 +328,32 @@ export default function CashModule({ onBack, currentUserRole = 'owner' }: CashMo
 
     if (transactionType === 'out' && !canWithdrawCash) {
       toast.error('Para çıkışı yapma yetkiniz bulunmamakta');
+      Logger.warn('cash-register', 'Unauthorized cash withdrawal attempt', {
+        userId: authSession?.userId,
+        userRole: currentUserRole,
+        amount: transactionAmount,
+      });
       return;
     }
 
     if (transactionType === 'in' && !canAddCash) {
       toast.error('Para ekleme yetkiniz bulunmamakta');
+      Logger.warn('cash-register', 'Unauthorized cash addition attempt', {
+        userId: authSession?.userId,
+        userRole: currentUserRole,
+        amount: transactionAmount,
+      });
       return;
     }
 
     const amount = parseFloat(transactionAmount);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Geçerli bir tutar girin');
+      Logger.logPaymentError('Invalid cash transaction amount', {
+        amount: transactionAmount,
+        type: transactionType,
+        userId: authSession?.userId,
+      });
       return;
     }
 
@@ -314,25 +365,51 @@ export default function CashModule({ onBack, currentUserRole = 'owner' }: CashMo
     const transaction: CashTransaction = {
       id: `transaction-${Date.now()}`,
       branchId: activeBranch.id,
+      adminId: authSession?.adminId,
       type: transactionType,
       amount,
       description: transactionDescription.trim(),
       date: new Date().toISOString(),
-      createdBy: 'current-user',
+      createdBy: authSession?.userId || 'current-user',
       createdAt: new Date().toISOString(),
     };
+
+    const balanceBefore = currentCashRegister.currentBalance;
+    const balanceAfter = transactionType === 'in' ? balanceBefore + amount : balanceBefore - amount;
+
+    Logger.logTransaction('Cash transaction recorded', {
+      transactionId: transaction.id,
+      transactionType: transactionType === 'in' ? 'transfer' : 'adjustment',
+      amount,
+      balanceBefore,
+      balanceAfter,
+      notes: transactionDescription.trim(),
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
+
+    Logger.info('cash-register', `Cash ${transactionType === 'in' ? 'added to' : 'withdrawn from'} register`, {
+      registerId: currentCashRegister.id,
+      transactionId: transaction.id,
+      type: transactionType,
+      amount,
+      description: transactionDescription.trim(),
+      balanceBefore,
+      balanceAfter,
+    }, {
+      userId: authSession?.userId,
+      userName: authSession?.userName,
+      branchId: authSession?.branchId,
+    });
 
     setCashRegisters((prev) =>
       (prev || []).map((cr) => {
         if (cr.id === currentCashRegister.id) {
-          const newBalance =
-            transactionType === 'in'
-              ? cr.currentBalance + amount
-              : cr.currentBalance - amount;
-
           return {
             ...cr,
-            currentBalance: newBalance,
+            currentBalance: balanceAfter,
             totalIn: transactionType === 'in' ? cr.totalIn + amount : cr.totalIn,
             totalOut: transactionType === 'out' ? cr.totalOut + amount : cr.totalOut,
             transactions: [...cr.transactions, transaction],
