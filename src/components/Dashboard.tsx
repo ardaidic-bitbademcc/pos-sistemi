@@ -226,6 +226,15 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
       bgColor: 'bg-purple-600/10',
     },
     {
+      id: 'cash-monitor' as any,
+      moduleId: 'cash-monitor' as Module,
+      title: 'Kasa İzleme',
+      description: 'Gerçek zamanlı kasa operasyonları',
+      icon: ClockClockwise,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-600/10',
+    },
+    {
       id: 'finance' as const,
       moduleId: 'finance' as Module,
       title: 'Finans Yönetimi',
@@ -257,6 +266,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
   const moduleCards = allModuleCards.filter(card => {
     if (card.id === 'qrmenu' || card.id === 'tasks' || card.id === 'b2b' || card.id === 'customers') return hasModuleAccess('tasks');
     if (card.id === 'admin') return currentUserRole === 'owner';
+    if (card.id === 'cash-monitor') return currentUserRole === 'owner' || currentUserRole === 'manager';
     return hasModuleAccess(card.id);
   });
 

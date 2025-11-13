@@ -3,7 +3,14 @@ import { useKV } from '@github/spark/hooks';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SignOut, CurrencyCircleDollar, Shield, Buildings, LockKey } from '@phosphor-icons/react';
+import { 
+  SignOut, 
+  CurrencyCircleDollar, 
+  Shield, 
+  Buildings, 
+  LockKey, 
+  ClockClockwise 
+} from '@phosphor-icons/react';
 import Login from '@/components/Login';
 import RegisterLogin from '@/components/RegisterLogin';
 import BranchSelector from '@/components/BranchSelector';
@@ -22,6 +29,7 @@ import TaskManagementModule from '@/components/modules/TaskManagementModule';
 import B2BModule from '@/components/modules/B2BModule';
 import CustomerAccountModule from '@/components/modules/CustomerAccountModule';
 import AdminModule from '@/components/modules/AdminModule';
+import CashRegisterMonitor from '@/components/CashRegisterMonitor';
 import DataMigration from '@/components/DataMigration';
 import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
@@ -29,7 +37,7 @@ import { checkMigrationStatus } from '@/lib/data-migration';
 import type { UserRole, AuthSession, Branch } from '@/lib/types';
 import { toast } from 'sonner';
 
-export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers' | 'admin';
+export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers' | 'admin' | 'cash-monitor';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
@@ -140,6 +148,8 @@ function App() {
         return <CustomerAccountModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'admin':
         return <AdminModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
+      case 'cash-monitor':
+        return <CashRegisterMonitor onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       default:
         return <Dashboard onNavigate={setActiveModule} currentUserRole={currentUserRole} authSession={authSession} />;
     }
@@ -190,6 +200,10 @@ function App() {
             <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')} className="h-8 px-2 sm:px-3">
               <CurrencyCircleDollar className="h-4 w-4 sm:mr-1" weight="fill" />
               <span className="hidden sm:inline">Kasa</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setActiveModule('cash-monitor')} className="h-8 px-2 sm:px-3 bg-primary/10 hover:bg-primary/20">
+              <ClockClockwise className="h-4 w-4 sm:mr-1" weight="fill" />
+              <span className="hidden sm:inline">İzleme</span>
             </Button>
             {currentUserRole === 'owner' && (
               <Button variant="outline" size="sm" onClick={() => setActiveModule('roles')} className="h-8 px-2 sm:px-3">
