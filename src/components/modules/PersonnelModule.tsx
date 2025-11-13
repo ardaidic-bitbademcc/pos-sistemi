@@ -57,12 +57,16 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
     email: '',
     phone: '',
     role: 'staff' as UserRole,
-    branchId: 'branch-1',
+    branchId: authSession?.branchId || 'branch-1',
     hourlyRate: 0,
     employeePin: '',
   });
 
-  const activeEmployees = (employees || []).filter((e) => e.isActive);
+  const { filteredItems: activeEmployees } = useBranchFilter(
+    (employees || []).filter((e) => e.isActive),
+    authSession
+  );
+  
   const todayShifts = (shifts || []).filter((s) => {
     const today = new Date().toDateString();
     return new Date(s.date).toDateString() === today;
@@ -86,11 +90,18 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
     let employee: Employee | undefined;
 
     if (loginPin) {
-      employee = (employees || []).find(e => e.employeePin === loginPin && e.isActive);
+      const trimmedPin = loginPin.trim();
+      employee = (employees || []).find(e => 
+        e.employeePin && 
+        e.employeePin.trim() === trimmedPin && 
+        e.isActive &&
+        (!authSession?.branchId || e.branchId === authSession.branchId)
+      );
     }
 
     if (!employee) {
-      toast.error('Geçersiz PIN kodu');
+      toast.error('Geçersiz PIN kodu veya bu şubede yetkiniz yok');
+      setLoginPin('');
       return;
     }
 
@@ -247,11 +258,28 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
       return;
     }
 
+    if (newEmployee.employeePin.length !== 4 || !/^\d{4}$/.test(newEmployee.employeePin)) {
+      toast.error('PIN kodu 4 haneli rakam olmalıdır');
+      return;
+    }
+
+    const pinExists = (employees || []).some(
+      e => e.isActive && e.employeePin === newEmployee.employeePin
+    );
+
+    if (pinExists) {
+      toast.error('Bu PIN kodu başka bir personel tarafından kullanılıyor');
+      return;
+    }
+
     const employee: Employee = {
       id: generateId(),
       ...newEmployee,
+      branchId: authSession?.branchId || newEmployee.branchId,
+      adminId: authSession?.adminId,
       isActive: true,
       qrCode: generateId(),
+      createdAt: new Date().toISOString(),
     };
 
     setEmployees((current) => [...(current || []), employee]);
@@ -262,7 +290,7 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
       email: '',
       phone: '',
       role: 'staff',
-      branchId: 'branch-1',
+      branchId: authSession?.branchId || 'branch-1',
       hourlyRate: 0,
       employeePin: '',
     });
@@ -290,9 +318,23 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
       return;
     }
 
+    if (employeeToEdit.employeePin.length !== 4 || !/^\d{4}$/.test(employeeToEdit.employeePin)) {
+      toast.error('PIN kodu 4 haneli rakam olmalıdır');
+      return;
+    }
+
+    const pinExists = (employees || []).some(
+      e => e.isActive && e.id !== employeeToEdit.id && e.employeePin === employeeToEdit.employeePin
+    );
+
+    if (pinExists) {
+      toast.error('Bu PIN kodu başka bir personel tarafından kullanılıyor');
+      return;
+    }
+
     setEmployees((current) =>
       (current || []).map(e =>
-        e.id === employeeToEdit.id ? employeeToEdit : e
+        e.id === employeeToEdit.id ? { ...employeeToEdit, updatedAt: new Date().toISOString() } : e
       )
     );
 
@@ -993,8 +1035,15 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
                 <Label>PIN Kodu (4 haneli) *</Label>
                 <Input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{4}"
                   value={newEmployee.employeePin}
-                  onChange={(e) => setNewEmployee({...newEmployee, employeePin: e.target.value})}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    if (value.length <= 4) {
+                      setNewEmployee({...newEmployee, employeePin: value});
+                    }
+                  }}
                   placeholder="1234"
                   maxLength={4}
                 />
@@ -1105,8 +1154,15 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
                   <Label>PIN Kodu (4 haneli) *</Label>
                   <Input
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{4}"
                     value={employeeToEdit.employeePin}
-                    onChange={(e) => setEmployeeToEdit({...employeeToEdit, employeePin: e.target.value})}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      if (value.length <= 4) {
+                        setEmployeeToEdit({...employeeToEdit, employeePin: value});
+                      }
+                    }}
                     placeholder="1234"
                     maxLength={4}
                   />

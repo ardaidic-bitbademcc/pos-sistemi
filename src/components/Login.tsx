@@ -48,11 +48,11 @@ export default function Login({ onLogin }: LoginProps) {
   useEffect(() => {
     if (employees && employees.length > 0) {
       const employeeCredentials: UserCredential[] = employees
-        .filter(emp => emp.isActive)
+        .filter(emp => emp.isActive && emp.employeePin && emp.employeePin.trim().length === 4)
         .map(emp => ({
           id: emp.id,
           name: emp.fullName,
-          pin: emp.employeePin,
+          pin: emp.employeePin.trim(),
           role: emp.role,
           employeeId: emp.id,
           isActive: true,
@@ -66,7 +66,12 @@ export default function Login({ onLogin }: LoginProps) {
 
   useEffect(() => {
     if (pin.length === 4) {
-      const user = users?.find(u => u.pin === pin && u.isActive);
+      const trimmedPin = pin.trim();
+      const user = users?.find(u => 
+        u.pin && 
+        u.pin.trim() === trimmedPin && 
+        u.isActive
+      );
       if (user) {
         setError(false);
         onLogin(user.role, user.name);
