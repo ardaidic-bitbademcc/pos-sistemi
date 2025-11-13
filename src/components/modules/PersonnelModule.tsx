@@ -17,6 +17,7 @@ import type { Employee, Shift, SalaryCalculation, SalaryCalculationSettings, Use
 import { formatCurrency, formatDateTime, calculateHoursWorked, generateId, formatDate } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 import Numpad from '@/components/Numpad';
+import { Logger } from '@/lib/logger';
 
 interface PersonnelModuleProps {
   onBack: () => void;
@@ -87,32 +88,31 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
   const currentSettings = (salarySettings || [])[0] || defaultSettings;
 
   const employeeLogin = () => {
-    console.log('=== PIN Doğrulama Başladı ===');
-    console.log('Girilen PIN:', loginPin);
-    console.log('PIN uzunluğu:', loginPin?.length);
+    Logger.debug('AUTH', 'PIN doğrulama başladı', {
+      pinLength: loginPin?.length,
+      branchId: authSession?.branchId,
+      totalEmployees: (employees || []).length
+    });
     
     let employee: Employee | undefined;
 
     if (loginPin) {
       const trimmedPin = loginPin.trim();
-      console.log('Temizlenmiş PIN:', trimmedPin);
-      console.log('Temizlenmiş PIN uzunluğu:', trimmedPin.length);
-      
-      console.log('Mevcut çalışanlar:', (employees || []).length);
-      console.log('Aktif şube ID:', authSession?.branchId);
+      Logger.debug('AUTH', 'PIN temizlendi', { 
+        trimmedPinLength: trimmedPin.length,
+        originalPinLength: loginPin.length
+      });
       
       const allEmployees = employees || [];
-      console.log('Tüm çalışan bilgileri:');
-      allEmployees.forEach((e, index) => {
-        console.log(`  Çalışan ${index + 1}:`, {
+      Logger.info('AUTH', `${allEmployees.length} çalışan kontrol ediliyor`, {
+        activeBranchId: authSession?.branchId,
+        employees: allEmployees.map(e => ({
           id: e.id,
           fullName: e.fullName,
-          employeePin: e.employeePin,
           employeePinLength: e.employeePin?.length,
           isActive: e.isActive,
-          branchId: e.branchId,
-          branchMatch: !authSession?.branchId || e.branchId === authSession.branchId
-        });
+          branchId: e.branchId
+        }))
       });
       
       employee = allEmployees.find(e => {
@@ -122,40 +122,66 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
         const isActiveEmployee = e.isActive;
         const branchMatch = !authSession?.branchId || e.branchId === authSession.branchId;
         
-        console.log(`Çalışan "${e.fullName}" kontrol ediliyor:`, {
+        Logger.debug('AUTH', `Çalışan kontrol: ${e.fullName}`, {
+          employeeId: e.id,
           hasPin,
-          trimmedEmployeePin,
+          employeePin: trimmedEmployeePin,
+          enteredPin: trimmedPin,
           pinMatch,
-          isActiveEmployee,
+          isActive: isActiveEmployee,
           branchMatch,
-          overall: hasPin && pinMatch && isActiveEmployee && branchMatch
+          overallMatch: hasPin && pinMatch && isActiveEmployee && branchMatch
         });
         
         return hasPin && pinMatch && isActiveEmployee && branchMatch;
       });
       
-      console.log('Bulunan çalışan:', employee ? {
-        id: employee.id,
-        fullName: employee.fullName,
-        branchId: employee.branchId
-      } : 'Bulunamadı');
+      if (employee) {
+        Logger.success('AUTH', 'Çalışan bulundu', {
+          employeeId: employee.id,
+          employeeName: employee.fullName,
+          branchId: employee.branchId
+        });
+      } else {
+        Logger.warn('AUTH', 'Çalışan bulunamadı', {
+          enteredPin: trimmedPin,
+          branchId: authSession?.branchId,
+          checkedEmployeeCount: allEmployees.length
+        });
+      }
     }
 
     if (!employee) {
-      console.log('❌ PIN Doğrulama Başarısız');
+      Logger.error('AUTH', 'PIN doğrulama başarısız', {
+        pinProvided: !!loginPin,
+        pinLength: loginPin?.length,
+        branchId: authSession?.branchId
+      });
       toast.error('Geçersiz PIN kodu veya bu şubede yetkiniz yok');
       setLoginPin('');
       return;
     }
 
-    console.log('✅ PIN Doğrulama Başarılı');
-    console.log('Giriş yapan çalışan:', employee.fullName);
+    Logger.success('AUTH', 'PIN doğrulama başarılı', {
+      employeeId: employee.id,
+      employeeName: employee.fullName,
+      branchId: employee.branchId
+    }, {
+      userId: employee.id,
+      userName: employee.fullName,
+      branchId: employee.branchId
+    });
 
     const activeShift = (shifts || []).find(
       s => s.employeeId === employee.id && s.status === 'in_progress'
     );
 
-    console.log('Aktif vardiya:', activeShift ? 'Var (Çıkış yapılacak)' : 'Yok (Giriş yapılacak)');
+    Logger.info('SHIFT', `Vardiya durumu: ${activeShift ? 'Çıkış yapılacak' : 'Giriş yapılacak'}`, {
+      employeeId: employee.id,
+      employeeName: employee.fullName,
+      hasActiveShift: !!activeShift,
+      activeShiftId: activeShift?.id
+    });
 
     if (activeShift) {
       clockOut(activeShift.id);
@@ -165,12 +191,14 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
 
     setLoginPin('');
     setShowLoginDialog(false);
-    console.log('=== PIN Doğrulama Tamamlandı ===');
   };
 
   const clockIn = (employeeId: string) => {
     const employee = employees?.find((e) => e.id === employeeId);
-    if (!employee) return;
+    if (!employee) {
+      Logger.error('SHIFT', 'Giriş yapılamadı: Çalışan bulunamadı', { employeeId });
+      return;
+    }
 
     const newShift: Shift = {
       id: generateId(),
@@ -185,15 +213,48 @@ export default function PersonnelModule({ onBack, authSession }: PersonnelModule
     };
 
     setShifts((current) => [...(current || []), newShift]);
+    
+    Logger.success('SHIFT', 'Vardiya başlatıldı', {
+      shiftId: newShift.id,
+      employeeId: employee.id,
+      employeeName: employee.fullName,
+      startTime: newShift.startTime
+    }, {
+      userId: employee.id,
+      userName: employee.fullName,
+      branchId: employee.branchId
+    });
+    
     toast.success(`${employee.fullName} vardiyaya başladı`);
   };
 
   const clockOut = (shiftId: string) => {
+    const shift = (shifts || []).find(s => s.id === shiftId);
+    if (!shift) {
+      Logger.error('SHIFT', 'Çıkış yapılamadı: Vardiya bulunamadı', { shiftId });
+      return;
+    }
+    
     setShifts((current) =>
       (current || []).map((shift) => {
         if (shift.id === shiftId && !shift.endTime) {
           const endTime = new Date().toISOString();
           const totalHours = calculateHoursWorked(shift.startTime, endTime, shift.breakDuration);
+          
+          Logger.success('SHIFT', 'Vardiya tamamlandı', {
+            shiftId: shift.id,
+            employeeId: shift.employeeId,
+            employeeName: shift.employeeName,
+            startTime: shift.startTime,
+            endTime,
+            totalHours,
+            breakDuration: shift.breakDuration
+          }, {
+            userId: shift.employeeId,
+            userName: shift.employeeName,
+            branchId: shift.branchId
+          });
+          
           return {
             ...shift,
             endTime,

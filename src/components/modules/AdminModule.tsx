@@ -33,11 +33,13 @@ import {
   UserCircle,
   LockKey,
   Database,
-  Warning
+  Warning,
+  Bug
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Branch, Employee, UserRole, AuthSession, RolePermissions } from '@/lib/types';
 import { formatCurrency, formatDateTime, formatDate } from '@/lib/helpers';
+import LogViewer from '@/components/LogViewer';
 
 interface AdminModuleProps {
   onBack: () => void;
@@ -463,7 +465,7 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
       </header>
 
       <Tabs defaultValue="branches" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="branches" className="flex items-center gap-2">
             <Buildings className="h-4 w-4" />
             <span>Şubeler</span>
@@ -475,6 +477,10 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
           <TabsTrigger value="data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             <span>Veri Yönetimi</span>
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="flex items-center gap-2">
+            <Bug className="h-4 w-4" />
+            <span>Loglar</span>
           </TabsTrigger>
         </TabsList>
 
@@ -963,6 +969,10 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
               </Card>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="logs" className="space-y-4">
+          <LogViewer />
         </TabsContent>
       </Tabs>
 

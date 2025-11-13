@@ -9,6 +9,7 @@ import { Storefront, EnvelopeSimple, LockKey, Phone, Buildings } from '@phosphor
 import { toast } from 'sonner';
 import type { Admin, AuthSession, Branch, Category } from '@/lib/types';
 import { generateId, getBaseCategories } from '@/lib/helpers';
+import { Logger } from '@/lib/logger';
 
 interface RegisterLoginProps {
   onSuccess: (session: AuthSession) => void;
@@ -35,17 +36,21 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
 
   const handleLogin = async () => {
     if (!loginEmail.trim() || !loginPassword.trim()) {
+      Logger.warn('AUTH', 'Login başarısız: E-posta ve şifre gerekli');
       toast.error('E-posta ve şifre gerekli');
       return;
     }
 
     setIsLoading(true);
+    
+    Logger.info('AUTH', 'Login denemesi başladı', { email: loginEmail });
 
     const admin = (admins || []).find(
       (a) => a.email.toLowerCase() === loginEmail.toLowerCase() && a.password === loginPassword && a.isActive
     );
 
     if (!admin) {
+      Logger.error('AUTH', 'Login başarısız: Geçersiz kimlik bilgileri', { email: loginEmail });
       toast.error('Geçersiz e-posta veya şifre');
       setIsLoading(false);
       return;
@@ -54,6 +59,10 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
     const adminBranches = (branches || []).filter((b) => b.adminId === admin.id && b.isActive);
     
     if (adminBranches.length === 0) {
+      Logger.error('AUTH', 'Login başarısız: Aktif şube yok', {
+        adminId: admin.id,
+        businessName: admin.businessName
+      });
       toast.error('Aktif şubeniz bulunmuyor');
       setIsLoading(false);
       return;
@@ -66,6 +75,17 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       userName: admin.businessName,
       loginTime: new Date().toISOString(),
     };
+
+    Logger.success('AUTH', 'Login başarılı', {
+      adminId: admin.id,
+      businessName: admin.businessName,
+      branchCount: adminBranches.length,
+      selectedBranchId: session.branchId
+    }, {
+      userId: admin.id,
+      userName: admin.businessName,
+      branchId: session.branchId
+    });
 
     toast.success(`Hoş geldiniz, ${admin.businessName}`);
     
@@ -84,27 +104,36 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       !registerPhone.trim() ||
       !registerBranchName.trim()
     ) {
+      Logger.warn('AUTH', 'Kayıt başarısız: Eksik alanlar var');
       toast.error('Tüm zorunlu alanları doldurun');
       return;
     }
 
     if (registerPassword !== registerConfirmPassword) {
+      Logger.warn('AUTH', 'Kayıt başarısız: Şifreler eşleşmiyor');
       toast.error('Şifreler eşleşmiyor');
       return;
     }
 
     if (registerPassword.length < 6) {
+      Logger.warn('AUTH', 'Kayıt başarısız: Şifre çok kısa');
       toast.error('Şifre en az 6 karakter olmalı');
       return;
     }
 
     const emailExists = (admins || []).some((a) => a.email.toLowerCase() === registerEmail.toLowerCase());
     if (emailExists) {
+      Logger.warn('AUTH', 'Kayıt başarısız: E-posta kullanımda', { email: registerEmail });
       toast.error('Bu e-posta adresi zaten kullanılıyor');
       return;
     }
 
     setIsLoading(true);
+    
+    Logger.info('AUTH', 'Yeni hesap oluşturuluyor', {
+      businessName: registerBusinessName,
+      branchName: registerBranchName
+    });
 
     const newAdminId = generateId();
     const newBranchId = generateId();
@@ -140,6 +169,19 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
     setAdmins((current) => [...(current || []), newAdmin]);
     setBranches((current) => [...(current || []), newBranch]);
     setCategories((current) => [...(current || []), ...baseCategories]);
+
+    Logger.success('AUTH', 'Yeni hesap oluşturuldu', {
+      adminId: newAdminId,
+      businessName: newAdmin.businessName,
+      branchId: newBranchId,
+      branchName: newBranch.name,
+      categoryCount: baseCategories.length
+    }, {
+      userId: newAdminId,
+      userName: newAdmin.businessName,
+      branchId: newBranchId,
+      branchName: newBranch.name
+    });
 
     const session: AuthSession = {
       adminId: newAdminId,
