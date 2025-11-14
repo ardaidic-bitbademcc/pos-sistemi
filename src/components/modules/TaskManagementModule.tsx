@@ -601,7 +601,6 @@ export default function TaskManagementModule({
         </div>
       )}
 
-      <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -801,7 +800,7 @@ export default function TaskManagementModule({
                             )}
 
                             {canRateThisTask && (
-                              <Button
+                            {canRateThisTask && (
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
@@ -815,10 +814,11 @@ export default function TaskManagementModule({
                             )}
 
                             {canEditThisTask && task.status !== 'completed' && (
-                              <>
+                            {canEditThisTask && task.status !== 'completed' && (
                                 <Button variant="ghost" size="sm" onClick={() => openEditDialog(task)}>
                                   <PencilSimple className="h-4 w-4" />
                                 </Button>
+                                {canDeleteThisTask && (
                                 {canDeleteThisTask && (
                                   <Button
                                     variant="ghost"
@@ -828,7 +828,6 @@ export default function TaskManagementModule({
                                     <Trash className="h-4 w-4" />
                                   </Button>
                                 )}
-                              </>
                             )}
                           </div>
                         </CardContent>
