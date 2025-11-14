@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ChartLine, TrendUp, TrendDown, Users, Package, Calendar, Buildings, CreditCard, Money, DeviceMobile, Bank, Ticket, Clock } from '@phosphor-icons/react';
-import type { Sale, Employee, Product, Branch, BranchComparison, WaiterSalesReport, ProductSalesReport, AuthSession } from '@/lib/types';
+import type { Sale, Employee, Product, Branch, BranchComparison, WaiterSalesReport, ProductSalesReport, AuthSession, Table, TableSection } from '@/lib/types';
 import { formatCurrency, formatNumber } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, Area, AreaChart } from 'recharts';
@@ -22,6 +22,8 @@ export default function ReportsModule({ onBack, authSession }: ReportsModuleProp
   const [employees] = useKV<Employee[]>('employees', []);
   const [products] = useKV<Product[]>('products', []);
   const [branches] = useKV<Branch[]>('branches', []);
+  const [tables] = useKV<Table[]>('tables', []);
+  const [tableSections] = useKV<TableSection[]>('tableSections', []);
   
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('week');
@@ -251,6 +253,91 @@ export default function ReportsModule({ onBack, authSession }: ReportsModuleProp
     };
   }, [sales, selectedBranch, selectedPeriod]);
 
+  const tableSectionStats = useMemo(() => {
+    const dateRange = getDateRange(selectedPeriod);
+    const filteredSales = (sales || []).filter(s => {
+      const saleDate = new Date(s.saleDate);
+      const matchesBranch = selectedBranch === 'all' || s.branchId === selectedBranch;
+      const matchesDate = saleDate >= dateRange.start && saleDate <= dateRange.end;
+      return matchesBranch && matchesDate;
+    });
+
+    const branchTables = (tables || []).filter(t => 
+      selectedBranch === 'all' || t.branchId === selectedBranch
+    );
+
+    const branchSections = (tableSections || []).filter(s => 
+      selectedBranch === 'all' || s.branchId === selectedBranch
+    );
+
+    const sectionMap = new Map<string, {
+      sectionName: string;
+      color: string;
+      totalRevenue: number;
+      transactionCount: number;
+      totalItems: number;
+      tableCount: number;
+      averagePerTable: number;
+      averageTransaction: number;
+      occupancyRate: number;
+      peakHours: Map<number, number>;
+    }>();
+
+    branchSections.forEach(section => {
+      const sectionTables = branchTables.filter(t => t.sectionId === section.id);
+      const tableIds = new Set(sectionTables.map(t => t.id));
+      
+      const sectionSales = filteredSales.filter(sale => {
+        const tableId = sale.notes?.match(/Masa: ([^\|]+)/)?.[1]?.trim();
+        return tableId && tableIds.has(tableId);
+      });
+
+      const totalRevenue = sectionSales.reduce((sum, s) => sum + s.totalAmount, 0);
+      const transactionCount = sectionSales.length;
+      const totalItems = sectionSales.reduce((sum, s) => 
+        sum + s.items.reduce((iSum, i) => iSum + i.quantity, 0), 0
+      );
+
+      const peakHours = new Map<number, number>();
+      sectionSales.forEach(sale => {
+        const hour = new Date(sale.saleDate).getHours();
+        peakHours.set(hour, (peakHours.get(hour) || 0) + 1);
+      });
+
+      const occupiedCount = sectionTables.filter(t => t.status === 'occupied').length;
+      const occupancyRate = sectionTables.length > 0 ? (occupiedCount / sectionTables.length) * 100 : 0;
+
+      sectionMap.set(section.id, {
+        sectionName: section.name,
+        color: section.color || '#666',
+        totalRevenue,
+        transactionCount,
+        totalItems,
+        tableCount: sectionTables.length,
+        averagePerTable: sectionTables.length > 0 ? totalRevenue / sectionTables.length : 0,
+        averageTransaction: transactionCount > 0 ? totalRevenue / transactionCount : 0,
+        occupancyRate,
+        peakHours,
+      });
+    });
+
+    const sectionStats = Array.from(sectionMap.entries())
+      .map(([sectionId, data]) => ({
+        sectionId,
+        ...data,
+        peakHour: Array.from(data.peakHours.entries())
+          .sort((a, b) => b[1] - a[1])[0]?.[0] || 0,
+      }))
+      .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    const totalSectionRevenue = sectionStats.reduce((sum, s) => sum + s.totalRevenue, 0);
+
+    return {
+      sectionStats,
+      totalSectionRevenue,
+    };
+  }, [sales, tables, tableSections, selectedBranch, selectedPeriod]);
+
   return (
     <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
       <header className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
@@ -363,6 +450,7 @@ export default function ReportsModule({ onBack, authSession }: ReportsModuleProp
       <Tabs defaultValue="hourly" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="hourly" className="text-xs sm:text-sm">Saatlik Analiz</TabsTrigger>
+          <TabsTrigger value="sections" className="text-xs sm:text-sm">Masa Bölgeleri</TabsTrigger>
           <TabsTrigger value="branches" className="text-xs sm:text-sm">Şube Karşılaştırma</TabsTrigger>
           <TabsTrigger value="payments" className="text-xs sm:text-sm">Ödeme Yöntemleri</TabsTrigger>
           <TabsTrigger value="waiters" className="text-xs sm:text-sm">Garson Satışları</TabsTrigger>
@@ -661,6 +749,308 @@ export default function ReportsModule({ onBack, authSession }: ReportsModuleProp
                   <p className="text-muted-foreground text-sm text-center py-8">
                     Seçili dönemde işlem yok
                   </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sections" className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Bölge</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {tableSectionStats.sectionStats.length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  aktif bölge
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Masa</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {tableSectionStats.sectionStats.reduce((sum, s) => sum + s.tableCount, 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  masa
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Bölge Satışları</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold font-tabular-nums">
+                  {formatCurrency(tableSectionStats.totalSectionRevenue)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  toplam ciro
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Masa Bölgesi Performans Grafiği</CardTitle>
+              <CardDescription>
+                Bölgelerin ciro karşılaştırması
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {tableSectionStats.sectionStats.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-8">
+                  Henüz masa bölgesi verisi yok
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={tableSectionStats.sectionStats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="sectionName" 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '0.5rem',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value: number) => [formatCurrency(value), 'Ciro']}
+                    />
+                    <Bar 
+                      dataKey="totalRevenue" 
+                      fill="hsl(var(--primary))" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Detaylı Bölge İstatistikleri</CardTitle>
+              <CardDescription>
+                Her bölgenin performans detayları ve metrikleri
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {tableSectionStats.sectionStats.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Henüz masa bölgesi verisi yok
+                  </p>
+                ) : (
+                  tableSectionStats.sectionStats.map((section, index) => {
+                    const revenuePercentage = tableSectionStats.totalSectionRevenue > 0 
+                      ? (section.totalRevenue / tableSectionStats.totalSectionRevenue) * 100 
+                      : 0;
+
+                    return (
+                      <div key={section.sectionId} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold"
+                              style={{ backgroundColor: section.color }}
+                            >
+                              #{index + 1}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg">{section.sectionName}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {section.tableCount} masa • {formatNumber(section.transactionCount)} işlem
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold font-tabular-nums">
+                              {formatCurrency(section.totalRevenue)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Toplam satışın %{revenuePercentage.toFixed(1)}'i
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="absolute h-full transition-all duration-300"
+                            style={{ 
+                              width: `${revenuePercentage}%`,
+                              backgroundColor: section.color
+                            }}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Masa Başına Ciro</p>
+                            <p className="text-lg font-semibold font-tabular-nums">
+                              {formatCurrency(section.averagePerTable)}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Ortalama İşlem</p>
+                            <p className="text-lg font-semibold font-tabular-nums">
+                              {formatCurrency(section.averageTransaction)}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Doluluk Oranı</p>
+                            <p className="text-lg font-semibold font-tabular-nums">
+                              %{section.occupancyRate.toFixed(0)}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Yoğun Saat</p>
+                            <p className="text-lg font-semibold font-tabular-nums">
+                              {section.peakHour.toString().padStart(2, '0')}:00
+                            </p>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Toplam Satılan Ürün</span>
+                          <span className="font-semibold">{formatNumber(section.totalItems)} adet</span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Performans Durumu</span>
+                          <Badge 
+                            variant={
+                              section.occupancyRate >= 75 ? 'default' : 
+                              section.occupancyRate >= 50 ? 'secondary' : 
+                              'outline'
+                            }
+                          >
+                            {section.occupancyRate >= 75 ? '🔥 Yüksek Talep' : 
+                             section.occupancyRate >= 50 ? '✅ Normal' : 
+                             section.occupancyRate >= 25 ? '⚠️ Düşük' : 
+                             '💤 Çok Düşük'}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Bölgelere Göre İşlem Dağılımı</CardTitle>
+              <CardDescription>
+                Her bölgenin işlem sayısı karşılaştırması
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {tableSectionStats.sectionStats.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-8">
+                  Henüz masa bölgesi verisi yok
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={tableSectionStats.sectionStats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="sectionName" 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '0.5rem',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value: number) => [formatNumber(value), 'İşlem']}
+                    />
+                    <Bar 
+                      dataKey="transactionCount" 
+                      fill="hsl(var(--accent))" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Bölge Karşılaştırma Özeti</CardTitle>
+              <CardDescription>
+                Bölgelerin performans özeti ve sıralama
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {tableSectionStats.sectionStats.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Henüz masa bölgesi verisi yok
+                  </p>
+                ) : (
+                  tableSectionStats.sectionStats.map((section, index) => (
+                    <div 
+                      key={section.sectionId} 
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                          style={{ backgroundColor: section.color }}
+                        >
+                          #{index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold">{section.sectionName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {section.tableCount} masa • Doluluk: %{section.occupancyRate.toFixed(0)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold font-tabular-nums">
+                          {formatCurrency(section.totalRevenue)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatNumber(section.transactionCount)} işlem
+                        </p>
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </CardContent>
