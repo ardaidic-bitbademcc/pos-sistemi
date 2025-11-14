@@ -258,27 +258,39 @@ export default function TaskManagementModule({
   };
 
   const filteredTasks = (tasks || []).filter((task) => {
+    const branchMatch = !authSession?.branchId || task.branchId === authSession?.branchId;
     const statusMatch = filterStatus === 'all' || task.status === filterStatus;
     const priorityMatch = filterPriority === 'all' || task.priority === filterPriority;
 
     let tabMatch = true;
     if (activeTab === 'my-tasks') {
-      tabMatch = task.assignedTo === currentUserId;
+      const currentEmployeeId = authSession?.userId || currentUserId;
+      tabMatch = task.assignedTo === currentEmployeeId;
     } else if (activeTab === 'assigned-by-me') {
-      tabMatch = task.createdBy === currentUserId;
+      const currentEmployeeId = authSession?.userId || currentUserId;
+      tabMatch = task.createdBy === currentEmployeeId;
     } else if (activeTab === 'all' && !canViewAllTasks) {
-      tabMatch = task.assignedTo === currentUserId || task.createdBy === currentUserId;
+      const currentEmployeeId = authSession?.userId || currentUserId;
+      tabMatch = task.assignedTo === currentEmployeeId || task.createdBy === currentEmployeeId;
     }
 
-    return statusMatch && priorityMatch && tabMatch;
+    return branchMatch && statusMatch && priorityMatch && tabMatch;
   });
 
   const myPendingTasks = (tasks || []).filter(
-    (t) => t.assignedTo === currentUserId && t.status === 'pending'
+    (t) => {
+      const currentEmployeeId = authSession?.userId || currentUserId;
+      const branchMatch = !authSession?.branchId || t.branchId === authSession?.branchId;
+      return t.assignedTo === currentEmployeeId && t.status === 'pending' && branchMatch;
+    }
   ).length;
 
   const myInProgressTasks = (tasks || []).filter(
-    (t) => t.assignedTo === currentUserId && t.status === 'in_progress'
+    (t) => {
+      const currentEmployeeId = authSession?.userId || currentUserId;
+      const branchMatch = !authSession?.branchId || t.branchId === authSession?.branchId;
+      return t.assignedTo === currentEmployeeId && t.status === 'in_progress' && branchMatch;
+    }
   ).length;
 
   const handleCreate = () => {
@@ -299,20 +311,20 @@ export default function TaskManagementModule({
       description: formData.description,
       assignedTo: formData.assignedTo,
       assignedToName: assignedEmployee.fullName,
-      createdBy: currentUserId,
-      createdByName: currentUserName,
+      createdBy: authSession?.userId || currentUserId,
+      createdByName: authSession?.userName || currentUserName,
       priority: formData.priority,
       status: 'pending',
       dueDate: formData.dueDate,
       createdAt: new Date().toISOString(),
       recurrence: formData.recurrence,
-      branchId: 'branch-1',
+      branchId: authSession?.branchId || 'branch-1',
       category: formData.category,
       estimatedDuration: formData.estimatedDuration ? parseInt(formData.estimatedDuration) : undefined,
     };
 
     setTasks((current) => [...(current || []), newTask]);
-    toast.success('Görev oluşturuldu');
+    toast.success(`Görev ${assignedEmployee.fullName} kullanıcısına atandı`);
     setShowCreateDialog(false);
     resetForm();
   };
@@ -373,6 +385,9 @@ export default function TaskManagementModule({
   const handleCompleteTask = () => {
     if (!selectedTask) return;
 
+    const currentEmployeeId = authSession?.userId || currentUserId;
+    const currentEmployeeName = authSession?.userName || currentUserName;
+
     setTasks((current) =>
       (current || []).map((task) =>
         task.id === selectedTask.id
@@ -380,8 +395,8 @@ export default function TaskManagementModule({
               ...task,
               status: 'completed' as TaskStatus,
               completedAt: new Date().toISOString(),
-              completedBy: currentUserId,
-              completedByName: currentUserName,
+              completedBy: currentEmployeeId,
+              completedByName: currentEmployeeName,
               notes: completionNotes,
               actualDuration: actualDuration ? parseInt(actualDuration) : undefined,
             }
@@ -402,6 +417,9 @@ export default function TaskManagementModule({
       return;
     }
 
+    const currentEmployeeId = authSession?.userId || currentUserId;
+    const currentEmployeeName = authSession?.userName || currentUserName;
+
     setTasks((current) =>
       (current || []).map((task) =>
         task.id === selectedTask.id
@@ -409,8 +427,8 @@ export default function TaskManagementModule({
               ...task,
               rating,
               ratingComment,
-              ratedBy: currentUserId,
-              ratedByName: currentUserName,
+              ratedBy: currentEmployeeId,
+              ratedByName: currentEmployeeName,
               ratedAt: new Date().toISOString(),
             }
           : task
@@ -572,10 +590,13 @@ export default function TaskManagementModule({
                   <p className="text-3xl font-bold">
                     {
                       (tasks || []).filter(
-                        (t) =>
-                          t.status === 'completed' &&
-                          t.completedAt &&
-                          new Date(t.completedAt).toDateString() === new Date().toDateString()
+                        (t) => {
+                          const branchMatch = !authSession?.branchId || t.branchId === authSession?.branchId;
+                          return t.status === 'completed' &&
+                            t.completedAt &&
+                            new Date(t.completedAt).toDateString() === new Date().toDateString() &&
+                            branchMatch;
+                        }
                       ).length
                     }
                   </p>
@@ -591,7 +612,10 @@ export default function TaskManagementModule({
                 <div>
                   <p className="text-sm text-muted-foreground">Tekrarlayan</p>
                   <p className="text-3xl font-bold">
-                    {(tasks || []).filter((t) => t.recurrence !== 'none').length}
+                    {(tasks || []).filter((t) => {
+                      const branchMatch = !authSession?.branchId || t.branchId === authSession?.branchId;
+                      return t.recurrence !== 'none' && branchMatch;
+                    }).length}
                   </p>
                 </div>
                 <ArrowClockwise className="h-10 w-10 text-purple-500" weight="bold" />
@@ -641,16 +665,27 @@ export default function TaskManagementModule({
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
             <TabsList>
               <TabsTrigger value="my-tasks">
-                Benim Görevlerim ({(tasks || []).filter((t) => t.assignedTo === currentUserId).length})
+                Benim Görevlerim ({(tasks || []).filter((t) => {
+                  const currentEmployeeId = authSession?.userId || currentUserId;
+                  const branchMatch = !authSession?.branchId || t.branchId === authSession?.branchId;
+                  return t.assignedTo === currentEmployeeId && branchMatch;
+                }).length})
               </TabsTrigger>
               {canCreateTask && (
                 <TabsTrigger value="assigned-by-me">
-                  Verdiğim Görevler ({(tasks || []).filter((t) => t.createdBy === currentUserId).length})
+                  Verdiğim Görevler ({(tasks || []).filter((t) => {
+                    const currentEmployeeId = authSession?.userId || currentUserId;
+                    const branchMatch = !authSession?.branchId || t.branchId === authSession?.branchId;
+                    return t.createdBy === currentEmployeeId && branchMatch;
+                  }).length})
                 </TabsTrigger>
               )}
               {canViewAllTasks && (
                 <TabsTrigger value="all">
-                  Tüm Görevler ({(tasks || []).length})
+                  Tüm Görevler ({(tasks || []).filter((t) => {
+                    const branchMatch = !authSession?.branchId || t.branchId === authSession?.branchId;
+                    return branchMatch;
+                  }).length})
                 </TabsTrigger>
               )}
             </TabsList>
@@ -668,17 +703,18 @@ export default function TaskManagementModule({
                       task.status !== 'completed' &&
                       task.status !== 'cancelled' &&
                       new Date(task.dueDate) < new Date();
-                    const canEditThisTask = (canEditTask && task.createdBy === currentUserId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
-                    const canDeleteThisTask = (canDeleteTask && task.createdBy === currentUserId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
-                    const canStart = task.assignedTo === currentUserId && task.status === 'pending';
+                    const currentEmployeeId = authSession?.userId || currentUserId;
+                    const canEditThisTask = (canEditTask && task.createdBy === currentEmployeeId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
+                    const canDeleteThisTask = (canDeleteTask && task.createdBy === currentEmployeeId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
+                    const canStart = task.assignedTo === currentEmployeeId && task.status === 'pending';
                     const canComplete =
-                      task.assignedTo === currentUserId &&
+                      task.assignedTo === currentEmployeeId &&
                       (task.status === 'in_progress' || task.status === 'pending');
                     const canRateThisTask =
                       canRateTask &&
                       task.status === 'completed' &&
                       !task.rating &&
-                      task.completedBy !== currentUserId;
+                      task.completedBy !== currentEmployeeId;
 
                     return (
                       <Card
@@ -876,7 +912,11 @@ export default function TaskManagementModule({
                     <SelectValue placeholder="Personel seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(employees || []).filter((e) => e.isActive).map((employee) => (
+                    {(employees || []).filter((e) => {
+                      const isActive = e.isActive;
+                      const branchMatch = !authSession?.branchId || e.branchId === authSession?.branchId;
+                      return isActive && branchMatch;
+                    }).map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
                         {employee.fullName} - {employee.role}
                       </SelectItem>
@@ -1006,7 +1046,11 @@ export default function TaskManagementModule({
                     <SelectValue placeholder="Personel seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(employees || []).filter((e) => e.isActive).map((employee) => (
+                    {(employees || []).filter((e) => {
+                      const isActive = e.isActive;
+                      const branchMatch = !authSession?.branchId || e.branchId === authSession?.branchId;
+                      return isActive && branchMatch;
+                    }).map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
                         {employee.fullName} - {employee.role}
                       </SelectItem>

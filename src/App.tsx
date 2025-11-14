@@ -141,7 +141,7 @@ function App() {
       case 'qrmenu':
         return <QRMenuModule onBack={() => setActiveModule('dashboard')} authSession={authSession} />;
       case 'tasks':
-        return <TaskManagementModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} currentUserId="user-1" currentUserName={currentUserName} authSession={authSession} />;
+        return <TaskManagementModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole} currentUserId={authSession?.userId || 'user-1'} currentUserName={currentUserName} authSession={authSession} />;
       case 'b2b':
         return <B2BModule onBack={() => setActiveModule('dashboard')} currentUserRole={currentUserRole || 'owner'} currentUserName={currentUserName} authSession={authSession} />;
       case 'customers':
