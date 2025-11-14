@@ -13,6 +13,12 @@ export interface RolePermissions {
   canAddCash: boolean;
   canWithdrawCash: boolean;
   canCloseCashRegister: boolean;
+  canCreateTask: boolean;
+  canEditTask: boolean;
+  canDeleteTask: boolean;
+  canViewAllTasks: boolean;
+  canViewTaskStatus: boolean;
+  canRateTask: boolean;
 }
 
 export interface BranchComparison {

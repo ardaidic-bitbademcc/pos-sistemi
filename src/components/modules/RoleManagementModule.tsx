@@ -19,7 +19,7 @@ interface RoleManagementModuleProps {
 const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   {
     role: 'owner',
-    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'settings', 'reports'],
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'settings', 'reports', 'tasks'],
     canViewFinancials: true,
     canEditPrices: true,
     canManageUsers: true,
@@ -28,10 +28,16 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canAddCash: true,
     canWithdrawCash: true,
     canCloseCashRegister: true,
+    canCreateTask: true,
+    canEditTask: true,
+    canDeleteTask: true,
+    canViewAllTasks: true,
+    canViewTaskStatus: true,
+    canRateTask: true,
   },
   {
     role: 'manager',
-    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'reports'],
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'reports', 'tasks'],
     canViewFinancials: true,
     canEditPrices: true,
     canManageUsers: false,
@@ -40,10 +46,16 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canAddCash: true,
     canWithdrawCash: true,
     canCloseCashRegister: true,
+    canCreateTask: true,
+    canEditTask: true,
+    canDeleteTask: true,
+    canViewAllTasks: true,
+    canViewTaskStatus: true,
+    canRateTask: true,
   },
   {
     role: 'waiter',
-    permissions: ['pos'],
+    permissions: ['pos', 'tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -52,10 +64,16 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canAddCash: false,
     canWithdrawCash: false,
     canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: false,
+    canRateTask: false,
   },
   {
     role: 'cashier',
-    permissions: ['pos', 'reports'],
+    permissions: ['pos', 'reports', 'tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -64,10 +82,16 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canAddCash: true,
     canWithdrawCash: false,
     canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: false,
+    canRateTask: false,
   },
   {
     role: 'chef',
-    permissions: ['menu'],
+    permissions: ['menu', 'tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -76,10 +100,16 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canAddCash: false,
     canWithdrawCash: false,
     canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: true,
+    canRateTask: false,
   },
   {
     role: 'staff',
-    permissions: [],
+    permissions: ['tasks'],
     canViewFinancials: false,
     canEditPrices: false,
     canManageUsers: false,
@@ -88,6 +118,12 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     canAddCash: false,
     canWithdrawCash: false,
     canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: false,
+    canRateTask: false,
   },
 ];
 
@@ -328,6 +364,109 @@ export default function RoleManagementModule({ onBack }: RoleManagementModulePro
               <Separator />
 
               <div className="space-y-3">
+                <Label className="text-sm font-medium">Görev Yönetimi Yetkileri</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Görev Oluşturma</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Yeni görev oluşturabilir ve personele atayabilir
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canCreateTask')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canCreateTask', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Görev Düzenleme</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Mevcut görevleri düzenleyebilir ve güncelleyebilir
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canEditTask')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canEditTask', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Görev Silme</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Görevleri silebilir
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canDeleteTask')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canDeleteTask', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Tüm Görevleri Görüntüleme</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Tüm görevleri görüntüleyebilir (sadece kendine atananlar değil)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canViewAllTasks')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canViewAllTasks', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Görev Durumlarını Görüntüleme</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Görev durumlarını ve istatistiklerini görüntüleyebilir
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canViewTaskStatus')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canViewTaskStatus', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm cursor-pointer">Görev Puanlama</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Tamamlanan görevleri puanlayabilir ve değerlendirebilir
+                      </p>
+                    </div>
+                    <Switch
+                      checked={getCapability(role, 'canRateTask')}
+                      onCheckedChange={(checked) =>
+                        updateRoleCapability(role, 'canRateTask', checked)
+                      }
+                      disabled={role === 'owner'}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
                 <Label className="text-sm font-medium">Özel Yetkiler</Label>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-2 rounded-lg">
@@ -409,13 +548,22 @@ export default function RoleManagementModule({ onBack }: RoleManagementModulePro
             • <strong>Sahip</strong> rolü tüm yetkilere sahiptir ve değiştirilemez
           </p>
           <p>
-            • <strong>Garson</strong> rolü varsayılan olarak sadece POS ekranına erişebilir
+            • <strong>Garson</strong> rolü varsayılan olarak sadece POS ekranına erişebilir ve kendine atanan görevleri görüntüleyebilir
           </p>
           <p>
             • <strong>Kasiyer</strong> rolü varsayılan olarak kasa kontrolü ve para ekleme yetkisine sahiptir, ancak para çıkışı yapamaz
           </p>
           <p>
-            • Her rol için modül erişimi, özel yetkiler ve kasa yetkileri ayrı ayrı yapılandırılabilir
+            • <strong>Şef</strong> rolü tüm görevleri ve görev durumlarını görüntüleyebilir ancak görev oluşturamaz veya düzenleyemez
+          </p>
+          <p>
+            • <strong>Yönetici</strong> rolü tüm görevleri oluşturabilir, düzenleyebilir, silebilir ve puanlayabilir
+          </p>
+          <p>
+            • Her rol için modül erişimi, özel yetkiler, kasa yetkileri ve görev yönetimi yetkileri ayrı ayrı yapılandırılabilir
+          </p>
+          <p>
+            • Görev yönetimi yetkileri ile personelin görev oluşturma, düzenleme, silme, tüm görevleri görüntüleme ve puanlama yetkilerini kontrol edebilirsiniz
           </p>
           <p>
             • Kasa yetkileri sayesinde hassas finansal işlemleri sınırlayabilirsiniz

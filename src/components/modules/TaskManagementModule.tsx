@@ -29,7 +29,7 @@ import {
   ChatCircle
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Task, TaskPriority, TaskStatus, TaskRecurrence, Employee, UserRole, AuthSession } from '@/lib/types';
+import type { Task, TaskPriority, TaskStatus, TaskRecurrence, Employee, UserRole, AuthSession, RolePermissions } from '@/lib/types';
 import { generateId } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 
@@ -41,14 +41,127 @@ interface TaskManagementModuleProps {
   authSession?: AuthSession | null;
 }
 
+const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
+  {
+    role: 'owner',
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'settings', 'reports', 'tasks'],
+    canViewFinancials: true,
+    canEditPrices: true,
+    canManageUsers: true,
+    canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
+    canCreateTask: true,
+    canEditTask: true,
+    canDeleteTask: true,
+    canViewAllTasks: true,
+    canViewTaskStatus: true,
+    canRateTask: true,
+  },
+  {
+    role: 'manager',
+    permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'reports', 'tasks'],
+    canViewFinancials: true,
+    canEditPrices: true,
+    canManageUsers: false,
+    canApprovePayments: true,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: true,
+    canCloseCashRegister: true,
+    canCreateTask: true,
+    canEditTask: true,
+    canDeleteTask: true,
+    canViewAllTasks: true,
+    canViewTaskStatus: true,
+    canRateTask: true,
+  },
+  {
+    role: 'waiter',
+    permissions: ['pos', 'tasks'],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: false,
+    canRateTask: false,
+  },
+  {
+    role: 'cashier',
+    permissions: ['pos', 'reports', 'tasks'],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: true,
+    canAddCash: true,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: false,
+    canRateTask: false,
+  },
+  {
+    role: 'chef',
+    permissions: ['menu', 'tasks'],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: true,
+    canRateTask: false,
+  },
+  {
+    role: 'staff',
+    permissions: ['tasks'],
+    canViewFinancials: false,
+    canEditPrices: false,
+    canManageUsers: false,
+    canApprovePayments: false,
+    canViewCashRegister: false,
+    canAddCash: false,
+    canWithdrawCash: false,
+    canCloseCashRegister: false,
+    canCreateTask: false,
+    canEditTask: false,
+    canDeleteTask: false,
+    canViewAllTasks: false,
+    canViewTaskStatus: false,
+    canRateTask: false,
+  },
+];
+
 export default function TaskManagementModule({ 
   onBack, 
   currentUserRole = 'staff',
   currentUserId = 'user-1',
-  currentUserName = 'Kullanıcı'
+  currentUserName = 'Kullanıcı',
+  authSession
 }: TaskManagementModuleProps) {
   const [tasks, setTasks] = useKV<Task[]>('tasks', []);
   const [employees] = useKV<Employee[]>('employees', []);
+  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
@@ -75,7 +188,14 @@ export default function TaskManagementModule({
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
 
-  const isAdmin = currentUserRole === 'owner' || currentUserRole === 'manager';
+  const currentPermissions = rolePermissions?.find((rp) => rp.role === currentUserRole) || DEFAULT_ROLE_PERMISSIONS.find((rp) => rp.role === currentUserRole);
+  
+  const canCreateTask = currentPermissions?.canCreateTask || false;
+  const canEditTask = currentPermissions?.canEditTask || false;
+  const canDeleteTask = currentPermissions?.canDeleteTask || false;
+  const canViewAllTasks = currentPermissions?.canViewAllTasks || false;
+  const canViewTaskStatus = currentPermissions?.canViewTaskStatus || false;
+  const canRateTask = currentPermissions?.canRateTask || false;
 
   useEffect(() => {
     checkRecurringTasks();
@@ -146,6 +266,8 @@ export default function TaskManagementModule({
       tabMatch = task.assignedTo === currentUserId;
     } else if (activeTab === 'assigned-by-me') {
       tabMatch = task.createdBy === currentUserId;
+    } else if (activeTab === 'all' && !canViewAllTasks) {
+      tabMatch = task.assignedTo === currentUserId || task.createdBy === currentUserId;
     }
 
     return statusMatch && priorityMatch && tabMatch;
@@ -407,7 +529,7 @@ export default function TaskManagementModule({
             </p>
           </div>
         </div>
-        {(isAdmin || currentUserRole !== 'waiter') && (
+        {canCreateTask && (
           <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto text-xs sm:text-sm h-9">
             <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
             <span className="hidden sm:inline">Yeni Görev</span>
@@ -416,66 +538,68 @@ export default function TaskManagementModule({
         )}
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Bekleyen</p>
-                <p className="text-3xl font-bold">{myPendingTasks}</p>
+      {canViewTaskStatus && (
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Bekleyen</p>
+                  <p className="text-3xl font-bold">{myPendingTasks}</p>
+                </div>
+                <Clock className="h-10 w-10 text-amber-500" weight="bold" />
               </div>
-              <Clock className="h-10 w-10 text-amber-500" weight="bold" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Devam Eden</p>
-                <p className="text-3xl font-bold">{myInProgressTasks}</p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Devam Eden</p>
+                  <p className="text-3xl font-bold">{myInProgressTasks}</p>
+                </div>
+                <Play className="h-10 w-10 text-blue-500" weight="bold" />
               </div>
-              <Play className="h-10 w-10 text-blue-500" weight="bold" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Bugün Tamamlanan</p>
-                <p className="text-3xl font-bold">
-                  {
-                    (tasks || []).filter(
-                      (t) =>
-                        t.status === 'completed' &&
-                        t.completedAt &&
-                        new Date(t.completedAt).toDateString() === new Date().toDateString()
-                    ).length
-                  }
-                </p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Bugün Tamamlanan</p>
+                  <p className="text-3xl font-bold">
+                    {
+                      (tasks || []).filter(
+                        (t) =>
+                          t.status === 'completed' &&
+                          t.completedAt &&
+                          new Date(t.completedAt).toDateString() === new Date().toDateString()
+                      ).length
+                    }
+                  </p>
+                </div>
+                <CheckCircle className="h-10 w-10 text-emerald-500" weight="bold" />
               </div>
-              <CheckCircle className="h-10 w-10 text-emerald-500" weight="bold" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Tekrarlayan</p>
-                <p className="text-3xl font-bold">
-                  {(tasks || []).filter((t) => t.recurrence !== 'none').length}
-                </p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Tekrarlayan</p>
+                  <p className="text-3xl font-bold">
+                    {(tasks || []).filter((t) => t.recurrence !== 'none').length}
+                  </p>
+                </div>
+                <ArrowClockwise className="h-10 w-10 text-purple-500" weight="bold" />
               </div>
-              <ArrowClockwise className="h-10 w-10 text-purple-500" weight="bold" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -519,12 +643,12 @@ export default function TaskManagementModule({
               <TabsTrigger value="my-tasks">
                 Benim Görevlerim ({(tasks || []).filter((t) => t.assignedTo === currentUserId).length})
               </TabsTrigger>
-              {(isAdmin || currentUserRole !== 'waiter') && (
+              {canCreateTask && (
                 <TabsTrigger value="assigned-by-me">
                   Verdiğim Görevler ({(tasks || []).filter((t) => t.createdBy === currentUserId).length})
                 </TabsTrigger>
               )}
-              {isAdmin && (
+              {canViewAllTasks && (
                 <TabsTrigger value="all">
                   Tüm Görevler ({(tasks || []).length})
                 </TabsTrigger>
@@ -544,13 +668,14 @@ export default function TaskManagementModule({
                       task.status !== 'completed' &&
                       task.status !== 'cancelled' &&
                       new Date(task.dueDate) < new Date();
-                    const canEdit = isAdmin || task.createdBy === currentUserId;
+                    const canEditThisTask = (canEditTask && task.createdBy === currentUserId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
+                    const canDeleteThisTask = (canDeleteTask && task.createdBy === currentUserId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
                     const canStart = task.assignedTo === currentUserId && task.status === 'pending';
                     const canComplete =
                       task.assignedTo === currentUserId &&
                       (task.status === 'in_progress' || task.status === 'pending');
-                    const canRate =
-                      isAdmin &&
+                    const canRateThisTask =
+                      canRateTask &&
                       task.status === 'completed' &&
                       !task.rating &&
                       task.completedBy !== currentUserId;
@@ -675,7 +800,7 @@ export default function TaskManagementModule({
                               </Button>
                             )}
 
-                            {canRate && (
+                            {canRateThisTask && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -689,18 +814,20 @@ export default function TaskManagementModule({
                               </Button>
                             )}
 
-                            {canEdit && task.status !== 'completed' && (
+                            {canEditThisTask && task.status !== 'completed' && (
                               <>
                                 <Button variant="ghost" size="sm" onClick={() => openEditDialog(task)}>
                                   <PencilSimple className="h-4 w-4" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(task.id)}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
+                                {canDeleteThisTask && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDelete(task.id)}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </>
                             )}
                           </div>
