@@ -137,6 +137,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isTableLegendOpen, setIsTableLegendOpen] = useState(false);
   const [cashReceived, setCashReceived] = useState('');
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>('all');
 
   const activePaymentMethods = (settings?.paymentMethods || []).filter(pm => pm.isActive);
   const pricesIncludeVAT = settings?.pricesIncludeVAT || false;
@@ -2169,68 +2170,123 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
           <Card>
             <CardHeader>
               <CardTitle>Masa Yönetimi</CardTitle>
-              <CardDescription>Mevcut masaları görüntüle ve yönet</CardDescription>
+              <CardDescription>Bölge seçin ve masaları görüntüleyin</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                {availableTables.map((table) => {
-                  const hasOrder = table.status === 'occupied' && table.currentSaleId;
-                  const isLazy = isLazyTable(table);
-                  const duration = getOrderDuration(table);
-                  const minutesSinceLastOrder = getTimeSinceLastOrder(table);
-                  
-                  return (
-                    <Card
-                      key={table.id}
-                      className={`cursor-pointer transition-all hover:shadow-md relative ${
-                        hasOrder ? 'border-amber-500 bg-amber-50/50' : 'border-emerald-500 bg-emerald-50/50'
-                      } ${selectedTable?.id === table.id ? 'ring-2 ring-primary' : ''} ${
-                        isLazy ? 'ring-2 ring-destructive' : ''
-                      }`}
-                      onClick={() => selectTable(table)}
+            <CardContent className="space-y-4">
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant={selectedSectionFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setSelectedSectionFilter('all')}
+                >
+                  Tümü
+                </Button>
+                {(tableSections || [])
+                  .filter((section) => section.isActive)
+                  .map((section) => (
+                    <Button
+                      key={section.id}
+                      size="sm"
+                      variant={selectedSectionFilter === section.id ? 'default' : 'outline'}
+                      onClick={() => setSelectedSectionFilter(section.id)}
+                      className="flex items-center gap-2"
                     >
-                      {isLazy && (
-                        <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 shadow-md z-10">
-                          <Warning className="h-3 w-3" weight="bold" />
-                          TEMBEL MASA
-                        </div>
-                      )}
-                      <CardContent className="p-6 text-center space-y-2">
-                        <TableIcon
-                          className={`h-10 w-10 mx-auto ${
-                            hasOrder ? 'text-amber-600' : 'text-emerald-600'
-                          }`}
-                          weight="bold"
-                        />
-                        <div>
-                          <p className="font-semibold text-lg">Masa {table.tableNumber}</p>
-                          <Badge
-                            variant={hasOrder ? 'default' : 'secondary'}
-                            className={`text-xs mt-1 ${hasOrder ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
-                          >
-                            {hasOrder ? 'Dolu' : 'Boş'}
-                          </Badge>
-                        </div>
-                        {hasOrder && (
-                          <div className="space-y-1 text-xs text-muted-foreground pt-2 border-t">
-                            {duration && (
-                              <div className="flex items-center justify-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                <span>Süre: {duration}</span>
-                              </div>
-                            )}
-                            {minutesSinceLastOrder !== null && (
-                              <div className="flex items-center justify-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                <span>Son: {minutesSinceLastOrder}dk</span>
-                              </div>
-                            )}
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: section.color }}
+                      />
+                      {section.name}
+                    </Button>
+                  ))}
+                {availableTables.filter((t) => !t.sectionId).length > 0 && (
+                  <Button
+                    size="sm"
+                    variant={selectedSectionFilter === 'no-section' ? 'default' : 'outline'}
+                    onClick={() => setSelectedSectionFilter('no-section')}
+                  >
+                    Diğer Masalar
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                {availableTables
+                  .filter((table) => {
+                    if (selectedSectionFilter === 'all') return true;
+                    if (selectedSectionFilter === 'no-section') return !table.sectionId;
+                    return table.sectionId === selectedSectionFilter;
+                  })
+                  .map((table) => {
+                    const hasOrder = table.status === 'occupied' && table.currentSaleId;
+                    const isLazy = isLazyTable(table);
+                    const duration = getOrderDuration(table);
+                    const minutesSinceLastOrder = getTimeSinceLastOrder(table);
+                    const section = (tableSections || []).find((s) => s.id === table.sectionId);
+                    
+                    return (
+                      <Card
+                        key={table.id}
+                        className={`cursor-pointer transition-all hover:shadow-md relative ${
+                          hasOrder ? 'border-amber-500 bg-amber-50/50' : 'border-emerald-500 bg-emerald-50/50'
+                        } ${selectedTable?.id === table.id ? 'ring-2 ring-primary' : ''} ${
+                          isLazy ? 'ring-2 ring-destructive' : ''
+                        }`}
+                        onClick={() => selectTable(table)}
+                      >
+                        {isLazy && (
+                          <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 shadow-md z-10">
+                            <Warning className="h-3 w-3" weight="bold" />
+                            TEMBEL MASA
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        <CardContent className="p-6 text-center space-y-2">
+                          {section ? (
+                            <div
+                              className="w-10 h-10 rounded-lg mx-auto flex items-center justify-center font-bold text-white"
+                              style={{ backgroundColor: section.color }}
+                            >
+                              {table.tableNumber}
+                            </div>
+                          ) : (
+                            <TableIcon
+                              className={`h-10 w-10 mx-auto ${
+                                hasOrder ? 'text-amber-600' : 'text-emerald-600'
+                              }`}
+                              weight="bold"
+                            />
+                          )}
+                          <div>
+                            <p className="font-semibold text-lg">Masa {table.tableNumber}</p>
+                            {section && (
+                              <p className="text-xs text-muted-foreground">{section.name}</p>
+                            )}
+                            <Badge
+                              variant={hasOrder ? 'default' : 'secondary'}
+                              className={`text-xs mt-1 ${hasOrder ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+                            >
+                              {hasOrder ? 'Dolu' : 'Boş'}
+                            </Badge>
+                          </div>
+                          {hasOrder && (
+                            <div className="space-y-1 text-xs text-muted-foreground pt-2 border-t">
+                              {duration && (
+                                <div className="flex items-center justify-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  <span>Süre: {duration}</span>
+                                </div>
+                              )}
+                              {minutesSinceLastOrder !== null && (
+                                <div className="flex items-center justify-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  <span>Son: {minutesSinceLastOrder}dk</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>
