@@ -8,9 +8,10 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette, Money, DeviceMobile, Bank, Ticket, PencilSimple } from '@phosphor-icons/react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette, Money, DeviceMobile, Bank, Ticket, PencilSimple, Table as TableIcon, MapPin } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Product, PaymentMethod, Category, AppTheme, AuthSession } from '@/lib/types';
+import type { Product, PaymentMethod, Category, AppTheme, AuthSession, TableSection, Table } from '@/lib/types';
 import { formatCurrency, generateId } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 
@@ -50,9 +51,16 @@ interface StockEntry {
   addQuantity: number;
 }
 
-export default function SettingsModule({ onBack }: SettingsModuleProps) {
+export default function SettingsModule({ onBack, authSession }: SettingsModuleProps) {
   const [products, setProducts] = useKV<Product[]>('products', []);
   const [categories, setCategories] = useKV<Category[]>('categories', []);
+  const [tableSections, setTableSections] = useKV<TableSection[]>('tableSections', []);
+  const [tables, setTables] = useKV<Table[]>('tables', []);
+  
+  const filteredProducts = useBranchFilter(products, authSession).filteredItems;
+  const filteredCategories = useBranchFilter(categories, authSession).filteredItems;
+  const filteredTableSections = useBranchFilter(tableSections, authSession).filteredItems;
+  const filteredTables = useBranchFilter(tables, authSession).filteredItems;
   
   const defaultSettings: AppSettings = {
     taxRates: [
@@ -79,6 +87,8 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
   const [showTaxDialog, setShowTaxDialog] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showSectionDialog, setShowSectionDialog] = useState(false);
+  const [showTableDialog, setShowTableDialog] = useState(false);
   const [newTaxName, setNewTaxName] = useState('');
   const [newTaxRate, setNewTaxRate] = useState(18);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -86,6 +96,14 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
   const [editingPayment, setEditingPayment] = useState<PaymentMethodSetting | null>(null);
   const [paymentDisplayName, setPaymentDisplayName] = useState('');
   const [paymentIcon, setPaymentIcon] = useState('');
+  const [editingSection, setEditingSection] = useState<TableSection | null>(null);
+  const [sectionName, setSectionName] = useState('');
+  const [sectionDescription, setSectionDescription] = useState('');
+  const [sectionColor, setSectionColor] = useState('#4F46E5');
+  const [editingTable, setEditingTable] = useState<Table | null>(null);
+  const [tableNumber, setTableNumber] = useState('');
+  const [tableCapacity, setTableCapacity] = useState(4);
+  const [tableSection, setTableSection] = useState<string>('');
 
   const togglePaymentMethod = (method: PaymentMethod) => {
     setSettings((current) => {
@@ -230,7 +248,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
       )
     );
     
-    const category = (categories || []).find(c => c.id === categoryId);
+    const category = filteredCategories.find(c => c.id === categoryId);
     if (category) {
       const newStatus = category.showInPOS === false ? 'gösterilecek' : 'gizlenecek';
       toast.success(`${category.name} satış ekranında ${newStatus}`);
@@ -248,7 +266,9 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
       name: newCategoryName,
       description: newCategoryDescription,
       showInPOS: true,
-      sortOrder: (categories || []).length,
+      sortOrder: filteredCategories.length,
+      branchId: authSession?.branchId || 'branch-1',
+      adminId: authSession?.adminId || 'demo-admin',
     };
 
     setCategories((current) => [...(current || []), newCategory]);
@@ -259,9 +279,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
   };
 
   const deleteCategory = (categoryId: string) => {
-    const category = (categories || []).find(c => c.id === categoryId);
-    
-    const productsInCategory = (products || []).filter(
+    const productsInCategory = filteredProducts.filter(
       p => p.categoryId === categoryId
     );
     
@@ -275,6 +293,191 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
     );
 
     toast.success('Kategori silindi');
+  };
+
+  const openAddSectionDialog = () => {
+    setEditingSection(null);
+    setSectionName('');
+    setSectionDescription('');
+    setSectionColor('#4F46E5');
+    setShowSectionDialog(true);
+  };
+
+  const openEditSectionDialog = (section: TableSection) => {
+    setEditingSection(section);
+    setSectionName(section.name);
+    setSectionDescription(section.description || '');
+    setSectionColor(section.color || '#4F46E5');
+    setShowSectionDialog(true);
+  };
+
+  const saveSection = () => {
+    if (!sectionName.trim()) {
+      toast.error('Bölge adı gerekli');
+      return;
+    }
+
+    if (editingSection) {
+      setTableSections((current) =>
+        (current || []).map((s) =>
+          s.id === editingSection.id
+            ? {
+                ...s,
+                name: sectionName,
+                description: sectionDescription,
+                color: sectionColor,
+                updatedAt: new Date().toISOString(),
+              }
+            : s
+        )
+      );
+      toast.success('Masa bölgesi güncellendi');
+    } else {
+      const newSection: TableSection = {
+        id: generateId(),
+        branchId: authSession?.branchId || 'branch-1',
+        adminId: authSession?.adminId || 'demo-admin',
+        name: sectionName,
+        description: sectionDescription,
+        color: sectionColor,
+        isActive: true,
+        sortOrder: filteredTableSections.length,
+        createdAt: new Date().toISOString(),
+      };
+
+      setTableSections((current) => [...(current || []), newSection]);
+      toast.success('Yeni masa bölgesi eklendi');
+    }
+
+    setShowSectionDialog(false);
+  };
+
+  const deleteSection = (sectionId: string) => {
+    const tablesInSection = filteredTables.filter(
+      (t) => t.sectionId === sectionId
+    );
+
+    if (tablesInSection.length > 0) {
+      toast.error(`Bu bölgede ${tablesInSection.length} masa var. Önce masaları taşıyın.`);
+      return;
+    }
+
+    setTableSections((current) =>
+      (current || []).filter((s) => s.id !== sectionId)
+    );
+
+    toast.success('Masa bölgesi silindi');
+  };
+
+  const toggleSectionStatus = (sectionId: string) => {
+    setTableSections((current) =>
+      (current || []).map((s) =>
+        s.id === sectionId ? { ...s, isActive: !s.isActive, updatedAt: new Date().toISOString() } : s
+      )
+    );
+
+    const section = filteredTableSections.find((s) => s.id === sectionId);
+    if (section) {
+      toast.success(`${section.name} ${!section.isActive ? 'aktif' : 'pasif'} edildi`);
+    }
+  };
+
+  const openAddTableDialog = () => {
+    setEditingTable(null);
+    setTableNumber('');
+    setTableCapacity(4);
+    setTableSection('');
+    setShowTableDialog(true);
+  };
+
+  const openEditTableDialog = (table: Table) => {
+    setEditingTable(table);
+    setTableNumber(table.tableNumber);
+    setTableCapacity(table.capacity);
+    setTableSection(table.sectionId || '');
+    setShowTableDialog(true);
+  };
+
+  const saveTable = () => {
+    if (!tableNumber.trim()) {
+      toast.error('Masa numarası gerekli');
+      return;
+    }
+
+    const existingTable = filteredTables.find(
+      (t) => t.tableNumber === tableNumber && (!editingTable || t.id !== editingTable.id)
+    );
+
+    if (existingTable) {
+      toast.error('Bu masa numarası zaten kullanılıyor');
+      return;
+    }
+
+    if (editingTable) {
+      setTables((current) =>
+        (current || []).map((t) =>
+          t.id === editingTable.id
+            ? {
+                ...t,
+                tableNumber,
+                capacity: tableCapacity,
+                sectionId: tableSection || undefined,
+                section: tableSection
+                  ? filteredTableSections.find((s) => s.id === tableSection)?.name
+                  : undefined,
+                updatedAt: new Date().toISOString(),
+              }
+            : t
+        )
+      );
+      toast.success('Masa güncellendi');
+    } else {
+      const newTable: Table = {
+        id: generateId(),
+        branchId: authSession?.branchId || 'branch-1',
+        adminId: authSession?.adminId || 'demo-admin',
+        tableNumber,
+        capacity: tableCapacity,
+        status: 'available',
+        sectionId: tableSection || undefined,
+        section: tableSection
+          ? filteredTableSections.find((s) => s.id === tableSection)?.name
+          : undefined,
+        isActive: true,
+        sortOrder: filteredTables.length,
+        createdAt: new Date().toISOString(),
+      };
+
+      setTables((current) => [...(current || []), newTable]);
+      toast.success('Yeni masa eklendi');
+    }
+
+    setShowTableDialog(false);
+  };
+
+  const deleteTable = (tableId: string) => {
+    const table = filteredTables.find((t) => t.id === tableId);
+
+    if (table?.status === 'occupied') {
+      toast.error('Aktif siparişi olan masa silinemez');
+      return;
+    }
+
+    setTables((current) => (current || []).filter((t) => t.id !== tableId));
+    toast.success('Masa silindi');
+  };
+
+  const toggleTableStatus = (tableId: string) => {
+    setTables((current) =>
+      (current || []).map((t) =>
+        t.id === tableId ? { ...t, isActive: !t.isActive, updatedAt: new Date().toISOString() } : t
+      )
+    );
+
+    const table = filteredTables.find((t) => t.id === tableId);
+    if (table) {
+      toast.success(`Masa ${table.tableNumber} ${!table.isActive ? 'aktif' : 'pasif'} edildi`);
+    }
   };
 
   return (
@@ -292,6 +495,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
       <Tabs defaultValue="categories" className="space-y-4">
         <TabsList className="w-full sm:w-auto flex-wrap h-auto">
           <TabsTrigger value="categories" className="text-xs sm:text-sm">Kategori Yönetimi</TabsTrigger>
+          <TabsTrigger value="tables" className="text-xs sm:text-sm">Masa Yönetimi</TabsTrigger>
           <TabsTrigger value="tax" className="text-xs sm:text-sm">KDV Ayarları</TabsTrigger>
           <TabsTrigger value="payment" className="text-xs sm:text-sm">Ödeme Yöntemleri</TabsTrigger>
           <TabsTrigger value="theme" className="text-xs sm:text-sm">Sistem Teması</TabsTrigger>
@@ -314,13 +518,13 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {(categories || []).length === 0 ? (
+                {filteredCategories.length === 0 ? (
                   <p className="text-muted-foreground text-sm text-center py-8">
                     Henüz kategori yok. "Yeni Kategori" butonunu kullanarak kategori ekleyebilirsiniz.
                   </p>
                 ) : (
-                  (categories || []).map((category) => {
-                    const productCount = (products || []).filter(
+                  filteredCategories.map((category) => {
+                    const productCount = filteredProducts.filter(
                       p => p.categoryId === category.id
                     ).length;
                     
@@ -447,7 +651,7 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
 
               <div className="space-y-3">
                 <p className="text-sm font-medium">Ürün KDV Atamaları</p>
-                {(products || []).map((product) => (
+                {filteredProducts.map((product) => (
                   <div
                     key={product.id}
                     className="flex items-center justify-between p-4 border rounded-lg"
@@ -472,6 +676,184 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tables" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MapPin className="h-5 w-5" weight="fill" />
+                    Masa Bölgeleri
+                  </CardTitle>
+                  <CardDescription>Masa bölgelerini oluşturun ve düzenleyin</CardDescription>
+                </div>
+                <Button onClick={openAddSectionDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Yeni Bölge
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {filteredTableSections.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Henüz masa bölgesi yok. Masalarınızı organize etmek için bölge ekleyin.
+                  </p>
+                ) : (
+                  filteredTableSections.map((section) => {
+                    const tableCount = filteredTables.filter(
+                      (t) => t.sectionId === section.id
+                    ).length;
+
+                    return (
+                      <div
+                        key={section.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded-lg"
+                              style={{ backgroundColor: section.color }}
+                            />
+                            <div>
+                              <p className="font-medium">{section.name}</p>
+                              {section.description && (
+                                <p className="text-sm text-muted-foreground">{section.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground ml-11">
+                            <span>{tableCount} masa</span>
+                            <span className={section.isActive ? 'text-accent' : 'text-muted-foreground'}>
+                              {section.isActive ? 'Aktif' : 'Pasif'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditSectionDialog(section)}
+                          >
+                            <PencilSimple className="h-4 w-4" />
+                          </Button>
+                          <Switch
+                            checked={section.isActive}
+                            onCheckedChange={() => toggleSectionStatus(section.id)}
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteSection(section.id)}
+                            disabled={tableCount > 0}
+                            title={tableCount > 0 ? 'Bu bölgede masalar var' : 'Bölgeyi sil'}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TableIcon className="h-5 w-5" weight="fill" />
+                    Masalar
+                  </CardTitle>
+                  <CardDescription>Masaları oluşturun ve düzenleyin</CardDescription>
+                </div>
+                <Button onClick={openAddTableDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Yeni Masa
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {filteredTables.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    Henüz masa yok. "Yeni Masa" butonunu kullanarak masa ekleyebilirsiniz.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {filteredTables.map((table) => {
+                      const section = filteredTableSections.find(
+                        (s) => s.id === table.sectionId
+                      );
+
+                      return (
+                        <div
+                          key={table.id}
+                          className="flex flex-col p-4 border rounded-lg space-y-3"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white"
+                                style={{
+                                  backgroundColor: section?.color || '#6B7280',
+                                }}
+                              >
+                                {table.tableNumber}
+                              </div>
+                              <div>
+                                <p className="font-medium">Masa {table.tableNumber}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {table.capacity} kişilik
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={table.isActive}
+                              onCheckedChange={() => toggleTableStatus(table.id)}
+                            />
+                          </div>
+
+                          {section && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <MapPin className="h-4 w-4 text-muted-foreground" weight="fill" />
+                              <span className="text-muted-foreground">{section.name}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2 pt-2 border-t">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => openEditTableDialog(table)}
+                            >
+                              <PencilSimple className="h-4 w-4 mr-1" />
+                              Düzenle
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteTable(table.id)}
+                              disabled={table.status === 'occupied'}
+                              title={table.status === 'occupied' ? 'Aktif masa silinemez' : 'Masayı sil'}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -948,6 +1330,151 @@ export default function SettingsModule({ onBack }: SettingsModuleProps) {
             <Button onClick={updatePaymentMethod}>
               <PencilSimple className="h-4 w-4 mr-2" />
               Güncelle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSectionDialog} onOpenChange={setShowSectionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingSection ? 'Bölgeyi Düzenle' : 'Yeni Masa Bölgesi'}</DialogTitle>
+            <DialogDescription>
+              {editingSection ? 'Masa bölgesi bilgilerini güncelleyin' : 'Yeni bir masa bölgesi oluşturun'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Bölge Adı</Label>
+              <Input
+                value={sectionName}
+                onChange={(e) => setSectionName(e.target.value)}
+                placeholder="Örn: İç Salon, Dış Mekan, Bahçe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Açıklama (Opsiyonel)</Label>
+              <Input
+                value={sectionDescription}
+                onChange={(e) => setSectionDescription(e.target.value)}
+                placeholder="Bölge açıklaması..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Renk</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="color"
+                  value={sectionColor}
+                  onChange={(e) => setSectionColor(e.target.value)}
+                  className="w-20 h-10"
+                />
+                <Input
+                  type="text"
+                  value={sectionColor}
+                  onChange={(e) => setSectionColor(e.target.value)}
+                  placeholder="#4F46E5"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bu renk masaların görsel tanımlanmasında kullanılacak
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSectionDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={saveSection}>
+              {editingSection ? (
+                <>
+                  <PencilSimple className="h-4 w-4 mr-2" />
+                  Güncelle
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Oluştur
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTableDialog} onOpenChange={setShowTableDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingTable ? 'Masayı Düzenle' : 'Yeni Masa'}</DialogTitle>
+            <DialogDescription>
+              {editingTable ? 'Masa bilgilerini güncelleyin' : 'Yeni bir masa oluşturun'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Masa Numarası</Label>
+              <Input
+                value={tableNumber}
+                onChange={(e) => setTableNumber(e.target.value)}
+                placeholder="Örn: 1, 2, A1, B3"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Kapasite (Kişi Sayısı)</Label>
+              <Input
+                type="number"
+                min="1"
+                max="20"
+                value={tableCapacity}
+                onChange={(e) => setTableCapacity(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Masa Bölgesi (Opsiyonel)</Label>
+              <Select value={tableSection} onValueChange={setTableSection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Bölge seçin..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Bölge Yok</SelectItem>
+                  {filteredTableSections
+                    .filter((s) => s.isActive)
+                    .map((section) => (
+                      <SelectItem key={section.id} value={section.id}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded"
+                            style={{ backgroundColor: section.color }}
+                          />
+                          {section.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                💡 Masa bölgeleri masalarınızı organize etmenize yardımcı olur
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTableDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={saveTable}>
+              {editingTable ? (
+                <>
+                  <PencilSimple className="h-4 w-4 mr-2" />
+                  Güncelle
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Oluştur
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

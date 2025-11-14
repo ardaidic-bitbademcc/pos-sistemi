@@ -214,6 +214,19 @@ export interface SalaryCalculationSettings {
   includeMealAllowance?: boolean;
 }
 
+export interface TableSection {
+  id: string;
+  branchId: string;
+  adminId?: string;
+  name: string;
+  description?: string;
+  color?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface Table {
   id: string;
   branchId: string;
@@ -223,8 +236,13 @@ export interface Table {
   status: 'available' | 'occupied' | 'reserved' | 'cleaning';
   currentSaleId?: string;
   section?: string;
+  sectionId?: string;
   firstOrderTime?: string;
   lastOrderTime?: string;
+  isActive: boolean;
+  sortOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TableOrder {

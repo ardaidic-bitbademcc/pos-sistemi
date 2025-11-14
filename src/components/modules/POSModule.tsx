@@ -17,7 +17,7 @@ import { motion } from 'framer-motion';
 import Numpad from '@/components/Numpad';
 import KeyboardInput from '@/components/KeyboardInput';
 import ProductOptionsSelector from '@/components/ProductOptionsSelector';
-import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem, CustomerAccount, CustomerTransaction, AuthSession } from '@/lib/types';
+import type { Product, Sale, SaleItem, PaymentMethod, Table, TableOrder, Category, UserRole, CashRegister, MenuItem, CustomerAccount, CustomerTransaction, AuthSession, TableSection } from '@/lib/types';
 import { formatCurrency, generateId, generateSaleNumber, calculateTax } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 import { Logger } from '@/lib/logger';
@@ -66,6 +66,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
   const [categories] = useKV<Category[]>('categories', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
+  const [tableSections] = useKV<TableSection[]>('tableSections', []);
   const [tableOrders, setTableOrders] = useKV<TableOrder[]>('tableOrders', []);
   const [cashRegister, setCashRegister] = useKV<CashRegister>('cashRegister', {
     id: generateId(),
@@ -250,7 +251,9 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
     p.isActive && p.hasActiveCampaign && p.campaignDetails
   );
 
-  const availableTables = (tables || []).filter(t => t.status === 'available' || t.status === 'occupied');
+  const availableTables = (tables || []).filter(t => 
+    t.isActive && (t.status === 'available' || t.status === 'occupied')
+  );
 
   useEffect(() => {
     if (selectedTable) {
@@ -2235,41 +2238,124 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
       </Tabs>
 
       <Dialog open={showTableSelect} onOpenChange={setShowTableSelect}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Masa Seç</DialogTitle>
             <DialogDescription>
               Sipariş için bir masa seçin
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-3 py-4">
-            {availableTables.map((table) => (
-              <Card
-                key={table.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  table.status === 'occupied' ? 'border-accent' : ''
-                }`}
-                onClick={() => selectTable(table)}
-              >
-                <CardContent className="p-4 text-center space-y-2">
-                  <TableIcon
-                    className={`h-8 w-8 mx-auto ${
-                      table.status === 'occupied' ? 'text-accent' : 'text-muted-foreground'
-                    }`}
-                    weight="bold"
-                  />
-                  <div>
-                    <p className="font-medium">Masa {table.tableNumber}</p>
-                    <Badge
-                      variant={table.status === 'occupied' ? 'default' : 'secondary'}
-                      className="text-xs mt-1"
-                    >
-                      {table.status === 'occupied' ? 'Dolu' : 'Boş'}
-                    </Badge>
+          <div className="space-y-6 py-4">
+            {(tableSections || [])
+              .filter((section) => section.isActive)
+              .map((section) => {
+                const sectionTables = availableTables.filter(
+                  (t) => t.sectionId === section.id
+                );
+                
+                if (sectionTables.length === 0) return null;
+
+                return (
+                  <div key={section.id} className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: section.color }}
+                      />
+                      <h3 className="font-semibold text-lg">{section.name}</h3>
+                      {section.description && (
+                        <span className="text-sm text-muted-foreground">
+                          {section.description}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {sectionTables.map((table) => (
+                        <Card
+                          key={table.id}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            table.status === 'occupied' ? 'border-accent' : ''
+                          }`}
+                          onClick={() => selectTable(table)}
+                        >
+                          <CardContent className="p-4 text-center space-y-2">
+                            <div
+                              className="w-10 h-10 rounded-lg mx-auto flex items-center justify-center font-bold text-white"
+                              style={{ backgroundColor: section.color }}
+                            >
+                              {table.tableNumber}
+                            </div>
+                            <div>
+                              <p className="font-medium">Masa {table.tableNumber}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {table.capacity} kişilik
+                              </p>
+                              <Badge
+                                variant={table.status === 'occupied' ? 'default' : 'secondary'}
+                                className="text-xs mt-1"
+                              >
+                                {table.status === 'occupied' ? 'Dolu' : 'Boş'}
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                );
+              })}
+
+            {(() => {
+              const tablesWithoutSection = availableTables.filter(
+                (t) => !t.sectionId
+              );
+              
+              if (tablesWithoutSection.length === 0) return null;
+
+              return (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg text-muted-foreground">
+                    Diğer Masalar
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {tablesWithoutSection.map((table) => (
+                      <Card
+                        key={table.id}
+                        className={`cursor-pointer transition-all hover:shadow-md ${
+                          table.status === 'occupied' ? 'border-accent' : ''
+                        }`}
+                        onClick={() => selectTable(table)}
+                      >
+                        <CardContent className="p-4 text-center space-y-2">
+                          <TableIcon
+                            className={`h-8 w-8 mx-auto ${
+                              table.status === 'occupied'
+                                ? 'text-accent'
+                                : 'text-muted-foreground'
+                            }`}
+                            weight="bold"
+                          />
+                          <div>
+                            <p className="font-medium">Masa {table.tableNumber}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {table.capacity} kişilik
+                            </p>
+                            <Badge
+                              variant={
+                                table.status === 'occupied' ? 'default' : 'secondary'
+                              }
+                              className="text-xs mt-1"
+                            >
+                              {table.status === 'occupied' ? 'Dolu' : 'Boş'}
+                            </Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useKV } from '@github/spark/hooks';
-import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem, B2BSupplier, B2BProduct, Admin } from '@/lib/types';
+import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem, B2BSupplier, B2BProduct, Admin, TableSection } from '@/lib/types';
 import { generateId, generateSaleNumber, calculateTax, getBaseCategories } from '@/lib/helpers';
 
 export function useSeedData() {
@@ -9,6 +9,7 @@ export function useSeedData() {
   const [products, setProducts] = useKV<Product[]>('products', []);
   const [categories, setCategories] = useKV<Category[]>('categories', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
+  const [tableSections, setTableSections] = useKV<TableSection[]>('tableSections', []);
   const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const [branches, setBranches] = useKV<Branch[]>('branches', []);
   const [sales, setSales] = useKV<Sale[]>('sales', []);
@@ -582,16 +583,72 @@ export function useSeedData() {
       setProducts(sampleProducts);
     }
 
+    if (!tableSections || tableSections.length === 0) {
+      const sampleSections: TableSection[] = [
+        {
+          id: 'section-1',
+          branchId: 'branch-1',
+          adminId: 'demo-admin',
+          name: 'İç Salon',
+          description: 'Restoran iç mekan masaları',
+          color: '#4F46E5',
+          isActive: true,
+          sortOrder: 0,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'section-2',
+          branchId: 'branch-1',
+          adminId: 'demo-admin',
+          name: 'Dış Mekan',
+          description: 'Teras ve bahçe masaları',
+          color: '#10B981',
+          isActive: true,
+          sortOrder: 1,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'section-3',
+          branchId: 'branch-1',
+          adminId: 'demo-admin',
+          name: 'VIP Salon',
+          description: 'Özel rezervasyon alanı',
+          color: '#F59E0B',
+          isActive: true,
+          sortOrder: 2,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      setTableSections(sampleSections);
+    }
+
     if (!tables || tables.length === 0) {
-      const sampleTables: Table[] = Array.from({ length: 12 }, (_, i) => ({
-        id: generateId(),
-        branchId: 'branch-1',
-        adminId: 'demo-admin',
-        tableNumber: (i + 1).toString(),
-        capacity: i < 4 ? 2 : i < 8 ? 4 : 6,
-        status: 'available' as const,
-        section: i < 6 ? 'İç Salon' : 'Dış Mekan',
-      }));
+      const sampleTables: Table[] = Array.from({ length: 15 }, (_, i) => {
+        let sectionId = 'section-1';
+        let section = 'İç Salon';
+        
+        if (i >= 6 && i < 12) {
+          sectionId = 'section-2';
+          section = 'Dış Mekan';
+        } else if (i >= 12) {
+          sectionId = 'section-3';
+          section = 'VIP Salon';
+        }
+        
+        return {
+          id: generateId(),
+          branchId: 'branch-1',
+          adminId: 'demo-admin',
+          tableNumber: (i + 1).toString(),
+          capacity: i >= 12 ? 8 : i < 4 ? 2 : i < 8 ? 4 : 6,
+          status: 'available' as const,
+          section,
+          sectionId,
+          isActive: true,
+          sortOrder: i,
+          createdAt: new Date().toISOString(),
+        };
+      });
       setTables(sampleTables);
     }
 

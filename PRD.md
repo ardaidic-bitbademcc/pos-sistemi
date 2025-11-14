@@ -88,8 +88,8 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Enter/Tamam ile onaylama
 
 #### Masa Yönetimi
-- **İşlevsellik**: Masa durumu takibi (Boş/Dolu/Rezerve), masa kapasitesi görüntüleme, sipariş zamanı takibi, tembel masa uyarıları
-- **Amaç**: Restoran masalarını verimli yönetmek ve masa bazlı sipariş takibi
+- **İşlevsellik**: Masa durumu takibi (Boş/Dolu/Rezerve), masa kapasitesi görüntüleme, sipariş zamanı takibi, tembel masa uyarıları, masa bölgeleri ile organizasyon
+- **Amaç**: Restoran masalarını verimli yönetmek, masa bazlı sipariş takibi ve bölgelere göre düzenli organizasyon
 - **Tetikleyici**: Kasiyer/garson masa seçer veya masa durumu değişir
 - **Akış**: Masa listesi görüntüle → Masa seç → Sipariş ekle → Kaydet → Masalar ekranına yönlendir → Ödeme al (sadece yetkili kullanıcılar) → Masa otomatik boşalt
 - **Başarı Kriterleri**: 
@@ -99,6 +99,27 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Son sipariş dakikası gösterilir
   - Kullanıcı tarafından ayarlanabilir süre sonunda (varsayılan 120 dk) "TEMBEL MASA" uyarısı gösterilir
   - Sipariş kaydedildikten sonra otomatik olarak masalar ekranına yönlendirilir
+  - Masalar bölgelere (İç Salon, Dış Mekan, VIP Salon vb.) göre gruplandırılabilir
+  - Her bölge kendine özel renk ile görselleştirilir
+  - Masa seçim ekranında bölgelere göre organize görünüm sunulur
+
+#### Masa Bölge Yönetimi (Ayarlar Modülünde)
+- **İşlevsellik**: Masa bölgeleri oluşturma, düzenleme, silme, aktif/pasif yapma, renklendirme
+- **Amaç**: Restoranın fiziksel alanlarını organize etmek, masaları kategorize etmek
+- **Tetikleyici**: Yönetici Ayarlar → Masa Yönetimi sekmesine gider
+- **Akış**: 
+  - **Bölge Oluşturma**: Yeni Bölge → Bölge adı gir (İç Salon, Dış Mekan vb.) → Açıklama ekle → Renk seç → Oluştur
+  - **Masa Oluşturma**: Yeni Masa → Masa numarası gir → Kapasite belirle → Bölge seç → Oluştur
+  - **Masa Düzenleme**: Masa kartında Düzenle → Bilgileri güncelle → Kaydet
+  - **Bölge/Masa Silme**: Sil butonuna tıkla → Onay → (Bölgede/masada işlem yoksa) Silinir
+- **Başarı Kriterleri**:
+  - Bölgeler renk kodlu olarak görüntülenir
+  - Her bölgede kaç masa olduğu gösterilir
+  - Masalar bölge renginde vurgulanır
+  - Aktif işlem olan masalar silinemez
+  - Masaları olan bölgeler silinemez
+  - Masa numaraları benzersiz olmalı
+  - Masa kapasitesi 1-20 arası seçilebilir
 
 #### Ödeme Yöntemleri ve Yetkiler
 - **İşlevsellik**: Buton bazlı ödeme yöntemi seçimi (Nakit, Kredi Kartı, Mobil Ödeme), rol bazlı yetkilendirme
