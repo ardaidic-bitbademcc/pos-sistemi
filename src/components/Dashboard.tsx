@@ -128,18 +128,24 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
 
   const stats: DashboardStats = useMemo(() => {
     const today = getStartOfDay();
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+    
     const completedSales = filteredSales.filter((sale) => sale.paymentStatus === 'completed');
-    const todaySales = completedSales.filter(
-      (sale) => new Date(sale.saleDate) >= today
-    );
+    const todaySales = completedSales.filter((sale) => {
+      const saleDate = new Date(sale.saleDate);
+      return saleDate >= today && saleDate <= todayEnd;
+    });
 
     console.log('Dashboard KPI Debug:', {
       totalSales: filteredSales.length,
       completedSales: completedSales.length,
       todaySales: todaySales.length,
-      today: today.toISOString(),
+      todayStart: today.toISOString(),
+      todayEnd: todayEnd.toISOString(),
       sampleSaleDate: completedSales[0]?.saleDate,
       sampleSaleDateParsed: completedSales[0] ? new Date(completedSales[0].saleDate).toISOString() : null,
+      allCompletedSaleDates: completedSales.slice(0, 5).map(s => s.saleDate),
     });
 
     return {
