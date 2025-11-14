@@ -800,7 +800,7 @@ export default function TaskManagementModule({
                             )}
 
                             {canRateThisTask && (
-                            {canRateThisTask && (
+                              <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
@@ -814,11 +814,10 @@ export default function TaskManagementModule({
                             )}
 
                             {canEditThisTask && task.status !== 'completed' && (
-                            {canEditThisTask && task.status !== 'completed' && (
+                              <>
                                 <Button variant="ghost" size="sm" onClick={() => openEditDialog(task)}>
                                   <PencilSimple className="h-4 w-4" />
                                 </Button>
-                                {canDeleteThisTask && (
                                 {canDeleteThisTask && (
                                   <Button
                                     variant="ghost"
@@ -828,6 +827,7 @@ export default function TaskManagementModule({
                                     <Trash className="h-4 w-4" />
                                   </Button>
                                 )}
+                              </>
                             )}
                           </div>
                         </CardContent>
