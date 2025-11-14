@@ -985,7 +985,20 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
       branchId: authSession?.branchId,
     });
 
-    setSales((currentSales) => [...(currentSales || []), newSale]);
+    console.log('Partial payment sale being saved:', {
+      id: newSale.id,
+      saleNumber: newSale.saleNumber,
+      saleDate: newSale.saleDate,
+      paymentStatus: newSale.paymentStatus,
+      totalAmount: newSale.totalAmount,
+      branchId: newSale.branchId,
+    });
+
+    setSales((currentSales) => {
+      const updated = [...(currentSales || []), newSale];
+      console.log('Added partial payment sale. Total sales count:', updated.length);
+      return updated;
+    });
     updateCashRegister(finalPaymentMethod, partialTotals.total, splitPayments);
 
     deductStock(paidItems);
@@ -1173,12 +1186,27 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
       branchId: authSession?.branchId,
     });
 
+    console.log('Sale being saved:', {
+      id: newSale.id,
+      saleNumber: newSale.saleNumber,
+      saleDate: newSale.saleDate,
+      paymentStatus: newSale.paymentStatus,
+      totalAmount: newSale.totalAmount,
+      branchId: newSale.branchId,
+    });
+
     if (selectedTable?.currentSaleId) {
-      setSales((currentSales) => 
-        (currentSales || []).map(s => s.id === saleId ? newSale : s)
-      );
+      setSales((currentSales) => {
+        const updated = (currentSales || []).map(s => s.id === saleId ? newSale : s);
+        console.log('Updated existing sale. Total sales count:', updated.length);
+        return updated;
+      });
     } else {
-      setSales((currentSales) => [...(currentSales || []), newSale]);
+      setSales((currentSales) => {
+        const updated = [...(currentSales || []), newSale];
+        console.log('Added new sale. Total sales count:', updated.length);
+        return updated;
+      });
     }
 
     updateCashRegister(finalPaymentMethod, totals.total, splitPayments);
@@ -1346,6 +1374,29 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
       userName: authSession?.userName,
       branchId: authSession?.branchId,
     });
+
+    console.log('Customer account sale being saved:', {
+      id: newSale.id,
+      saleNumber: newSale.saleNumber,
+      saleDate: newSale.saleDate,
+      paymentStatus: newSale.paymentStatus,
+      totalAmount: newSale.totalAmount,
+      branchId: newSale.branchId,
+    });
+
+    if (selectedTable?.currentSaleId) {
+      setSales((currentSales) => {
+        const updated = (currentSales || []).map(s => s.id === saleId ? newSale : s);
+        console.log('Updated customer account sale. Total sales count:', updated.length);
+        return updated;
+      });
+    } else {
+      setSales((currentSales) => {
+        const updated = [...(currentSales || []), newSale];
+        console.log('Added customer account sale. Total sales count:', updated.length);
+        return updated;
+      });
+    }
 
     setCustomerTransactions((current) => [...(current || []), transaction]);
 

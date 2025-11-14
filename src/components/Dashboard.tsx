@@ -128,9 +128,19 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
 
   const stats: DashboardStats = useMemo(() => {
     const today = getStartOfDay();
-    const todaySales = filteredSales.filter(
+    const completedSales = filteredSales.filter((sale) => sale.paymentStatus === 'completed');
+    const todaySales = completedSales.filter(
       (sale) => new Date(sale.saleDate) >= today
     );
+
+    console.log('Dashboard KPI Debug:', {
+      totalSales: filteredSales.length,
+      completedSales: completedSales.length,
+      todaySales: todaySales.length,
+      today: today.toISOString(),
+      sampleSaleDate: completedSales[0]?.saleDate,
+      sampleSaleDateParsed: completedSales[0] ? new Date(completedSales[0].saleDate).toISOString() : null,
+    });
 
     return {
       todaySales: currentPermissions.canViewFinancials 
