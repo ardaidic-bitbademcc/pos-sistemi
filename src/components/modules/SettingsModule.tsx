@@ -58,10 +58,10 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
   const [tableSections, setTableSections] = useKV<TableSection[]>('tableSections', []);
   const [tables, setTables] = useKV<Table[]>('tables', []);
   
-  const filteredProducts = useBranchFilter(products, authSession).filteredItems;
-  const filteredCategories = useBranchFilter(categories, authSession).filteredItems;
-  const filteredTableSections = useBranchFilter(tableSections, authSession).filteredItems;
-  const filteredTables = useBranchFilter(tables, authSession).filteredItems;
+  const { filteredItems: filteredProducts } = useBranchFilter(products, authSession);
+  const { filteredItems: filteredCategories } = useBranchFilter(categories, authSession);
+  const { filteredItems: filteredTableSections } = useBranchFilter(tableSections, authSession);
+  const { filteredItems: filteredTables } = useBranchFilter(tables, authSession);
   
   const defaultSettings: AppSettings = {
     taxRates: [
@@ -1496,17 +1496,20 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
                     .filter((s) => s.isActive)
                     .map((section) => (
                       <SelectItem key={section.id} value={section.id}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-4 h-4 rounded"
-                            style={{ backgroundColor: section.color }}
-                          />
-                          {section.name}
-                        </div>
+                        {section.name}
                       </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
+              {tableSection && filteredTableSections.find(s => s.id === tableSection) && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div
+                    className="w-4 h-4 rounded"
+                    style={{ backgroundColor: filteredTableSections.find(s => s.id === tableSection)?.color }}
+                  />
+                  <span>{filteredTableSections.find(s => s.id === tableSection)?.name}</span>
+                </div>
+              )}
             </div>
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">

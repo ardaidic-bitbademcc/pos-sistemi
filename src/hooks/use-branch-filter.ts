@@ -14,7 +14,8 @@ export function useBranchFilter<T extends BranchFilterableItem>(
   const manager = useMemo(() => createBranchManager<T>(session || null), [session]);
   
   const filteredItems = useMemo(() => {
-    if (!items || !session) return [];
+    if (!items) return [];
+    if (!session) return items;
     return manager.filter(items);
   }, [items, session, manager]);
 

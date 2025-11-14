@@ -24,7 +24,7 @@ export function filterByBranch<T extends BranchFilterableItem>(
   items: T[],
   session: AuthSession | null
 ): T[] {
-  if (!session) return [];
+  if (!session) return items;
   
   return items.filter((item) => {
     const hasAdminId = item.adminId === session.adminId;
@@ -39,7 +39,7 @@ export function filterByAdminOnly<T extends BranchFilterableItem>(
   items: T[],
   session: AuthSession | null
 ): T[] {
-  if (!session) return [];
+  if (!session) return items;
   
   return items.filter((item) => {
     return item.adminId === session.adminId || !item.adminId;
