@@ -21,7 +21,7 @@ import {
   UserGear,
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
-import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission, AuthSession } from '@/lib/types';
+import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission, AuthSession, Task } from '@/lib/types';
 import { formatCurrency, formatNumber } from '@/lib/helpers';
 import { useMemo } from 'react';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
@@ -147,6 +147,7 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
   const [sales] = useKV<Sale[]>('sales', []);
   const [employees] = useKV<any[]>('employees', []);
   const [products] = useKV<any[]>('products', []);
+  const [tasks] = useKV<Task[]>('tasks', []);
   const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
 
   const { filteredItems: filteredSales } = useBranchFilter(sales, authSession);
@@ -183,6 +184,41 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
       pendingApprovals: 0,
     };
   }, [filteredSales, filteredEmployees, filteredProducts, currentPermissions]);
+
+  const taskStats = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentUserId = authSession?.userId;
+    
+    const myTasks = (tasks || []).filter(
+      (task) => 
+        task.assignedTo === currentUserId &&
+        (!authSession?.branchId || task.branchId === authSession?.branchId)
+    );
+
+    const urgentTasks = myTasks.filter(
+      (task) => task.priority === 'urgent' && (task.status === 'pending' || task.status === 'in_progress')
+    );
+
+    const overdueTasks = myTasks.filter(
+      (task) => 
+        (task.status === 'pending' || task.status === 'in_progress') &&
+        task.dueDate < today
+    );
+
+    const dueTodayTasks = myTasks.filter(
+      (task) => 
+        (task.status === 'pending' || task.status === 'in_progress') &&
+        task.dueDate === today
+    );
+
+    return {
+      urgent: urgentTasks.length,
+      overdue: overdueTasks.length,
+      dueToday: dueTodayTasks.length,
+      total: myTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length,
+    };
+  }, [tasks, authSession]);
 
   const allModuleCards = [
     {
@@ -401,6 +437,67 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
           </CardContent>
         </Card>
       </div>
+
+      {hasModuleAccess('tasks') && (taskStats.urgent > 0 || taskStats.overdue > 0 || taskStats.dueToday > 0) && (
+        <Card className="border-orange-500 bg-gradient-to-r from-orange-50/50 to-red-50/50 dark:from-orange-950/20 dark:to-red-950/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-orange-600" weight="fill" />
+                <CardTitle className="text-orange-900 dark:text-orange-100">Görev Hatırlatıcıları</CardTitle>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onNavigate('tasks')}
+                className="border-orange-600 text-orange-600 hover:bg-orange-100"
+              >
+                Görevlere Git
+              </Button>
+            </div>
+            <CardDescription className="text-orange-800 dark:text-orange-200">
+              Dikkat gerektiren görevleriniz var
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {taskStats.overdue > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-red-500 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-red-600 dark:text-red-400">GECİKMİŞ</span>
+                    <div className="bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold animate-pulse">
+                      {taskStats.overdue}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Tarihi geçmiş görevler</p>
+                </div>
+              )}
+              {taskStats.urgent > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-orange-500 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-orange-600 dark:text-orange-400">ACİL</span>
+                    <div className="bg-orange-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
+                      {taskStats.urgent}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Acil öncelikli görevler</p>
+                </div>
+              )}
+              {taskStats.dueToday > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-yellow-500 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">BUGÜN</span>
+                    <div className="bg-yellow-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
+                      {taskStats.dueToday}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Bugün bitmesi gereken</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Modüller</h2>

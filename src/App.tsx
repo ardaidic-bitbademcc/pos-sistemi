@@ -33,6 +33,7 @@ import CashRegisterMonitor from '@/components/CashRegisterMonitor';
 import DataMigration from '@/components/DataMigration';
 import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
+import { useTaskReminders } from '@/hooks/use-task-reminders';
 import { checkMigrationStatus } from '@/lib/data-migration';
 import type { UserRole, AuthSession, Branch } from '@/lib/types';
 import { toast } from 'sonner';
@@ -52,6 +53,7 @@ function App() {
   
   useSeedData();
   useAutoEmployeeAccounts();
+  useTaskReminders(authSession);
 
   useEffect(() => {
     const checkMigration = async () => {

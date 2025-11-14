@@ -26,7 +26,9 @@ import {
   Eye,
   Play,
   X,
-  ChatCircle
+  ChatCircle,
+  Bell,
+  Warning
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Task, TaskPriority, TaskStatus, TaskRecurrence, Employee, UserRole, AuthSession, RolePermissions } from '@/lib/types';
@@ -167,10 +169,27 @@ export default function TaskManagementModule({
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [showReminderSettings, setShowReminderSettings] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'my-tasks' | 'assigned-by-me'>('my-tasks');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [filterPriority, setFilterPriority] = useState<TaskPriority | 'all'>('all');
+  
+  const [reminderSettings, setReminderSettings] = useKV<{
+    enabled: boolean;
+    urgentTaskReminder: boolean;
+    dueTodayReminder: boolean;
+    dueTomorrowReminder: boolean;
+    overdueReminder: boolean;
+    reminderInterval: number;
+  }>('taskReminderSettings', {
+    enabled: true,
+    urgentTaskReminder: true,
+    dueTodayReminder: true,
+    dueTomorrowReminder: true,
+    overdueReminder: true,
+    reminderInterval: 15,
+  });
   
   const [formData, setFormData] = useState({
     title: '',
@@ -547,13 +566,23 @@ export default function TaskManagementModule({
             </p>
           </div>
         </div>
-        {canCreateTask && (
-          <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto text-xs sm:text-sm h-9">
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
-            <span className="hidden sm:inline">Yeni Görev</span>
-            <span className="sm:hidden">Yeni</span>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowReminderSettings(true)} 
+            className="flex-1 sm:flex-initial text-xs sm:text-sm h-9"
+          >
+            <Bell className="h-4 w-4 sm:mr-2" weight={reminderSettings?.enabled ? 'fill' : 'regular'} />
+            <span className="hidden sm:inline">Hatırlatıcılar</span>
           </Button>
-        )}
+          {canCreateTask && (
+            <Button onClick={() => setShowCreateDialog(true)} className="flex-1 sm:flex-initial text-xs sm:text-sm h-9">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Yeni Görev</span>
+              <span className="sm:hidden">Yeni</span>
+            </Button>
+          )}
+        </div>
       </header>
 
       {canViewTaskStatus && (
@@ -703,6 +732,8 @@ export default function TaskManagementModule({
                       task.status !== 'completed' &&
                       task.status !== 'cancelled' &&
                       new Date(task.dueDate) < new Date();
+                    const isDueToday = task.dueDate === new Date().toISOString().split('T')[0];
+                    const isDueTomorrow = task.dueDate === new Date(Date.now() + 86400000).toISOString().split('T')[0];
                     const currentEmployeeId = authSession?.userId || currentUserId;
                     const canEditThisTask = (canEditTask && task.createdBy === currentEmployeeId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
                     const canDeleteThisTask = (canDeleteTask && task.createdBy === currentEmployeeId) || (currentUserRole === 'owner' || currentUserRole === 'manager');
@@ -720,9 +751,23 @@ export default function TaskManagementModule({
                       <Card
                         key={task.id}
                         className={`relative ${
-                          isOverdue ? 'border-destructive bg-destructive/5' : ''
-                        } ${task.status === 'completed' ? 'opacity-75' : ''}`}
+                          isOverdue ? 'border-destructive bg-destructive/5 shadow-lg' : ''
+                        } ${task.priority === 'urgent' && !isOverdue ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20' : ''} ${task.status === 'completed' ? 'opacity-75' : ''}`}
                       >
+                        {isOverdue && (
+                          <div className="absolute -top-2 -right-2 z-10">
+                            <div className="bg-destructive text-destructive-foreground rounded-full p-2 shadow-lg animate-pulse">
+                              <Warning className="h-4 w-4" weight="fill" />
+                            </div>
+                          </div>
+                        )}
+                        {task.priority === 'urgent' && !isOverdue && (
+                          <div className="absolute -top-2 -right-2 z-10">
+                            <div className="bg-orange-500 text-white rounded-full p-2 shadow-lg">
+                              <FlagBanner className="h-4 w-4" weight="fill" />
+                            </div>
+                          </div>
+                        )}
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
@@ -763,7 +808,19 @@ export default function TaskManagementModule({
                               </span>
                               {isOverdue && (
                                 <Badge variant="destructive" className="text-xs">
+                                  <Warning className="h-3 w-3 mr-1" weight="fill" />
                                   Gecikmiş
+                                </Badge>
+                              )}
+                              {isDueToday && !isOverdue && (
+                                <Badge variant="default" className="text-xs bg-orange-500">
+                                  <Clock className="h-3 w-3 mr-1" weight="fill" />
+                                  Bugün
+                                </Badge>
+                              )}
+                              {isDueTomorrow && (task.priority === 'high' || task.priority === 'urgent') && (
+                                <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">
+                                  Yarın
                                 </Badge>
                               )}
                             </div>
@@ -1379,6 +1436,169 @@ export default function TaskManagementModule({
             <Button onClick={handleRateTask}>
               <Star className="h-4 w-4 mr-2" weight="fill" />
               Puanla
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReminderSettings} onOpenChange={setShowReminderSettings}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" weight="bold" />
+              Hatırlatıcı Ayarları
+            </DialogTitle>
+            <DialogDescription>
+              Görev hatırlatıcılarını özelleştirin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-base">Hatırlatıcıları Etkinleştir</Label>
+                <p className="text-sm text-muted-foreground">
+                  Tüm hatırlatıcıları aç/kapat
+                </p>
+              </div>
+              <Button
+                variant={reminderSettings?.enabled ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => 
+                  setReminderSettings((current) => ({
+                    ...current!,
+                    enabled: !current?.enabled
+                  }))
+                }
+              >
+                {reminderSettings?.enabled ? 'Açık' : 'Kapalı'}
+              </Button>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Acil Görevler</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Acil öncelikli görevler için uyarı
+                  </p>
+                </div>
+                <Button
+                  variant={reminderSettings?.urgentTaskReminder ? 'destructive' : 'outline'}
+                  size="sm"
+                  disabled={!reminderSettings?.enabled}
+                  onClick={() => 
+                    setReminderSettings((current) => ({
+                      ...current!,
+                      urgentTaskReminder: !current?.urgentTaskReminder
+                    }))
+                  }
+                >
+                  {reminderSettings?.urgentTaskReminder ? 'Açık' : 'Kapalı'}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Gecikmiş Görevler</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Bitiş tarihi geçen görevler
+                  </p>
+                </div>
+                <Button
+                  variant={reminderSettings?.overdueReminder ? 'destructive' : 'outline'}
+                  size="sm"
+                  disabled={!reminderSettings?.enabled}
+                  onClick={() => 
+                    setReminderSettings((current) => ({
+                      ...current!,
+                      overdueReminder: !current?.overdueReminder
+                    }))
+                  }
+                >
+                  {reminderSettings?.overdueReminder ? 'Açık' : 'Kapalı'}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Bugün Bitenler</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Bugün bitmesi gereken görevler
+                  </p>
+                </div>
+                <Button
+                  variant={reminderSettings?.dueTodayReminder ? 'default' : 'outline'}
+                  size="sm"
+                  disabled={!reminderSettings?.enabled}
+                  onClick={() => 
+                    setReminderSettings((current) => ({
+                      ...current!,
+                      dueTodayReminder: !current?.dueTodayReminder
+                    }))
+                  }
+                >
+                  {reminderSettings?.dueTodayReminder ? 'Açık' : 'Kapalı'}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Yarın Bitenler</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Yarın biten önemli görevler
+                  </p>
+                </div>
+                <Button
+                  variant={reminderSettings?.dueTomorrowReminder ? 'default' : 'outline'}
+                  size="sm"
+                  disabled={!reminderSettings?.enabled}
+                  onClick={() => 
+                    setReminderSettings((current) => ({
+                      ...current!,
+                      dueTomorrowReminder: !current?.dueTomorrowReminder
+                    }))
+                  }
+                >
+                  {reminderSettings?.dueTomorrowReminder ? 'Açık' : 'Kapalı'}
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Hatırlatıcı Aralığı (dakika)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Hatırlatıcılar arasındaki süre
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="5"
+                  max="120"
+                  value={reminderSettings?.reminderInterval || 15}
+                  onChange={(e) => 
+                    setReminderSettings((current) => ({
+                      ...current!,
+                      reminderInterval: parseInt(e.target.value) || 15
+                    }))
+                  }
+                  disabled={!reminderSettings?.enabled}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">dakika</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => {
+              setShowReminderSettings(false);
+              toast.success('Hatırlatıcı ayarları kaydedildi');
+            }}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Kaydet
             </Button>
           </DialogFooter>
         </DialogContent>
