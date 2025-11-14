@@ -243,6 +243,11 @@ export interface Table {
   sortOrder?: number;
   createdAt?: string;
   updatedAt?: string;
+  layoutX?: number;
+  layoutY?: number;
+  layoutWidth?: number;
+  layoutHeight?: number;
+  layoutShape?: 'square' | 'rectangle' | 'circle';
 }
 
 export interface TableOrder {

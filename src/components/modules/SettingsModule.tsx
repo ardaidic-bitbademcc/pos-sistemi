@@ -9,11 +9,12 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette, Money, DeviceMobile, Bank, Ticket, PencilSimple, Table as TableIcon, MapPin } from '@phosphor-icons/react';
+import { ArrowLeft, Gear, Plus, Trash, Package, CurrencyCircleDollar, CreditCard, Tag, Eye, EyeSlash, Palette, Money, DeviceMobile, Bank, Ticket, PencilSimple, Table as TableIcon, MapPin, Layout } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Product, PaymentMethod, Category, AppTheme, AuthSession, TableSection, Table } from '@/lib/types';
 import { formatCurrency, generateId } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
+import TableLayoutEditor from '@/components/TableLayoutEditor';
 
 interface SettingsModuleProps {
   onBack: () => void;
@@ -480,6 +481,47 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
     }
   };
 
+  const handleUpdateTableLayout = (tableId: string, updates: Partial<Table>) => {
+    setTables((current) =>
+      (current || []).map((t) =>
+        t.id === tableId
+          ? { ...t, ...updates, updatedAt: new Date().toISOString() }
+          : t
+      )
+    );
+  };
+
+  const handleAutoArrangeTables = () => {
+    const PADDING = 20;
+    const SPACING = 30;
+    const TABLE_SIZE = 80;
+    const COLUMNS = 5;
+
+    setTables((current) => {
+      const tablesToArrange = (current || []).filter(t => 
+        authSession?.branchId ? t.branchId === authSession.branchId : true
+      );
+
+      return (current || []).map((t, index) => {
+        const tableIndex = tablesToArrange.findIndex(at => at.id === t.id);
+        if (tableIndex === -1) return t;
+
+        const row = Math.floor(tableIndex / COLUMNS);
+        const col = tableIndex % COLUMNS;
+
+        return {
+          ...t,
+          layoutX: PADDING + col * (TABLE_SIZE + SPACING),
+          layoutY: PADDING + row * (TABLE_SIZE + SPACING),
+          layoutWidth: TABLE_SIZE,
+          layoutHeight: TABLE_SIZE,
+          layoutShape: t.layoutShape || 'square' as const,
+          updatedAt: new Date().toISOString(),
+        };
+      });
+    });
+  };
+
   return (
     <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
       <header className="flex items-center gap-2 sm:gap-4">
@@ -496,6 +538,10 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
         <TabsList className="w-full sm:w-auto flex-wrap h-auto">
           <TabsTrigger value="categories" className="text-xs sm:text-sm">Kategori Yönetimi</TabsTrigger>
           <TabsTrigger value="tables" className="text-xs sm:text-sm">Masa Yönetimi</TabsTrigger>
+          <TabsTrigger value="layout" className="text-xs sm:text-sm">
+            <Layout className="h-4 w-4 mr-1" />
+            Masa Düzeni
+          </TabsTrigger>
           <TabsTrigger value="tax" className="text-xs sm:text-sm">KDV Ayarları</TabsTrigger>
           <TabsTrigger value="payment" className="text-xs sm:text-sm">Ödeme Yöntemleri</TabsTrigger>
           <TabsTrigger value="theme" className="text-xs sm:text-sm">Sistem Teması</TabsTrigger>
@@ -857,6 +903,15 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="layout" className="space-y-4">
+          <TableLayoutEditor
+            tables={filteredTables}
+            sections={filteredTableSections}
+            onUpdateTable={handleUpdateTableLayout}
+            onAutoArrange={handleAutoArrangeTables}
+          />
         </TabsContent>
 
         <TabsContent value="payment" className="space-y-4">
