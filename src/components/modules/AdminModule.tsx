@@ -357,7 +357,7 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
   const getRoleName = (role: UserRole): string => {
     const roleNames: Record<UserRole, string> = {
       owner: 'Sahibi',
-      manager: 'Yönetici',
+      manager: 'Admin/Yönetici',
       cashier: 'Kasiyer',
       chef: 'Şef',
       staff: 'Personel',

@@ -40,7 +40,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     permissions: ['pos', 'personnel', 'branch', 'menu', 'finance', 'reports', 'tasks'],
     canViewFinancials: true,
     canEditPrices: true,
-    canManageUsers: false,
+    canManageUsers: true,
     canApprovePayments: true,
     canViewCashRegister: true,
     canAddCash: true,
@@ -129,7 +129,7 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
 
 const ROLE_LABELS: Record<UserRole, string> = {
   owner: 'Sahip',
-  manager: 'Yönetici',
+  manager: 'Admin/Yönetici',
   waiter: 'Garson',
   cashier: 'Kasiyer',
   chef: 'Şef',
@@ -241,7 +241,7 @@ export default function RoleManagementModule({ onBack }: RoleManagementModulePro
                   </CardTitle>
                   <CardDescription className="text-xs">
                     {role === 'owner' && 'Tüm yetkilere sahip sistem sahibi'}
-                    {role === 'manager' && 'Şube ve personel yönetimi yapabilir'}
+                    {role === 'manager' && 'Admin/Yönetici - Şube ve personel yönetimi yapabilir, tüm yetkilere sahip'}
                     {role === 'waiter' && 'Sadece POS ekranına erişim'}
                     {role === 'cashier' && 'POS ve raporlara erişim'}
                     {role === 'chef' && 'Menü ve reçete yönetimi'}
@@ -548,6 +548,9 @@ export default function RoleManagementModule({ onBack }: RoleManagementModulePro
             • <strong>Sahip</strong> rolü tüm yetkilere sahiptir ve değiştirilemez
           </p>
           <p>
+            • <strong>Admin/Yönetici</strong> rolü tüm yetkilere sahiptir - kullanıcı yönetimi, finansal veriler, kasa yönetimi ve görev yönetimi dahil
+          </p>
+          <p>
             • <strong>Garson</strong> rolü varsayılan olarak sadece POS ekranına erişebilir ve kendine atanan görevleri görüntüleyebilir
           </p>
           <p>
@@ -555,9 +558,6 @@ export default function RoleManagementModule({ onBack }: RoleManagementModulePro
           </p>
           <p>
             • <strong>Şef</strong> rolü tüm görevleri ve görev durumlarını görüntüleyebilir ancak görev oluşturamaz veya düzenleyemez
-          </p>
-          <p>
-            • <strong>Yönetici</strong> rolü tüm görevleri oluşturabilir, düzenleyebilir, silebilir ve puanlayabilir
           </p>
           <p>
             • Her rol için modül erişimi, özel yetkiler, kasa yetkileri ve görev yönetimi yetkileri ayrı ayrı yapılandırılabilir
