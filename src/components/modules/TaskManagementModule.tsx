@@ -601,6 +601,7 @@ export default function TaskManagementModule({
         </div>
       )}
 
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
