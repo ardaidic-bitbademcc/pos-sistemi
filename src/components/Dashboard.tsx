@@ -22,7 +22,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Module } from '@/App';
 import type { DashboardStats, Sale, UserRole, RolePermissions, ModulePermission, AuthSession } from '@/lib/types';
-import { formatCurrency, formatNumber, getStartOfDay } from '@/lib/helpers';
+import { formatCurrency, formatNumber } from '@/lib/helpers';
 import { useMemo } from 'react';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 
@@ -127,25 +127,14 @@ export default function Dashboard({ onNavigate, currentUserRole = 'owner', authS
   };
 
   const stats: DashboardStats = useMemo(() => {
-    const today = getStartOfDay();
-    const todayEnd = new Date(today);
-    todayEnd.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     
     const completedSales = filteredSales.filter((sale) => sale.paymentStatus === 'completed');
     const todaySales = completedSales.filter((sale) => {
       const saleDate = new Date(sale.saleDate);
       return saleDate >= today && saleDate <= todayEnd;
-    });
-
-    console.log('Dashboard KPI Debug:', {
-      totalSales: filteredSales.length,
-      completedSales: completedSales.length,
-      todaySales: todaySales.length,
-      todayStart: today.toISOString(),
-      todayEnd: todayEnd.toISOString(),
-      sampleSaleDate: completedSales[0]?.saleDate,
-      sampleSaleDateParsed: completedSales[0] ? new Date(completedSales[0].saleDate).toISOString() : null,
-      allCompletedSaleDates: completedSales.slice(0, 5).map(s => s.saleDate),
     });
 
     return {
