@@ -309,6 +309,29 @@ export default function CashModule({ onBack, currentUserRole = 'owner', authSess
       return;
     }
 
+    const unpaidOrders = (sales || []).filter(
+      (sale) => 
+        sale.branchId === activeBranch.id && 
+        sale.paymentStatus === 'pending'
+    );
+
+    if (unpaidOrders.length > 0) {
+      toast.error(`Kasa kapatılamaz! ${unpaidOrders.length} adet ödenmemiş sipariş bulunmakta`, {
+        duration: 5000,
+      });
+      Logger.warn('cash-register', 'Cash register close attempt with unpaid orders', {
+        registerId: currentCashRegister.id,
+        branchId: currentCashRegister.branchId,
+        unpaidOrderCount: unpaidOrders.length,
+        unpaidOrderIds: unpaidOrders.map(o => o.id),
+      }, {
+        userId: authSession?.userId,
+        userName: authSession?.userName,
+        branchId: authSession?.branchId,
+      });
+      return;
+    }
+
     Logger.info('cash-register', 'Cash register closed', {
       registerId: currentCashRegister.id,
       branchId: currentCashRegister.branchId,

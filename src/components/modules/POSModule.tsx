@@ -68,6 +68,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
   const [tables, setTables] = useKV<Table[]>('tables', []);
   const [tableSections] = useKV<TableSection[]>('tableSections', []);
   const [tableOrders, setTableOrders] = useKV<TableOrder[]>('tableOrders', []);
+  const [cashRegisters] = useKV<any[]>('cashRegisters', []);
   const [cashRegister, setCashRegister] = useKV<CashRegister>('cashRegister', {
     id: generateId(),
     branchId: 'branch-1',
@@ -879,6 +880,23 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
       return;
     }
 
+    const currentBranchId = authSession?.branchId || 'branch-1';
+    const isCashOpen = (cashRegisters || []).some(
+      cr => cr.branchId === currentBranchId && cr.isOpen
+    );
+
+    if (!isCashOpen) {
+      toast.error('Kasa açık değil! Ödeme alınamaz. Lütfen önce kasayı açın.', {
+        duration: 5000,
+      });
+      Logger.logPaymentError('Partial payment failed - cash register not open', {
+        branchId: currentBranchId,
+        userId: authSession?.userId,
+        userName: authSession?.userName,
+      });
+      return;
+    }
+
     const partialTotals = calculatePartialTotals();
     const finalPaymentMethod = splitPayments.length > 0 ? 'card' : paymentMethod;
 
@@ -1101,6 +1119,23 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
       return;
     }
 
+    const currentBranchId = authSession?.branchId || 'branch-1';
+    const isCashOpen = (cashRegisters || []).some(
+      cr => cr.branchId === currentBranchId && cr.isOpen
+    );
+
+    if (!isCashOpen) {
+      toast.error('Kasa açık değil! Ödeme alınamaz. Lütfen önce kasayı açın.', {
+        duration: 5000,
+      });
+      Logger.logPaymentError('Payment failed - cash register not open', {
+        branchId: currentBranchId,
+        userId: authSession?.userId,
+        userName: authSession?.userName,
+      });
+      return;
+    }
+
     const selectedPaymentMethodSetting = (settings?.paymentMethods || []).find(pm => pm.method === paymentMethod);
     if (!selectedPaymentMethodSetting || !selectedPaymentMethodSetting.isActive) {
       toast.error(`${paymentMethod} ödeme yöntemi şu anda pasif durumda. Lütfen başka bir yöntem seçin.`);
@@ -1275,6 +1310,24 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
         customerName: account.customerName,
         status: account.status,
         userId: authSession?.userId,
+      });
+      return;
+    }
+
+    const currentBranchId = authSession?.branchId || 'branch-1';
+    const isCashOpen = (cashRegisters || []).some(
+      cr => cr.branchId === currentBranchId && cr.isOpen
+    );
+
+    if (!isCashOpen) {
+      toast.error('Kasa açık değil! Ödeme alınamaz. Lütfen önce kasayı açın.', {
+        duration: 5000,
+      });
+      Logger.logPaymentError('Customer account sale failed - cash register not open', {
+        branchId: currentBranchId,
+        customerAccountId: account.id,
+        userId: authSession?.userId,
+        userName: authSession?.userName,
       });
       return;
     }
@@ -1554,8 +1607,27 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
 
   const totals = calculateTotals();
 
+  const currentBranchId = authSession?.branchId || 'branch-1';
+  const isCashOpen = (cashRegisters || []).some(
+    cr => cr.branchId === currentBranchId && cr.isOpen
+  );
+
   return (
     <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
+      {!isCashOpen && (
+        <Card className="bg-destructive/10 border-destructive">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Warning className="h-6 w-6 text-destructive flex-shrink-0" weight="fill" />
+              <div className="flex-1">
+                <p className="font-semibold text-destructive">Kasa Kapalı!</p>
+                <p className="text-sm text-destructive/80">Ödeme alabilmek için kasayı açmanız gerekmektedir. Kasa modülüne giderek kasayı açabilirsiniz.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
           <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">

@@ -152,3 +152,13 @@ export function getBaseCategories() {
     },
   ];
 }
+
+export function isCashRegisterOpen(cashRegisters: any[], branchId: string): boolean {
+  if (!cashRegisters || !Array.isArray(cashRegisters)) return false;
+  return cashRegisters.some(cr => cr.branchId === branchId && cr.isOpen);
+}
+
+export function hasUnpaidOrders(sales: any[]): boolean {
+  if (!sales || !Array.isArray(sales)) return false;
+  return sales.some(sale => sale.paymentStatus === 'pending');
+}
