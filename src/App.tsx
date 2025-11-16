@@ -287,14 +287,14 @@ function App() {
       <Sidebar variant="inset" collapsible="icon">
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Şube Bilgisi</SidebarGroupLabel>
+            <SidebarGroupLabel>Şube</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <div className="flex items-center gap-2 px-2 py-1.5">
+                  <SidebarMenuButton>
                     <Buildings className="h-4 w-4" weight="fill" />
-                    <span className="text-sm font-medium">{currentBranch?.name || 'Şube'}</span>
-                  </div>
+                    <span className="truncate">{currentBranch?.name || 'Şube'}</span>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
                 {adminBranches.length > 1 && (
                   <SidebarMenuItem>
