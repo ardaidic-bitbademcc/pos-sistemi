@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Storefront, EnvelopeSimple, LockKey, Phone, Buildings } from '@phosphor-icons/react';
+import { Storefront, EnvelopeSimple, LockKey, Phone, Buildings, Package } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Admin, AuthSession, Branch, Category } from '@/lib/types';
 import { generateId, getBaseCategories } from '@/lib/helpers';
@@ -13,9 +13,10 @@ import { Logger } from '@/lib/logger';
 
 interface RegisterLoginProps {
   onSuccess: (session: AuthSession) => void;
+  onSupplierLogin?: () => void;
 }
 
-export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
+export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLoginProps) {
   const [admins, setAdmins] = useKV<Admin[]>('admins', []);
   const [branches, setBranches] = useKV<Branch[]>('branches', []);
   const [categories, setCategories] = useKV<Category[]>('categories', []);
@@ -379,6 +380,19 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
               </Button>
             </TabsContent>
           </Tabs>
+          
+          {onSupplierLogin && (
+            <div className="mt-6 pt-6 border-t">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={onSupplierLogin}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Tedarikçi Girişi
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

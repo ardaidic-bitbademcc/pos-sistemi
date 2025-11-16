@@ -13,6 +13,8 @@ import {
 } from '@phosphor-icons/react';
 import Login from '@/components/Login';
 import RegisterLogin from '@/components/RegisterLogin';
+import SupplierLogin from '@/components/SupplierLogin';
+import SupplierDashboard from '@/components/SupplierDashboard';
 import BranchSelector from '@/components/BranchSelector';
 import Dashboard from '@/components/Dashboard';
 import POSModule from '@/components/modules/POSModule';
@@ -35,15 +37,19 @@ import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
 import { useTaskReminders } from '@/hooks/use-task-reminders';
 import { checkMigrationStatus } from '@/lib/data-migration';
-import type { UserRole, AuthSession, Branch } from '@/lib/types';
+import type { UserRole, AuthSession, Branch, SupplierAuthSession } from '@/lib/types';
 import { toast } from 'sonner';
 
 export type Module = 'dashboard' | 'pos' | 'personnel' | 'branch' | 'menu' | 'finance' | 'settings' | 'reports' | 'roles' | 'cash' | 'qrmenu' | 'tasks' | 'b2b' | 'customers' | 'admin' | 'cash-monitor';
+
+type LoginMode = 'customer' | 'supplier' | 'demo';
 
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authSession, setAuthSession] = useKV<AuthSession | null>('authSession', null);
+  const [supplierSession, setSupplierSession] = useKV<SupplierAuthSession | null>('supplierSession', null);
+  const [loginMode, setLoginMode] = useState<LoginMode>('customer');
   const [currentUserRole, setCurrentUserRole] = useKV<UserRole>('currentUserRole', 'owner');
   const [currentUserName, setCurrentUserName] = useState('');
   const [useOldAuth, setUseOldAuth] = useState(false);
@@ -68,18 +74,28 @@ function App() {
     setCurrentUserRole(session.userRole);
     setCurrentUserName(session.userName);
     setIsAuthenticated(true);
+    setLoginMode('customer');
     setActiveModule('dashboard');
+  };
+
+  const handleSupplierAuthSuccess = (session: SupplierAuthSession) => {
+    setSupplierSession(session);
+    setIsAuthenticated(true);
+    setLoginMode('supplier');
   };
 
   const handleLogin = (role: UserRole, userName: string) => {
     setCurrentUserRole(role);
     setCurrentUserName(userName);
     setIsAuthenticated(true);
+    setLoginMode('demo');
     setActiveModule('dashboard');
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setSupplierSession(null);
+    setLoginMode('customer');
     setActiveModule('dashboard');
     setShowBranchSelector(false);
     setUseOldAuth(false);
@@ -88,6 +104,8 @@ function App() {
   const handleSwitchUser = () => {
     setIsAuthenticated(false);
     setAuthSession(null);
+    setSupplierSession(null);
+    setLoginMode('customer');
     setActiveModule('dashboard');
     setCurrentUserName('');
     setShowBranchSelector(false);
@@ -158,18 +176,30 @@ function App() {
   };
 
   if (!isAuthenticated) {
+    if (loginMode === 'supplier') {
+      return <SupplierLogin onSuccess={handleSupplierAuthSuccess} onBack={() => setLoginMode('customer')} />;
+    }
     if (useOldAuth) {
       return <Login onLogin={handleLogin} />;
     }
     return (
       <div>
-        <RegisterLogin onSuccess={handleAuthSuccess} />
+        <RegisterLogin onSuccess={handleAuthSuccess} onSupplierLogin={() => setLoginMode('supplier')} />
         <div className="fixed bottom-4 left-4 z-50">
           <Button variant="outline" size="sm" onClick={() => setUseOldAuth(true)}>
             Demo Giriş
           </Button>
         </div>
       </div>
+    );
+  }
+
+  if (loginMode === 'supplier' && supplierSession) {
+    return (
+      <>
+        <SupplierDashboard session={supplierSession} onLogout={handleLogout} />
+        <Toaster position="top-right" />
+      </>
     );
   }
 

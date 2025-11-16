@@ -546,6 +546,7 @@ export interface B2BSupplier {
   companyName: string;
   contactName: string;
   email: string;
+  password: string;
   phone: string;
   address: string;
   taxNumber?: string;
@@ -559,6 +560,13 @@ export interface B2BSupplier {
   pausedUntil?: string;
   pauseReason?: string;
   adminId?: string;
+  isDemo?: boolean;
+}
+
+export interface SupplierAuthSession {
+  supplierId: string;
+  supplierName: string;
+  loginTime: string;
 }
 
 export interface ProductVariant {
