@@ -11,9 +11,10 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash, Power, Pause, AirplaneTilt, ToggleLeft, ToggleRight, ClipboardText, ListChecks } from '@phosphor-icons/react';
+import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash, Power, Pause, AirplaneTilt, ToggleLeft, ToggleRight, ClipboardText, ListChecks, Star, ChatCircle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus, AuthSession, Product, MenuItem } from '@/lib/types';
+import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus, AuthSession, Product, MenuItem, ProductReview } from '@/lib/types';
+import ProductReviews from '@/components/ProductReviews';
 
 interface B2BModuleProps {
   onBack: () => void;
@@ -352,15 +353,23 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
           </Alert>
         )}
 
-        <Tabs defaultValue="customer" className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-1">
-            <TabsTrigger value="customer" className="text-xs sm:text-sm">
+        <Tabs defaultValue="catalog" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsTrigger value="catalog" className="text-xs sm:text-sm">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Katalog
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="text-xs sm:text-sm">
               <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              E-Ticaret Platformu
+              Siparişlerim
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="text-xs sm:text-sm">
+              <Star className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Yorumlar
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="customer" className="space-y-6">
+          <TabsContent value="catalog" className="space-y-6">
             <CustomerPanel
               products={availableProducts}
               orders={myCustomerOrders}
@@ -371,6 +380,24 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
               onConfirmDelivery={confirmDelivery}
               getAnonymousSupplierName={getAnonymousSupplierName}
               commissionRate={actualCommissionRate}
+              authSession={authSession || null}
+            />
+          </TabsContent>
+
+          <TabsContent value="orders" className="space-y-6">
+            <OrdersPanel
+              orders={myCustomerOrders}
+              onUpdateOrderStatus={updateOrderStatus}
+              onConfirmDelivery={confirmDelivery}
+              getAnonymousSupplierName={getAnonymousSupplierName}
+            />
+          </TabsContent>
+
+          <TabsContent value="reviews" className="space-y-6">
+            <ReviewsPanel
+              products={availableProducts}
+              orders={myCustomerOrders}
+              authSession={authSession || null}
             />
           </TabsContent>
         </Tabs>
@@ -389,6 +416,7 @@ function CustomerPanel({
   onConfirmDelivery,
   getAnonymousSupplierName,
   commissionRate,
+  authSession,
 }: {
   products: B2BProduct[];
   orders: B2BOrder[];
@@ -399,17 +427,13 @@ function CustomerPanel({
   onConfirmDelivery: (orderId: string, withTracking?: boolean) => void;
   getAnonymousSupplierName: (supplierId: string) => string;
   commissionRate: number;
+  authSession: AuthSession | null;
 }) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<B2BProduct | null>(null);
   const [orderQuantity, setOrderQuantity] = useState(1);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
-  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
-  const [showBulkDeliveryDialog, setShowBulkDeliveryDialog] = useState(false);
-  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
-  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<B2BOrder | null>(null);
-  const [trackingQuantities, setTrackingQuantities] = useState<Record<string, number>>({});
   const [billingInfo, setBillingInfo] = useState({
     companyName: '',
     taxNumber: '',
@@ -481,88 +505,6 @@ function CustomerPanel({
       phone: '',
       email: '',
     });
-  };
-
-  const deliverableOrders = orders.filter(
-    order => (order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate
-  );
-
-  const toggleOrderSelection = (orderId: string) => {
-    setSelectedOrders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
-        newSet.add(orderId);
-      }
-      return newSet;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedOrders.size === deliverableOrders.length) {
-      setSelectedOrders(new Set());
-    } else {
-      setSelectedOrders(new Set(deliverableOrders.map(o => o.id)));
-    }
-  };
-
-  const handleBulkDelivery = () => {
-    if (selectedOrders.size === 0) {
-      toast.error('Lütfen en az bir sipariş seçin');
-      return;
-    }
-    setShowBulkDeliveryDialog(true);
-  };
-
-  const confirmBulkDelivery = () => {
-    selectedOrders.forEach(orderId => {
-      onConfirmDelivery(orderId);
-    });
-    setSelectedOrders(new Set());
-    setShowBulkDeliveryDialog(false);
-    toast.success(`${selectedOrders.size} sipariş teslim alındı!`);
-  };
-
-  const openTrackingDialog = (order: B2BOrder) => {
-    setSelectedOrderForTracking(order);
-    const initialQuantities: Record<string, number> = {};
-    order.items.forEach(item => {
-      initialQuantities[item.id] = item.quantity;
-    });
-    setTrackingQuantities(initialQuantities);
-    setShowTrackingDialog(true);
-  };
-
-  const handleTrackingQuantityChange = (itemId: string, value: number) => {
-    setTrackingQuantities(prev => ({
-      ...prev,
-      [itemId]: Math.max(0, value),
-    }));
-  };
-
-  const confirmDeliveryWithTracking = () => {
-    if (!selectedOrderForTracking) return;
-
-    const hasDiscrepancy = selectedOrderForTracking.items.some(
-      item => trackingQuantities[item.id] !== item.quantity
-    );
-
-    if (hasDiscrepancy) {
-      const discrepancies = selectedOrderForTracking.items
-        .filter(item => trackingQuantities[item.id] !== item.quantity)
-        .map(item => `${item.productName}: Beklenen ${item.quantity}, Sayılan ${trackingQuantities[item.id]}`)
-        .join('\n');
-      
-      toast.warning(`Miktar farklılıkları tespit edildi:\n${discrepancies}`, {
-        duration: 6000,
-      });
-    }
-
-    onConfirmDelivery(selectedOrderForTracking.id, true);
-    setShowTrackingDialog(false);
-    setSelectedOrderForTracking(null);
-    setTrackingQuantities({});
   };
 
   return (
@@ -714,130 +656,6 @@ function CustomerPanel({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Siparişlerim</CardTitle>
-              {deliverableOrders.length > 0 && (
-                <CardDescription className="mt-1">
-                  {deliverableOrders.length} sipariş teslim almaya hazır
-                </CardDescription>
-              )}
-            </div>
-            {deliverableOrders.length > 0 && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleSelectAll}
-                >
-                  {selectedOrders.size === deliverableOrders.length ? 'Tümünü Kaldır' : 'Tümünü Seç'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleBulkDelivery}
-                  disabled={selectedOrders.size === 0}
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Toplu Teslim Al ({selectedOrders.size})
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {orders.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Henüz sipariş vermediniz
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {orders.map(order => {
-                const isDeliverable = (order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate;
-                const isSelected = selectedOrders.has(order.id);
-                
-                return (
-                  <Card 
-                    key={order.id}
-                    className={isSelected ? 'border-primary border-2' : ''}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        {isDeliverable && (
-                          <div className="pt-1">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleOrderSelection(order.id)}
-                              className="h-5 w-5 rounded border-gray-300 cursor-pointer"
-                            />
-                          </div>
-                        )}
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm">{order.orderNumber}</span>
-                            <Badge>{getOrderStatusBadge(order.status)}</Badge>
-                          </div>
-                          <p className="text-sm">Tedarikçi: <strong>{getAnonymousSupplierName(order.supplierId)}</strong></p>
-                          <div className="text-sm space-y-1">
-                            {order.items.map(item => (
-                              <div key={item.id}>
-                                {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-sm">Toplam: <strong>{order.totalAmount.toFixed(2)} ₺</strong></p>
-                          <p className="text-xs text-muted-foreground">
-                            Sipariş tarihi: {new Date(order.orderDate).toLocaleDateString('tr-TR')}
-                          </p>
-                          {order.deliveredDate && (
-                            <p className="text-xs text-green-600 font-medium">
-                              Teslim alındı: {new Date(order.deliveredDate).toLocaleDateString('tr-TR')} {new Date(order.deliveredDate).toLocaleTimeString('tr-TR')}
-                            </p>
-                          )}
-                        </div>
-                        {!isSelected && (
-                          <div className="flex flex-col gap-2">
-                            {isDeliverable && (
-                              <>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => openTrackingDialog(order)}
-                                  className="whitespace-nowrap"
-                                >
-                                  <ListChecks className="h-4 w-4 mr-1" />
-                                  Stok Takibi Yap
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => onConfirmDelivery(order.id)}
-                                  className="whitespace-nowrap"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Teslim Al
-                                </Button>
-                              </>
-                            )}
-                            {order.deliveredDate && (
-                              <Button size="sm" variant="outline" disabled>
-                                <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
-                                Teslim Alındı
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
         <DialogContent>
           <DialogHeader>
@@ -983,221 +801,6 @@ function CustomerPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={showBulkDeliveryDialog} onOpenChange={setShowBulkDeliveryDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Toplu Teslim Alma Onayı</DialogTitle>
-            <DialogDescription>
-              {selectedOrders.size} adet sipariş teslim alınacak ve otomatik olarak stoklara eklenecektir.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Alert>
-              <Package className="h-4 w-4" />
-              <AlertDescription>
-                Seçili siparişlerdeki tüm ürünler stok sistemine eklenecek ve maliyet fiyatları güncellenecektir.
-              </AlertDescription>
-            </Alert>
-            <div className="border rounded-lg p-4 space-y-2 max-h-[300px] overflow-y-auto">
-              <h4 className="font-semibold text-sm mb-3">Teslim Alınacak Siparişler:</h4>
-              {orders
-                .filter(order => selectedOrders.has(order.id))
-                .map(order => (
-                  <div key={order.id} className="border-b pb-2 last:border-b-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono text-xs">{order.orderNumber}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {order.totalAmount.toFixed(2)} ₺
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      {order.items.map(item => (
-                        <div key={item.id}>
-                          • {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-            </div>
-            <div className="bg-muted p-3 rounded-lg">
-              <div className="text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="font-medium">Toplam Sipariş:</span>
-                  <span>{selectedOrders.size} adet</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Toplam Tutar:</span>
-                  <span className="font-bold">
-                    {orders
-                      .filter(order => selectedOrders.has(order.id))
-                      .reduce((sum, order) => sum + order.totalAmount, 0)
-                      .toFixed(2)} ₺
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBulkDeliveryDialog(false)}>
-              İptal
-            </Button>
-            <Button onClick={confirmBulkDelivery}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Teslim Al ve Stoklara Ekle
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Stok Takibi - Teslim Alma</DialogTitle>
-            <DialogDescription>
-              Teslim alınan ürünleri sayın ve gerçek stok miktarlarını girin
-            </DialogDescription>
-          </DialogHeader>
-          {selectedOrderForTracking && (
-            <div className="space-y-4">
-              <Alert>
-                <ClipboardText className="h-4 w-4" />
-                <AlertDescription>
-                  Sipariş No: <strong>{selectedOrderForTracking.orderNumber}</strong> - Her ürün için fiziksel sayım yapın
-                </AlertDescription>
-              </Alert>
-
-              <div className="border rounded-lg p-4 space-y-4">
-                <h4 className="font-semibold text-sm mb-3">Ürün Sayım Listesi:</h4>
-                {selectedOrderForTracking.items.map(item => {
-                  const trackedQty = trackingQuantities[item.id] || 0;
-                  const orderedQty = item.quantity;
-                  const hasDiscrepancy = trackedQty !== orderedQty;
-                  
-                  return (
-                    <div 
-                      key={item.id} 
-                      className={`border rounded-lg p-4 space-y-3 ${
-                        hasDiscrepancy ? 'border-destructive bg-destructive/5' : 'border-border'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <h5 className="font-semibold">{item.productName}</h5>
-                          {item.variantName && (
-                            <p className="text-xs text-muted-foreground">Varyant: {item.variantName}</p>
-                          )}
-                        </div>
-                        {hasDiscrepancy && (
-                          <Badge variant="destructive" className="text-xs">
-                            Fark Var
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Sipariş Edilen</Label>
-                          <div className="text-2xl font-bold text-muted-foreground">{orderedQty}</div>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Sayılan Miktar</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={trackedQty}
-                            onChange={(e) => handleTrackingQuantityChange(item.id, parseInt(e.target.value) || 0)}
-                            className="text-2xl font-bold h-14"
-                          />
-                        </div>
-                      </div>
-
-                      {hasDiscrepancy && (
-                        <Alert variant="destructive">
-                          <AlertDescription className="text-xs">
-                            Fark: {trackedQty - orderedQty > 0 ? '+' : ''}{trackedQty - orderedQty} adet
-                            {trackedQty > orderedQty && ' (Fazla gelen)'}
-                            {trackedQty < orderedQty && ' (Eksik gelen)'}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex justify-between p-2 bg-muted rounded">
-                          <span className="text-muted-foreground">Birim Fiyat:</span>
-                          <span className="font-semibold">{item.unitPrice.toFixed(2)} ₺</span>
-                        </div>
-                        <div className="flex justify-between p-2 bg-muted rounded">
-                          <span className="text-muted-foreground">Stok Değeri:</span>
-                          <span className="font-semibold">
-                            {(trackedQty * item.unitPrice).toFixed(2)} ₺
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="bg-primary/10 p-4 rounded-lg space-y-2">
-                <h4 className="font-semibold text-sm">Özet:</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Toplam Ürün Çeşidi:</span>
-                    <span className="font-bold">{selectedOrderForTracking.items.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Beklenen Toplam:</span>
-                    <span className="font-bold">
-                      {selectedOrderForTracking.items.reduce((sum, item) => sum + item.quantity, 0)} adet
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Sayılan Toplam:</span>
-                    <span className="font-bold">
-                      {Object.values(trackingQuantities).reduce((sum, qty) => sum + qty, 0)} adet
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Toplam Stok Değeri:</span>
-                    <span className="font-bold text-lg">
-                      {selectedOrderForTracking.items
-                        .reduce((sum, item) => sum + (trackingQuantities[item.id] || 0) * item.unitPrice, 0)
-                        .toFixed(2)} ₺
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {selectedOrderForTracking.items.some(item => trackingQuantities[item.id] !== item.quantity) && (
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    <strong>Dikkat:</strong> Sayılan miktarlar ile sipariş miktarları arasında fark bulunmaktadır. 
-                    Stoklara sayılan miktarlar eklenecektir.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowTrackingDialog(false);
-                setSelectedOrderForTracking(null);
-                setTrackingQuantities({});
-              }}
-            >
-              İptal
-            </Button>
-            <Button onClick={confirmDeliveryWithTracking}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Teslim Al ve Stoklara Ekle
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -1222,4 +825,307 @@ function getSampleStatusBadge(status: SampleRequestStatus): string {
     sent: 'Gönderildi',
   };
   return statusMap[status] || status;
+}
+
+function OrdersPanel({
+  orders,
+  onUpdateOrderStatus,
+  onConfirmDelivery,
+  getAnonymousSupplierName,
+}: {
+  orders: B2BOrder[];
+  onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  onConfirmDelivery: (orderId: string, withTracking?: boolean) => void;
+  getAnonymousSupplierName: (supplierId: string) => string;
+}) {
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+
+  const deliverableOrders = orders.filter(
+    order => (order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate
+  );
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === deliverableOrders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(deliverableOrders.map(o => o.id)));
+    }
+  };
+
+  const handleBulkDelivery = () => {
+    if (selectedOrders.size === 0) return;
+    selectedOrders.forEach(orderId => {
+      onConfirmDelivery(orderId);
+    });
+    setSelectedOrders(new Set());
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Siparişlerim</CardTitle>
+            {deliverableOrders.length > 0 && (
+              <CardDescription className="mt-1">
+                {deliverableOrders.length} sipariş teslim almaya hazır
+              </CardDescription>
+            )}
+          </div>
+          {deliverableOrders.length > 0 && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSelectAll}
+              >
+                {selectedOrders.size === deliverableOrders.length ? 'Tümünü Kaldır' : 'Tümünü Seç'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleBulkDelivery}
+                disabled={selectedOrders.size === 0}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Toplu Teslim Al ({selectedOrders.size})
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {orders.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Henüz sipariş vermediniz
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {orders.map(order => {
+              const isDeliverable = (order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate;
+              const isSelected = selectedOrders.has(order.id);
+              
+              return (
+                <Card 
+                  key={order.id}
+                  className={isSelected ? 'border-primary border-2' : ''}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      {isDeliverable && (
+                        <div className="pt-1">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleOrderSelection(order.id)}
+                            className="h-5 w-5 rounded border-gray-300 cursor-pointer"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm">{order.orderNumber}</span>
+                          <Badge>{getOrderStatusBadge(order.status)}</Badge>
+                        </div>
+                        <p className="text-sm">Tedarikçi: <strong>{getAnonymousSupplierName(order.supplierId)}</strong></p>
+                        <div className="text-sm space-y-1">
+                          {order.items.map(item => (
+                            <div key={item.id}>
+                              {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm">Toplam: <strong>{order.totalAmount.toFixed(2)} ₺</strong></p>
+                        <p className="text-xs text-muted-foreground">
+                          Sipariş tarihi: {new Date(order.orderDate).toLocaleDateString('tr-TR')}
+                        </p>
+                        {order.deliveredDate && (
+                          <p className="text-xs text-green-600 font-medium">
+                            Teslim alındı: {new Date(order.deliveredDate).toLocaleDateString('tr-TR')} {new Date(order.deliveredDate).toLocaleTimeString('tr-TR')}
+                          </p>
+                        )}
+                      </div>
+                      {!isSelected && isDeliverable && (
+                        <Button
+                          size="sm"
+                          onClick={() => onConfirmDelivery(order.id)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Teslim Al
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReviewsPanel({
+  products,
+  orders,
+  authSession,
+}: {
+  products: B2BProduct[];
+  orders: B2BOrder[];
+  authSession: AuthSession | null;
+}) {
+  const [reviews] = useKV<ProductReview[]>('productReviews', []);
+  const [selectedProductForReview, setSelectedProductForReview] = useState<string | null>(null);
+
+  const userId = authSession?.userId || authSession?.adminId;
+  
+  const purchasedProductIds = new Set(
+    (orders || [])
+      .filter(order => order.customerId === userId && order.deliveredDate)
+      .flatMap(order => order.items.map(item => item.productId))
+  );
+
+  const purchasedProducts = (products || []).filter(p => purchasedProductIds.has(p.id));
+
+  const productsWithReviews = purchasedProducts.map(product => {
+    const productReviews = (reviews || []).filter(
+      r => r.productId === product.id && r.branchId === authSession?.branchId
+    );
+    const averageRating = productReviews.length > 0
+      ? productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length
+      : 0;
+    const myReview = productReviews.find(r => r.customerId === userId);
+    return {
+      product,
+      reviewCount: productReviews.length,
+      averageRating,
+      myReview,
+    };
+  });
+
+  if (selectedProductForReview) {
+    return (
+      <div>
+        <Button 
+          variant="ghost" 
+          onClick={() => setSelectedProductForReview(null)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Ürün Listesine Dön
+        </Button>
+        <ProductReviews 
+          productId={selectedProductForReview} 
+          authSession={authSession}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Star weight="fill" className="h-5 w-5 text-yellow-500" />
+          Ürün Yorumları
+        </CardTitle>
+        <CardDescription>
+          Satın aldığınız ürünler için yorum yapabilirsiniz
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {purchasedProducts.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Star className="h-12 w-12 mx-auto mb-4 opacity-20" />
+            <p>Henüz teslim alınan ürününüz bulunmuyor</p>
+            <p className="text-xs mt-2">B2B platformundan ürün siparişi verip teslim aldıktan sonra yorum yapabilirsiniz</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {productsWithReviews.map(({ product, reviewCount, averageRating, myReview }) => (
+              <Card 
+                key={product.id}
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setSelectedProductForReview(product.id)}
+              >
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    {product.imageUrl && (
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base truncate">{product.name}</CardTitle>
+                      {product.category && (
+                        <CardDescription className="text-xs capitalize">
+                          {product.category}
+                        </CardDescription>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      {averageRating > 0 ? (
+                        <>
+                          <Star weight="fill" className="h-5 w-5 text-yellow-500" />
+                          <span className="font-semibold">{averageRating.toFixed(1)}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Star className="h-5 w-5 text-gray-300" />
+                          <span className="text-sm text-muted-foreground">Henüz yok</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <ChatCircle className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {reviewCount} yorum
+                      </span>
+                    </div>
+                  </div>
+                  {myReview ? (
+                    <Badge variant="secondary" className="w-full justify-center">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Yorumunuz mevcut
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="w-full justify-center">
+                      <ChatCircle className="h-3 w-3 mr-1" />
+                      Yorum yapabilirsiniz
+                    </Badge>
+                  )}
+                  <Button variant="outline" size="sm" className="w-full">
+                    {myReview ? 'Yorumu Görüntüle' : 'Yorum Yap'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }

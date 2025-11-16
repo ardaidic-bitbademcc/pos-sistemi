@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Star, ThumbsUp, ThumbsDown, ShieldCheck, ChatCircle } from '@phosphor-icons/react';
-import type { ProductReview, ReviewVote, ProductRatingStats, Product, AuthSession } from '@/lib/types';
+import type { ProductReview, ReviewVote, ProductRatingStats, Product, AuthSession, B2BOrder } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,7 @@ export default function ProductReviews({ productId, authSession }: ProductReview
   const [reviews, setReviews] = useKV<ProductReview[]>('productReviews', []);
   const [votes, setVotes] = useKV<ReviewVote[]>('reviewVotes', []);
   const [products] = useKV<Product[]>('products', []);
+  const [b2bOrders] = useKV<B2BOrder[]>('b2b-orders', []);
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [hoveredStar, setHoveredStar] = useState(0);
@@ -28,6 +29,16 @@ export default function ProductReviews({ productId, authSession }: ProductReview
   const [sortBy, setSortBy] = useState<'recent' | 'helpful' | 'rating'>('recent');
 
   const product = products?.find((p) => p.id === productId);
+  
+  const userId = authSession?.userId || authSession?.adminId;
+  
+  const hasPurchasedProduct = (b2bOrders || []).some(
+    order => 
+      order.customerId === userId &&
+      order.deliveredDate &&
+      order.items.some(item => item.productId === productId)
+  );
+
   const productReviews = (reviews || []).filter(
     (r) => r.productId === productId && r.branchId === authSession?.branchId
   );
@@ -60,7 +71,12 @@ export default function ProductReviews({ productId, authSession }: ProductReview
 
   const handleSubmitReview = () => {
     if (!authSession) {
-      toast.error('Yorum yapmak için giriş yapmalısınız');
+      toast.error('Yorum yapabilmek için giriş yapmalısınız');
+      return;
+    }
+
+    if (!hasPurchasedProduct) {
+      toast.error('Sadece satın aldığınız ürünler için yorum yapabilirsiniz');
       return;
     }
 
@@ -77,7 +93,7 @@ export default function ProductReviews({ productId, authSession }: ProductReview
       customerName: authSession.userName,
       rating: newRating,
       comment: newComment,
-      isVerifiedPurchase: false,
+      isVerifiedPurchase: hasPurchasedProduct,
       createdAt: new Date().toISOString(),
       helpfulCount: 0,
       notHelpfulCount: 0,
@@ -262,42 +278,54 @@ export default function ProductReviews({ productId, authSession }: ProductReview
 
           <Separator />
 
-          <div className="space-y-4">
-            <h3 className="font-semibold">Yeni Değerlendirme</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Puanınız:</span>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onMouseEnter={() => setHoveredStar(star)}
-                    onMouseLeave={() => setHoveredStar(0)}
-                    onClick={() => setNewRating(star)}
-                    className="transition-transform hover:scale-110"
-                  >
-                    <Star
-                      weight="fill"
-                      className={cn(
-                        'h-8 w-8 transition-colors',
-                        star <= (hoveredStar || newRating)
-                          ? 'text-yellow-500'
-                          : 'text-gray-300'
-                      )}
-                    />
-                  </button>
-                ))}
+          {hasPurchasedProduct ? (
+            <div className="space-y-4">
+              <h3 className="font-semibold">Yeni Değerlendirme</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Puanınız:</span>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onMouseEnter={() => setHoveredStar(star)}
+                      onMouseLeave={() => setHoveredStar(0)}
+                      onClick={() => setNewRating(star)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        weight="fill"
+                        className={cn(
+                          'h-8 w-8 transition-colors',
+                          star <= (hoveredStar || newRating)
+                            ? 'text-yellow-500'
+                            : 'text-gray-300'
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <span className="text-sm font-semibold">{newRating}/5</span>
               </div>
-              <span className="text-sm font-semibold">{newRating}/5</span>
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Ürün hakkında düşüncelerinizi paylaşın..."
+                rows={4}
+              />
+              <Button onClick={handleSubmitReview}>Değerlendirme Gönder</Button>
             </div>
-            <Textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Ürün hakkında düşüncelerinizi paylaşın..."
-              rows={4}
-            />
-            <Button onClick={handleSubmitReview}>Değerlendirme Gönder</Button>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <h3 className="font-semibold">Yeni Değerlendirme</h3>
+              <div className="bg-muted/50 border border-border rounded-lg p-6 text-center">
+                <ShieldCheck className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Yorum yapabilmek için önce bu ürünü B2B platformundan satın almanız gerekmektedir.
+                </p>
+              </div>
+            </div>
+          )}
 
           <Separator />
 

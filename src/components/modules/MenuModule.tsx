@@ -12,12 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent, MagnifyingGlass, SquaresFour, List, Image, Star, ChatCircle } from '@phosphor-icons/react';
+import { ArrowLeft, ForkKnife, Sparkle, TrendUp, TrendDown, Plus, Trash, Package, Receipt, FileText, CalendarBlank, PencilSimple, Check, X, Percent, MagnifyingGlass, SquaresFour, List, Image } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category, ProductOption, AuthSession, ProductReview } from '@/lib/types';
+import type { MenuItem, MenuAnalysis, MenuCategory, Product, Recipe, RecipeIngredient, Invoice, InvoiceItem, Sale, Category, ProductOption, AuthSession } from '@/lib/types';
 import { formatCurrency, formatNumber, generateId, generateInvoiceNumber, calculateRecipeTotalCost, calculateCostPerServing, calculateProfitMargin } from '@/lib/helpers';
 import ProductOptionsEditor from '@/components/ProductOptionsEditor';
-import ProductReviews from '@/components/ProductReviews';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
 
 interface MenuModuleProps {
@@ -40,7 +39,6 @@ export default function MenuModule({ onBack, authSession }: MenuModuleProps) {
   const [categories, setCategories] = useKV<Category[]>('categories', []);
   const [invoices, setInvoices] = useKV<Invoice[]>('invoices', []);
   const [sales] = useKV<Sale[]>('sales', []);
-  const [reviews] = useKV<ProductReview[]>('productReviews', []);
   
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysis, setAnalysis] = useState<MenuAnalysis[]>([]);
@@ -74,7 +72,6 @@ export default function MenuModule({ onBack, authSession }: MenuModuleProps) {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedProductForReview, setSelectedProductForReview] = useState<string | null>(null);
   
   const [campaignForm, setCampaignForm] = useState({
     menuItemId: '',
@@ -1165,7 +1162,6 @@ export default function MenuModule({ onBack, authSession }: MenuModuleProps) {
         <TabsList className="w-full sm:w-auto flex-wrap h-auto">
           <TabsTrigger value="menu" className="text-xs sm:text-sm">Menü Öğeleri</TabsTrigger>
           <TabsTrigger value="products" className="text-xs sm:text-sm">Ürünler</TabsTrigger>
-          <TabsTrigger value="reviews" className="text-xs sm:text-sm">Yorumlar</TabsTrigger>
           <TabsTrigger value="stock" className="text-xs sm:text-sm">Stok Yönetimi</TabsTrigger>
           <TabsTrigger value="recipes" className="text-xs sm:text-sm">Reçeteler</TabsTrigger>
           <TabsTrigger value="invoices" className="text-xs sm:text-sm">Faturalar</TabsTrigger>
@@ -1747,138 +1743,6 @@ export default function MenuModule({ onBack, authSession }: MenuModuleProps) {
                       </div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="reviews" className="space-y-4">
-          {selectedProductForReview ? (
-            <div>
-              <Button 
-                variant="ghost" 
-                onClick={() => setSelectedProductForReview(null)}
-                className="mb-4"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Ürün Listesine Dön
-              </Button>
-              <ProductReviews 
-                productId={selectedProductForReview} 
-                authSession={authSession || null}
-              />
-            </div>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star weight="fill" className="h-5 w-5 text-yellow-500" />
-                  Ürün Yorumları Yönetimi
-                </CardTitle>
-                <CardDescription>
-                  Ürünlere yapılan değerlendirmeleri görüntüleyin ve yönetin
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {(() => {
-                    const productsWithReviews = (products || [])
-                      .filter(p => p.isActive && (p.branchId === authSession?.branchId || !p.branchId))
-                      .map(product => {
-                        const productReviews = (reviews || []).filter(
-                          r => r.productId === product.id && r.branchId === authSession?.branchId
-                        );
-                        const averageRating = productReviews.length > 0
-                          ? productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length
-                          : 0;
-                        const pendingReviews = productReviews.filter(r => !r.isApproved).length;
-                        return {
-                          product,
-                          reviewCount: productReviews.length,
-                          averageRating,
-                          pendingReviews,
-                        };
-                      })
-                      .sort((a, b) => b.reviewCount - a.reviewCount);
-
-                    if (productsWithReviews.length === 0) {
-                      return (
-                        <div className="text-center py-12 text-muted-foreground">
-                          <Star className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                          <p>Henüz ürün bulunmuyor</p>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {productsWithReviews.map(({ product, reviewCount, averageRating, pendingReviews }) => (
-                          <Card 
-                            key={product.id}
-                            className="hover:shadow-md transition-shadow cursor-pointer"
-                            onClick={() => setSelectedProductForReview(product.id)}
-                          >
-                            <CardHeader>
-                              <div className="flex items-start gap-3">
-                                {product.imageUrl && (
-                                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
-                                    <img 
-                                      src={product.imageUrl} 
-                                      alt={product.name}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                      }}
-                                    />
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <CardTitle className="text-base truncate">{product.name}</CardTitle>
-                                  {product.category && (
-                                    <CardDescription className="text-xs capitalize">
-                                      {product.category}
-                                    </CardDescription>
-                                  )}
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1">
-                                  {averageRating > 0 ? (
-                                    <>
-                                      <Star weight="fill" className="h-5 w-5 text-yellow-500" />
-                                      <span className="font-semibold">{averageRating.toFixed(1)}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Star className="h-5 w-5 text-gray-300" />
-                                      <span className="text-sm text-muted-foreground">Henüz yok</span>
-                                    </>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <ChatCircle className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">
-                                    {reviewCount} yorum
-                                  </span>
-                                </div>
-                              </div>
-                              {pendingReviews > 0 && (
-                                <Badge variant="secondary" className="w-full justify-center">
-                                  {pendingReviews} yorum onay bekliyor
-                                </Badge>
-                              )}
-                              <Button variant="outline" size="sm" className="w-full">
-                                Yorumları Görüntüle
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    );
-                  })()}
                 </div>
               </CardContent>
             </Card>
