@@ -284,7 +284,7 @@ function App() {
 
   return (
     <SidebarProvider>
-      <Sidebar variant="floating" collapsible="icon">
+      <Sidebar variant="inset" collapsible="icon">
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel>Şube Bilgisi</SidebarGroupLabel>
@@ -342,32 +342,36 @@ function App() {
         </SidebarContent>
       </Sidebar>
 
-      <div className="flex-1 min-h-screen bg-background font-sans">
-        <div className="fixed top-2 left-2 sm:top-4 sm:left-4 z-50">
-          <SidebarTrigger />
+      <main className="flex-1 min-h-screen bg-background font-sans w-full">
+        <div className="sticky top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
+          <div className="flex items-center justify-between h-14 px-4">
+            <SidebarTrigger />
+            <div className="flex items-center gap-2">
+              {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
+                <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')} className="h-9">
+                  <CurrencyCircleDollar className="h-4 w-4 mr-2" weight="fill" />
+                  <span>Kasa</span>
+                </Button>
+              )}
+              <Badge variant="outline" className="text-sm px-3 py-1.5">
+                👤 {currentUserName}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={handleSwitchUser} className="h-9">
+                <LockKey className="h-4 w-4 mr-2" weight="bold" />
+                <span>Kullanıcı Değiştir</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout} className="h-9">
+                <SignOut className="h-4 w-4 mr-2" weight="bold" />
+                <span>Çıkış</span>
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex flex-wrap items-center gap-1 sm:gap-2 max-w-[calc(100vw-1rem)]">
-          {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
-            <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')} className="h-8 px-2 sm:px-3">
-              <CurrencyCircleDollar className="h-4 w-4 sm:mr-1" weight="fill" />
-              <span className="hidden sm:inline">Kasa</span>
-            </Button>
-          )}
-          <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 max-w-[120px] truncate">
-            👤 <span className="hidden sm:inline">{currentUserName}</span>
-          </Badge>
-          <Button variant="outline" size="sm" onClick={handleSwitchUser} className="h-8 px-2 sm:px-3">
-            <LockKey className="h-4 w-4 sm:mr-2" weight="bold" />
-            <span className="hidden sm:inline">Kullanıcı Değiştir</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleLogout} className="h-8 px-2 sm:px-3">
-            <SignOut className="h-4 w-4 sm:mr-2" weight="bold" />
-            <span className="hidden sm:inline">Çıkış</span>
-          </Button>
+        <div className="p-4">
+          {renderModule()}
         </div>
-        {renderModule()}
         <Toaster position="top-right" />
-      </div>
+      </main>
     </SidebarProvider>
   );
 }
