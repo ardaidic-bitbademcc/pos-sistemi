@@ -773,16 +773,38 @@ Restoran ve perakende işletmeler için kapsamlı, modern, çoklu şube destekli
   - Takip numarası müşteri ile paylaşılır
   - Kargo durumu izlenebilir
 
-#### Stok ve Reçete Senkronizasyonu
-- **İşlevsellik**: Teslim alındığında otomatik stok ve maliyet güncelleme
-- **Amaç**: Menü mühendisliği ile entegrasyon, otomatik maliyet takibi
-- **Tetikleyici**: Müşteri "Teslim Alındı" butonuna basar
-- **Akış**: Teslim alındı → Sistem sipariş detaylarını al → Stok güncelle → Reçetelerdeki alış fiyatını güncelle → Kar marjını yeniden hesapla
+#### Stok ve Reçete Senkronizasyonu (Teslim Alma)
+- **İşlevsellik**: Müşteri kargo/teslimatı aldığında "Teslim Al" butonu ile sipariş tamamlanır, stoklar ve maliyetler otomatik güncellenir
+- **Amaç**: Menü mühendisliği ile entegrasyon, otomatik maliyet takibi, manuel stok girişini ortadan kaldırma
+- **Tetikleyici**: Müşteri siparişi teslim aldığında "Teslim Al" butonuna basar
+- **Akış**: 
+  - Sipariş listesinde "Kargoda" veya "Teslim Edildi" durumundaki siparişlerde "Teslim Al" butonu görünür
+  - Müşteri butona tıklar → Sipariş durumu "Teslim Edildi" olarak işaretlenir
+  - Sistem sipariş içindeki her ürünü kontrol eder
+  - Ürün adı stok sisteminde varsa:
+    - Stok miktarı sipariş adedi kadar artar
+    - Maliyet fiyatı (costPrice) sipariş birim fiyatı ile güncellenir
+    - İlgili menü öğesinde de maliyet güncellenir
+  - Ürün adı stok sisteminde yoksa:
+    - Yeni ürün otomatik oluşturulur
+    - Kategori olarak B2B siparişten gelen kategori atanır
+    - Stok sipariş miktarı olarak girilir
+    - Maliyet fiyatı sipariş birim fiyatı olarak ayarlanır
+    - Satış fiyatı maliyet × 1.3 (varsayılan %30 kar marjı) olarak hesaplanır
+  - Başarı mesajı gösterilir: "Sipariş teslim alındı! Ürünler stoklara eklendi."
 - **Başarı Kriterleri**:
-  - Stok miktarı otomatik artar
-  - Alış fiyatı sipariş fiyatına göre güncellenir
-  - Reçetelerdeki maliyetler otomatik hesaplanır
+  - "Teslim Al" butonu sadece "Kargoda" veya "Teslim Edildi" durumunda görünür
+  - Butona tıklandığında sipariş durumu güncellenir ve teslim tarihi kaydedilir
+  - Stok miktarları otomatik artar (sipariş edilen miktar kadar)
+  - Maliyet fiyatları (costPrice) otomatik güncellenir (sipariş birim fiyatı ile)
+  - Ürün stok sisteminde yoksa otomatik oluşturulur
+  - Menü öğelerindeki maliyet fiyatları senkronize edilir
+  - Teslim alınan siparişlerde "Teslim Alındı" badge'i ve tarih bilgisi gösterilir
+  - Teslim alınan siparişlerde buton disabled olur ve "Teslim Alındı" yazısı görünür
+  - İşlem sırasında herhangi bir hata olursa kullanıcıya bilgi verilir
+  - Reçetelerdeki maliyetler otomatik hesaplanır (ilgili ürün reçetede varsa)
   - Menü öğelerinin kar marjı güncellenir
+  - Admin ve Branch ID otomatik atanır (multi-tenancy desteği)
 
 ## İstisna Durumları
 

@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash, Power, Pause, AirplaneTilt, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus, AuthSession } from '@/lib/types';
+import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus, AuthSession, Product, MenuItem } from '@/lib/types';
 
 interface B2BModuleProps {
   onBack: () => void;
@@ -30,6 +30,8 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
   const [commissionRate] = useKV<number>('b2b-commission-rate', 10);
   const [supplierPanelStatus, setSupplierPanelStatus] = useKV<SupplierPanelStatus>('b2b-supplier-panel-status', 'active');
   const [supplierPausedUntil, setSupplierPausedUntil] = useKV<string | null>('b2b-supplier-paused-until', null);
+  const [stockProducts, setStockProducts] = useKV<Product[]>('products', []);
+  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
   const actualCommissionRate = commissionRate ?? 10;
   
   const currentUserId = 'user-1';
@@ -164,6 +166,106 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
     toast.success('Sipariş durumu güncellendi');
   };
 
+  const confirmDelivery = (orderId: string) => {
+    const order = (orders || []).find(o => o.id === orderId);
+    if (!order) {
+      toast.error('Sipariş bulunamadı');
+      return;
+    }
+
+    if (order.status !== 'delivered' && order.status !== 'shipped') {
+      toast.error('Sadece kargoda veya teslim edildi durumundaki siparişler için teslim alınabilir');
+      return;
+    }
+
+    setOrders((current) =>
+      (current || []).map(o =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: 'delivered' as OrderStatus,
+              deliveredDate: new Date().toISOString(),
+              statusHistory: [
+                ...o.statusHistory,
+                {
+                  status: 'delivered' as OrderStatus,
+                  timestamp: new Date().toISOString(),
+                  updatedBy: currentUserName,
+                  notes: 'Müşteri tarafından teslim alındı',
+                }
+              ]
+            }
+          : o
+      )
+    );
+
+    order.items.forEach(item => {
+      const b2bProduct = (products || []).find(p => p.id === item.productId);
+      if (!b2bProduct) return;
+
+      const matchingStockProduct = (stockProducts || []).find(p => 
+        p.name.toLowerCase().trim() === b2bProduct.name.toLowerCase().trim()
+      );
+
+      if (matchingStockProduct) {
+        setStockProducts((current) =>
+          (current || []).map(p =>
+            p.id === matchingStockProduct.id
+              ? {
+                  ...p,
+                  stock: p.stock + item.quantity,
+                  costPrice: item.unitPrice,
+                }
+              : p
+          )
+        );
+        
+        const relatedMenuItem = (menuItems || []).find(m => 
+          m.name.toLowerCase().trim() === b2bProduct.name.toLowerCase().trim()
+        );
+        
+        if (relatedMenuItem) {
+          setMenuItems((current) =>
+            (current || []).map(m =>
+              m.id === relatedMenuItem.id
+                ? {
+                    ...m,
+                    costPrice: item.unitPrice,
+                  }
+                : m
+            )
+          );
+        }
+      } else {
+        const newStockProduct: Product = {
+          id: `product-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          sku: `B2B-${Date.now()}`,
+          name: b2bProduct.name,
+          description: b2bProduct.description,
+          categoryId: 'b2b-import',
+          category: b2bProduct.category,
+          basePrice: item.unitPrice * 1.3,
+          costPrice: item.unitPrice,
+          taxRate: b2bProduct.taxRate,
+          unit: b2bProduct.unit,
+          imageUrl: b2bProduct.imageUrl,
+          isActive: true,
+          stock: item.quantity,
+          minStockLevel: Math.ceil(item.quantity * 0.2),
+          trackStock: true,
+          branchId: authSession?.branchId,
+          adminId: authSession?.adminId,
+        };
+        
+        setStockProducts((current) => [...(current || []), newStockProduct]);
+      }
+    });
+
+    toast.success('Sipariş teslim alındı! Ürünler stoklara eklendi ve maliyet fiyatları güncellendi.', {
+      duration: 5000,
+    });
+  };
+
   const activateSupplierMode = () => {
     setIsSupplierMode(true);
     toast.success('Tedarikçi paneli aktifleştirildi');
@@ -266,6 +368,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
               onRequestSample={requestSample}
               onCreateOrder={createOrder}
               onUpdateOrderStatus={updateOrderStatus}
+              onConfirmDelivery={confirmDelivery}
               getAnonymousSupplierName={getAnonymousSupplierName}
               commissionRate={actualCommissionRate}
             />
@@ -283,6 +386,7 @@ function CustomerPanel({
   onRequestSample,
   onCreateOrder,
   onUpdateOrderStatus,
+  onConfirmDelivery,
   getAnonymousSupplierName,
   commissionRate,
 }: {
@@ -292,6 +396,7 @@ function CustomerPanel({
   onRequestSample: (productId: string) => void;
   onCreateOrder: (productId: string, quantity: number, variantId?: string, billingInfo?: any) => void;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  onConfirmDelivery: (orderId: string) => void;
   getAnonymousSupplierName: (supplierId: string) => string;
   commissionRate: number;
 }) {
@@ -554,11 +659,26 @@ function CustomerPanel({
                         <p className="text-xs text-muted-foreground">
                           Sipariş tarihi: {new Date(order.orderDate).toLocaleDateString('tr-TR')}
                         </p>
+                        {order.deliveredDate && (
+                          <p className="text-xs text-green-600 font-medium">
+                            Teslim alındı: {new Date(order.deliveredDate).toLocaleDateString('tr-TR')} {new Date(order.deliveredDate).toLocaleTimeString('tr-TR')}
+                          </p>
+                        )}
                       </div>
-                      <div>
-                        {order.status === 'delivered' && (
-                          <Button size="sm" variant="outline" disabled>
+                      <div className="flex flex-col gap-2">
+                        {(order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => onConfirmDelivery(order.id)}
+                            className="whitespace-nowrap"
+                          >
                             <CheckCircle className="h-4 w-4 mr-1" />
+                            Teslim Al
+                          </Button>
+                        )}
+                        {order.deliveredDate && (
+                          <Button size="sm" variant="outline" disabled>
+                            <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
                             Teslim Alındı
                           </Button>
                         )}
