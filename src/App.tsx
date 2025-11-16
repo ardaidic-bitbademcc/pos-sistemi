@@ -429,4 +429,8 @@ function App() {
   );
 }
 
+export default App;    </SidebarProvider>
+  );
+}
+
 export default App;
