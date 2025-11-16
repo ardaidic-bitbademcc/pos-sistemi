@@ -52,6 +52,7 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
     description: '',
     category: '',
     unitPrice: 0,
+    taxRate: 20,
     minOrderQuantity: 1,
     unit: 'adet',
     canProvideSample: false,
@@ -62,6 +63,9 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
     hasVariants: false,
     variants: [] as ProductVariant[],
   });
+  
+  const [editingProduct, setEditingProduct] = useState<B2BProduct | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   
   const [newVariant, setNewVariant] = useState({
     name: '',
@@ -160,6 +164,10 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
       toast.error('Lütfen ürün adı ve kategori girin');
       return;
     }
+    if (!newProduct.taxRate || newProduct.taxRate <= 0) {
+      toast.error('KDV oranı girilmesi zorunludur');
+      return;
+    }
     if (newProduct.hasVariants && newProduct.variants.length === 0) {
       toast.error('Varyantlı ürün için en az bir varyant ekleyin');
       return;
@@ -185,6 +193,7 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
       description: '',
       category: '',
       unitPrice: 0,
+      taxRate: 20,
       minOrderQuantity: 1,
       unit: 'adet',
       canProvideSample: false,
@@ -195,6 +204,39 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
       hasVariants: false,
       variants: [],
     });
+  };
+  
+  const handleEditProduct = (product: B2BProduct) => {
+    setEditingProduct(product);
+    setShowEditDialog(true);
+  };
+  
+  const handleUpdateProduct = () => {
+    if (!editingProduct) return;
+    
+    if (!editingProduct.name || !editingProduct.category) {
+      toast.error('Lütfen ürün adı ve kategori girin');
+      return;
+    }
+    if (!editingProduct.taxRate || editingProduct.taxRate <= 0) {
+      toast.error('KDV oranı girilmesi zorunludur');
+      return;
+    }
+    if (editingProduct.hasVariants && (!editingProduct.variants || editingProduct.variants.length === 0)) {
+      toast.error('Varyantlı ürün için en az bir varyant ekleyin');
+      return;
+    }
+    if (!editingProduct.hasVariants && editingProduct.unitPrice <= 0) {
+      toast.error('Lütfen geçerli bir fiyat girin');
+      return;
+    }
+
+    setProducts((current) =>
+      (current || []).map(p => p.id === editingProduct.id ? editingProduct : p)
+    );
+    toast.success('Ürün güncellendi');
+    setShowEditDialog(false);
+    setEditingProduct(null);
   };
 
   const toggleProductActive = (productId: string) => {
@@ -540,7 +582,7 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-3 gap-4">
+                          <div className="grid grid-cols-4 gap-4">
                             <div className="space-y-2">
                               <Label>Birim Fiyat (₺) *</Label>
                               <Input
@@ -548,6 +590,16 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
                                 step="0.01"
                                 value={newProduct.unitPrice || ''}
                                 onChange={(e) => setNewProduct({ ...newProduct, unitPrice: parseFloat(e.target.value) || 0 })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>KDV (%) *</Label>
+                              <Input
+                                type="number"
+                                step="1"
+                                value={newProduct.taxRate || ''}
+                                onChange={(e) => setNewProduct({ ...newProduct, taxRate: parseFloat(e.target.value) || 0 })}
+                                placeholder="20"
                               />
                             </div>
                             <div className="space-y-2">
@@ -699,23 +751,32 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
                                 </Badge>
                               </div>
                             </div>
-                            <Button
-                              variant={product.isActive ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => toggleProductActive(product.id)}
-                            >
-                              {product.isActive ? (
-                                <>
-                                  <Power className="h-4 w-4 mr-1" weight="fill" />
-                                  Aktif
-                                </>
-                              ) : (
-                                <>
-                                  <Power className="h-4 w-4 mr-1" />
-                                  Pasif
-                                </>
-                              )}
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditProduct(product)}
+                              >
+                                Düzenle
+                              </Button>
+                              <Button
+                                variant={product.isActive ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => toggleProductActive(product.id)}
+                              >
+                                {product.isActive ? (
+                                  <>
+                                    <Power className="h-4 w-4 mr-1" weight="fill" />
+                                    Aktif
+                                  </>
+                                ) : (
+                                  <>
+                                    <Power className="h-4 w-4 mr-1" />
+                                    Pasif
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -750,7 +811,29 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
                                 <Badge>{getOrderStatusBadge(order.status)}</Badge>
                               </div>
                               <p className="text-sm">Müşteri: <strong>Anonim</strong></p>
-                              <div className="text-sm space-y-1">
+                              
+                              {order.billingInfo && (
+                                <div className="mt-3 p-3 border rounded-lg bg-muted/30 space-y-1">
+                                  <p className="text-xs font-semibold text-muted-foreground mb-1">Fatura Bilgileri</p>
+                                  {order.billingInfo.companyName && (
+                                    <p className="text-sm"><strong>Firma:</strong> {order.billingInfo.companyName}</p>
+                                  )}
+                                  {order.billingInfo.taxNumber && order.billingInfo.taxOffice && (
+                                    <p className="text-sm"><strong>Vergi No:</strong> {order.billingInfo.taxNumber} - {order.billingInfo.taxOffice}</p>
+                                  )}
+                                  {order.billingInfo.address && (
+                                    <p className="text-sm"><strong>Adres:</strong> {order.billingInfo.address}</p>
+                                  )}
+                                  {order.billingInfo.phone && (
+                                    <p className="text-sm"><strong>Tel:</strong> {order.billingInfo.phone}</p>
+                                  )}
+                                  {order.billingInfo.email && (
+                                    <p className="text-sm"><strong>E-posta:</strong> {order.billingInfo.email}</p>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <div className="text-sm space-y-1 mt-2">
                                 {order.items.map(item => (
                                   <div key={item.id}>
                                     {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
@@ -844,6 +927,145 @@ export default function SupplierDashboard({ session, onLogout }: SupplierDashboa
           </TabsContent>
         </Tabs>
       </div>
+      
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ürünü Düzenle</DialogTitle>
+            <DialogDescription>Ürün bilgilerini güncelleyin</DialogDescription>
+          </DialogHeader>
+          {editingProduct && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Ürün Adı *</Label>
+                  <Input
+                    value={editingProduct.name}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Kategori *</Label>
+                  <Select
+                    value={editingProduct.category}
+                    onValueChange={(v) => setEditingProduct({ ...editingProduct, category: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Kahve">Kahve</SelectItem>
+                      <SelectItem value="Ambalaj">Ambalaj</SelectItem>
+                      <SelectItem value="İçecek">İçecek</SelectItem>
+                      <SelectItem value="Gıda">Gıda</SelectItem>
+                      <SelectItem value="Pasta/Çikolata">Pasta/Çikolata</SelectItem>
+                      <SelectItem value="Ekipman">Ekipman</SelectItem>
+                      <SelectItem value="Diğer">Diğer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Açıklama</Label>
+                <Textarea
+                  value={editingProduct.description}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              
+              {!editingProduct.hasVariants && (
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Birim Fiyat (₺) *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingProduct.unitPrice || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, unitPrice: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>KDV (%) *</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      value={editingProduct.taxRate || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, taxRate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Min. Sipariş *</Label>
+                    <Input
+                      type="number"
+                      value={editingProduct.minOrderQuantity || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, minOrderQuantity: parseInt(e.target.value) || 1 })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stok</Label>
+                    <Input
+                      type="number"
+                      value={editingProduct.stock || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, stock: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Birim</Label>
+                  <Input
+                    value={editingProduct.unit}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, unit: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Kargo Koşulu</Label>
+                  <Select
+                    value={editingProduct.shippingMethod}
+                    onValueChange={(v) => setEditingProduct({ ...editingProduct, shippingMethod: v as ShippingMethod })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Ücretsiz Kargo</SelectItem>
+                      <SelectItem value="buyer_pays">Alıcı Ödemeli</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <Label>Numune Verilebilir</Label>
+                  <p className="text-xs text-muted-foreground">Müşterilere ücretsiz numune gönderebilir misiniz?</p>
+                </div>
+                <Switch
+                  checked={editingProduct.canProvideSample}
+                  onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, canProvideSample: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <Label>Baskılı/Tasarım Gerektiriyor</Label>
+                  <p className="text-xs text-muted-foreground">Ürün özel tasarım veya logo baskısı gerektiriyor mu?</p>
+                </div>
+                <Switch
+                  checked={editingProduct.requiresDesign}
+                  onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, requiresDesign: checked })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowEditDialog(false); setEditingProduct(null); }}>İptal</Button>
+            <Button onClick={handleUpdateProduct}>Güncelle</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

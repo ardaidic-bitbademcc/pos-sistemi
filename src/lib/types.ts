@@ -586,6 +586,7 @@ export interface B2BProduct {
   description: string;
   category: string;
   unitPrice: number;
+  taxRate: number;
   minOrderQuantity: number;
   unit: string;
   imageUrl?: string;
@@ -639,6 +640,14 @@ export interface B2BOrder {
   shippingTrackingNumber?: string;
   shippingCompany?: string;
   deliveryAddress: string;
+  billingInfo?: {
+    companyName?: string;
+    taxNumber?: string;
+    taxOffice?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+  };
   orderDate: string;
   approvedDate?: string;
   shippedDate?: string;

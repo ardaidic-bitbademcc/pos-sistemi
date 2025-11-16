@@ -84,7 +84,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
     toast.success(`Numune talebi ${status === 'approved' ? 'onaylandı' : 'reddedildi'}`);
   };
 
-  const createOrder = (productId: string, quantity: number, variantId?: string) => {
+  const createOrder = (productId: string, quantity: number, variantId?: string, billingInfo?: any) => {
     const product = (products || []).find(p => p.id === productId);
     if (!product) return;
 
@@ -101,7 +101,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
 
     const subtotal = unitPrice * quantity;
     const shippingCost = product.shippingMethod === 'free' ? 0 : 150;
-    const taxAmount = subtotal * 0.18;
+    const taxAmount = subtotal * (product.taxRate / 100);
     const totalAmount = subtotal + shippingCost + taxAmount;
 
     const order: B2BOrder = {
@@ -128,6 +128,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
       totalAmount,
       status: 'pending',
       deliveryAddress: 'Demo Adres, İstanbul',
+      billingInfo: billingInfo && (billingInfo.companyName || billingInfo.taxNumber) ? billingInfo : undefined,
       orderDate: new Date().toISOString(),
       statusHistory: [{
         status: 'pending',
@@ -289,7 +290,7 @@ function CustomerPanel({
   orders: B2BOrder[];
   sampleRequests: SampleRequest[];
   onRequestSample: (productId: string) => void;
-  onCreateOrder: (productId: string, quantity: number, variantId?: string) => void;
+  onCreateOrder: (productId: string, quantity: number, variantId?: string, billingInfo?: any) => void;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
   getAnonymousSupplierName: (supplierId: string) => string;
   commissionRate: number;
@@ -299,6 +300,14 @@ function CustomerPanel({
   const [orderQuantity, setOrderQuantity] = useState(1);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [billingInfo, setBillingInfo] = useState({
+    companyName: '',
+    taxNumber: '',
+    taxOffice: '',
+    address: '',
+    phone: '',
+    email: '',
+  });
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
   const filteredProducts = selectedCategory === 'all'
@@ -350,10 +359,18 @@ function CustomerPanel({
       toast.error(`Minimum sipariş miktarı: ${minQty}`);
       return;
     }
-    onCreateOrder(selectedProduct.id, orderQuantity, selectedVariantId);
+    onCreateOrder(selectedProduct.id, orderQuantity, selectedVariantId, billingInfo);
     setShowOrderDialog(false);
     setSelectedProduct(null);
     setSelectedVariantId(undefined);
+    setBillingInfo({
+      companyName: '',
+      taxNumber: '',
+      taxOffice: '',
+      address: '',
+      phone: '',
+      email: '',
+    });
   };
 
   return (
@@ -609,6 +626,62 @@ function CustomerPanel({
                   Min. sipariş: {getMinOrderQuantity()} {selectedProduct.unit}
                 </p>
               </div>
+              
+              <div className="space-y-3 border-t pt-4">
+                <h4 className="font-semibold text-sm">Fatura Bilgileri (İsteğe Bağlı)</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Firma Adı</Label>
+                    <Input
+                      value={billingInfo.companyName}
+                      onChange={(e) => setBillingInfo({ ...billingInfo, companyName: e.target.value })}
+                      placeholder="Şirket A.Ş."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Vergi No</Label>
+                    <Input
+                      value={billingInfo.taxNumber}
+                      onChange={(e) => setBillingInfo({ ...billingInfo, taxNumber: e.target.value })}
+                      placeholder="1234567890"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Vergi Dairesi</Label>
+                    <Input
+                      value={billingInfo.taxOffice}
+                      onChange={(e) => setBillingInfo({ ...billingInfo, taxOffice: e.target.value })}
+                      placeholder="Kadıköy"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Telefon</Label>
+                    <Input
+                      value={billingInfo.phone}
+                      onChange={(e) => setBillingInfo({ ...billingInfo, phone: e.target.value })}
+                      placeholder="0555 123 45 67"
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">E-posta</Label>
+                    <Input
+                      value={billingInfo.email}
+                      onChange={(e) => setBillingInfo({ ...billingInfo, email: e.target.value })}
+                      placeholder="info@firma.com"
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">Adres</Label>
+                    <Textarea
+                      value={billingInfo.address}
+                      onChange={(e) => setBillingInfo({ ...billingInfo, address: e.target.value })}
+                      placeholder="Tam adres"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              </div>
+              
               <div className="space-y-2 border-t pt-4">
                 <div className="flex justify-between text-sm">
                   <span>Birim Fiyat:</span>
@@ -619,8 +692,8 @@ function CustomerPanel({
                   <span>{(getCurrentPrice() * orderQuantity).toFixed(2)} ₺</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>KDV (%18):</span>
-                  <span>{(getCurrentPrice() * orderQuantity * 0.18).toFixed(2)} ₺</span>
+                  <span>KDV (%{selectedProduct.taxRate}):</span>
+                  <span>{(getCurrentPrice() * orderQuantity * (selectedProduct.taxRate / 100)).toFixed(2)} ₺</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Kargo:</span>
@@ -630,7 +703,7 @@ function CustomerPanel({
                   <span>Toplam:</span>
                   <span>
                     {(
-                      getCurrentPrice() * orderQuantity * 1.18 +
+                      getCurrentPrice() * orderQuantity * (1 + selectedProduct.taxRate / 100) +
                       (selectedProduct.shippingMethod === 'free' ? 0 : 150)
                     ).toFixed(2)} ₺
                   </span>
