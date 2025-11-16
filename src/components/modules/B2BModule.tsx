@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash, Power, Pause, AirplaneTilt, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
+import { ArrowLeft, Package, ShoppingBag, Truck, CheckCircle, XCircle, Clock, Storefront, Eye, EyeSlash, Plus, Trash, Power, Pause, AirplaneTilt, ToggleLeft, ToggleRight, ClipboardText, ListChecks } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { B2BProduct, B2BOrder, SampleRequest, UserRole, ShippingMethod, OrderStatus, SampleRequestStatus, ProductVariant, SupplierPanelStatus, AuthSession, Product, MenuItem } from '@/lib/types';
 
@@ -166,7 +166,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
     toast.success('Sipariş durumu güncellendi');
   };
 
-  const confirmDelivery = (orderId: string) => {
+  const confirmDelivery = (orderId: string, withTracking: boolean = false) => {
     const order = (orders || []).find(o => o.id === orderId);
     if (!order) {
       toast.error('Sipariş bulunamadı');
@@ -191,7 +191,7 @@ export default function B2BModule({ onBack, currentUserRole, currentUserName, au
                   status: 'delivered' as OrderStatus,
                   timestamp: new Date().toISOString(),
                   updatedBy: currentUserName,
-                  notes: 'Müşteri tarafından teslim alındı',
+                  notes: withTracking ? 'Müşteri tarafından stok takibi ile teslim alındı' : 'Müşteri tarafından teslim alındı',
                 }
               ]
             }
@@ -396,7 +396,7 @@ function CustomerPanel({
   onRequestSample: (productId: string) => void;
   onCreateOrder: (productId: string, quantity: number, variantId?: string, billingInfo?: any) => void;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  onConfirmDelivery: (orderId: string) => void;
+  onConfirmDelivery: (orderId: string, withTracking?: boolean) => void;
   getAnonymousSupplierName: (supplierId: string) => string;
   commissionRate: number;
 }) {
@@ -407,6 +407,9 @@ function CustomerPanel({
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [showBulkDeliveryDialog, setShowBulkDeliveryDialog] = useState(false);
+  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<B2BOrder | null>(null);
+  const [trackingQuantities, setTrackingQuantities] = useState<Record<string, number>>({});
   const [billingInfo, setBillingInfo] = useState({
     companyName: '',
     taxNumber: '',
@@ -519,6 +522,47 @@ function CustomerPanel({
     setSelectedOrders(new Set());
     setShowBulkDeliveryDialog(false);
     toast.success(`${selectedOrders.size} sipariş teslim alındı!`);
+  };
+
+  const openTrackingDialog = (order: B2BOrder) => {
+    setSelectedOrderForTracking(order);
+    const initialQuantities: Record<string, number> = {};
+    order.items.forEach(item => {
+      initialQuantities[item.id] = item.quantity;
+    });
+    setTrackingQuantities(initialQuantities);
+    setShowTrackingDialog(true);
+  };
+
+  const handleTrackingQuantityChange = (itemId: string, value: number) => {
+    setTrackingQuantities(prev => ({
+      ...prev,
+      [itemId]: Math.max(0, value),
+    }));
+  };
+
+  const confirmDeliveryWithTracking = () => {
+    if (!selectedOrderForTracking) return;
+
+    const hasDiscrepancy = selectedOrderForTracking.items.some(
+      item => trackingQuantities[item.id] !== item.quantity
+    );
+
+    if (hasDiscrepancy) {
+      const discrepancies = selectedOrderForTracking.items
+        .filter(item => trackingQuantities[item.id] !== item.quantity)
+        .map(item => `${item.productName}: Beklenen ${item.quantity}, Sayılan ${trackingQuantities[item.id]}`)
+        .join('\n');
+      
+      toast.warning(`Miktar farklılıkları tespit edildi:\n${discrepancies}`, {
+        duration: 6000,
+      });
+    }
+
+    onConfirmDelivery(selectedOrderForTracking.id, true);
+    setShowTrackingDialog(false);
+    setSelectedOrderForTracking(null);
+    setTrackingQuantities({});
   };
 
   return (
@@ -756,14 +800,25 @@ function CustomerPanel({
                         {!isSelected && (
                           <div className="flex flex-col gap-2">
                             {isDeliverable && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => onConfirmDelivery(order.id)}
-                                className="whitespace-nowrap"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Teslim Al
-                              </Button>
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => openTrackingDialog(order)}
+                                  className="whitespace-nowrap"
+                                >
+                                  <ListChecks className="h-4 w-4 mr-1" />
+                                  Stok Takibi Yap
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => onConfirmDelivery(order.id)}
+                                  className="whitespace-nowrap"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Teslim Al
+                                </Button>
+                              </>
                             )}
                             {order.deliveredDate && (
                               <Button size="sm" variant="outline" disabled>
@@ -989,6 +1044,154 @@ function CustomerPanel({
               İptal
             </Button>
             <Button onClick={confirmBulkDelivery}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Teslim Al ve Stoklara Ekle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Stok Takibi - Teslim Alma</DialogTitle>
+            <DialogDescription>
+              Teslim alınan ürünleri sayın ve gerçek stok miktarlarını girin
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrderForTracking && (
+            <div className="space-y-4">
+              <Alert>
+                <ClipboardText className="h-4 w-4" />
+                <AlertDescription>
+                  Sipariş No: <strong>{selectedOrderForTracking.orderNumber}</strong> - Her ürün için fiziksel sayım yapın
+                </AlertDescription>
+              </Alert>
+
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-semibold text-sm mb-3">Ürün Sayım Listesi:</h4>
+                {selectedOrderForTracking.items.map(item => {
+                  const trackedQty = trackingQuantities[item.id] || 0;
+                  const orderedQty = item.quantity;
+                  const hasDiscrepancy = trackedQty !== orderedQty;
+                  
+                  return (
+                    <div 
+                      key={item.id} 
+                      className={`border rounded-lg p-4 space-y-3 ${
+                        hasDiscrepancy ? 'border-destructive bg-destructive/5' : 'border-border'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <h5 className="font-semibold">{item.productName}</h5>
+                          {item.variantName && (
+                            <p className="text-xs text-muted-foreground">Varyant: {item.variantName}</p>
+                          )}
+                        </div>
+                        {hasDiscrepancy && (
+                          <Badge variant="destructive" className="text-xs">
+                            Fark Var
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Sipariş Edilen</Label>
+                          <div className="text-2xl font-bold text-muted-foreground">{orderedQty}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Sayılan Miktar</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={trackedQty}
+                            onChange={(e) => handleTrackingQuantityChange(item.id, parseInt(e.target.value) || 0)}
+                            className="text-2xl font-bold h-14"
+                          />
+                        </div>
+                      </div>
+
+                      {hasDiscrepancy && (
+                        <Alert variant="destructive">
+                          <AlertDescription className="text-xs">
+                            Fark: {trackedQty - orderedQty > 0 ? '+' : ''}{trackedQty - orderedQty} adet
+                            {trackedQty > orderedQty && ' (Fazla gelen)'}
+                            {trackedQty < orderedQty && ' (Eksik gelen)'}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex justify-between p-2 bg-muted rounded">
+                          <span className="text-muted-foreground">Birim Fiyat:</span>
+                          <span className="font-semibold">{item.unitPrice.toFixed(2)} ₺</span>
+                        </div>
+                        <div className="flex justify-between p-2 bg-muted rounded">
+                          <span className="text-muted-foreground">Stok Değeri:</span>
+                          <span className="font-semibold">
+                            {(trackedQty * item.unitPrice).toFixed(2)} ₺
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="bg-primary/10 p-4 rounded-lg space-y-2">
+                <h4 className="font-semibold text-sm">Özet:</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Toplam Ürün Çeşidi:</span>
+                    <span className="font-bold">{selectedOrderForTracking.items.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Beklenen Toplam:</span>
+                    <span className="font-bold">
+                      {selectedOrderForTracking.items.reduce((sum, item) => sum + item.quantity, 0)} adet
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Sayılan Toplam:</span>
+                    <span className="font-bold">
+                      {Object.values(trackingQuantities).reduce((sum, qty) => sum + qty, 0)} adet
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Toplam Stok Değeri:</span>
+                    <span className="font-bold text-lg">
+                      {selectedOrderForTracking.items
+                        .reduce((sum, item) => sum + (trackingQuantities[item.id] || 0) * item.unitPrice, 0)
+                        .toFixed(2)} ₺
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedOrderForTracking.items.some(item => trackingQuantities[item.id] !== item.quantity) && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    <strong>Dikkat:</strong> Sayılan miktarlar ile sipariş miktarları arasında fark bulunmaktadır. 
+                    Stoklara sayılan miktarlar eklenecektir.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowTrackingDialog(false);
+                setSelectedOrderForTracking(null);
+                setTrackingQuantities({});
+              }}
+            >
+              İptal
+            </Button>
+            <Button onClick={confirmDeliveryWithTracking}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Teslim Al ve Stoklara Ekle
             </Button>
