@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useKV } from '@github/spark/hooks';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ import { useSeedData } from '@/hooks/use-seed-data';
 import { useAutoEmployeeAccounts } from '@/hooks/use-auto-employee-accounts';
 import { useTaskReminders } from '@/hooks/use-task-reminders';
 import { checkMigrationStatus } from '@/lib/data-migration';
+import { Logger } from '@/lib/logger';
 import type { UserRole, AuthSession, Branch, SupplierAuthSession } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -56,6 +57,7 @@ function App() {
   const [migrationCompleted, setMigrationCompleted] = useState<boolean | null>(null);
   const [showBranchSelector, setShowBranchSelector] = useState(false);
   const [branches] = useKV<Branch[]>('branches', []);
+  const sessionValidated = useRef(false);
   
   useSeedData();
   useAutoEmployeeAccounts();
@@ -68,6 +70,62 @@ function App() {
     };
     checkMigration();
   }, []);
+
+  useEffect(() => {
+    if (authSession && isAuthenticated && loginMode === 'customer' && !sessionValidated.current) {
+      sessionValidated.current = true;
+      
+      const adminBranches = (branches || []).filter(
+        (b) => b.isActive && authSession.adminId && b.adminId === authSession.adminId
+      );
+      
+      Logger.info('SESSION', 'Session doğrulanıyor', {
+        adminId: authSession.adminId,
+        branchId: authSession.branchId,
+        totalBranches: (branches || []).length,
+        adminBranches: adminBranches.length
+      });
+      
+      if (adminBranches.length === 0) {
+        Logger.error('SESSION', 'Geçersiz session: Aktif şube bulunamadı', {
+          adminId: authSession.adminId,
+          branchId: authSession.branchId
+        });
+        toast.error('Şube bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+        handleSwitchUser();
+        sessionValidated.current = false;
+        return;
+      }
+
+      const currentBranch = adminBranches.find((b) => b.id === authSession.branchId);
+      
+      if (!currentBranch) {
+        Logger.warn('SESSION', 'Mevcut şube bulunamadı, ilk şubeye geçiliyor', {
+          oldBranchId: authSession.branchId,
+          newBranchId: adminBranches[0].id,
+          newBranchName: adminBranches[0].name
+        });
+        
+        const updatedSession: AuthSession = {
+          ...authSession,
+          branchId: adminBranches[0].id,
+        };
+        setAuthSession(updatedSession);
+        toast.info(`${adminBranches[0].name} şubesine geçildi`);
+      } else {
+        Logger.success('SESSION', 'Session geçerli', {
+          branchId: currentBranch.id,
+          branchName: currentBranch.name
+        });
+      }
+    }
+  }, [authSession, branches, isAuthenticated, loginMode]);
+
+  useEffect(() => {
+    if (!isAuthenticated || loginMode !== 'customer') {
+      sessionValidated.current = false;
+    }
+  }, [isAuthenticated, loginMode]);
 
   const handleAuthSuccess = (session: AuthSession) => {
     setAuthSession(session);

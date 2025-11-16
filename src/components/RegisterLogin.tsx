@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useKV } from '@github/spark/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
   const [categories, setCategories] = useKV<Category[]>('categories', []);
   
   const [isLoading, setIsLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -34,6 +35,11 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
   const [registerBranchName, setRegisterBranchName] = useState('');
   const [registerBranchAddress, setRegisterBranchAddress] = useState('');
   const [registerBranchPhone, setRegisterBranchPhone] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDataLoaded(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLogin = async () => {
     if (!loginEmail.trim() || !loginPassword.trim()) {
@@ -57,21 +63,47 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
       return;
     }
 
+    Logger.info('AUTH', 'Admin bulundu, şubeler kontrol ediliyor', { 
+      adminId: admin.id,
+      businessName: admin.businessName,
+      totalBranches: (branches || []).filter(b => b.adminId === admin.id).length
+    });
+
     const adminBranches = (branches || []).filter((b) => b.adminId === admin.id && b.isActive);
+    
+    Logger.info('AUTH', 'Aktif şube kontrolü', {
+      adminId: admin.id,
+      activeBranches: adminBranches.length,
+      branchDetails: adminBranches.map(b => ({ id: b.id, name: b.name, isActive: b.isActive }))
+    });
     
     if (adminBranches.length === 0) {
       Logger.error('AUTH', 'Login başarısız: Aktif şube yok', {
         adminId: admin.id,
-        businessName: admin.businessName
+        businessName: admin.businessName,
+        totalBranchesForAdmin: (branches || []).filter(b => b.adminId === admin.id).length
       });
-      toast.error('Aktif şubeniz bulunmuyor');
+      toast.error('Hesabınıza ait aktif şube bulunmuyor. Lütfen admin ile iletişime geçin.');
+      setIsLoading(false);
+      return;
+    }
+
+    const firstBranch = adminBranches[0];
+    
+    if (!firstBranch.id) {
+      Logger.error('AUTH', 'Login başarısız: Şube ID bulunamadı', {
+        adminId: admin.id,
+        branchData: firstBranch
+      });
+      toast.error('Şube bilgisi hatalı. Lütfen admin ile iletişime geçin.');
       setIsLoading(false);
       return;
     }
 
     const session: AuthSession = {
       adminId: admin.id,
-      branchId: adminBranches[0].id,
+      branchId: firstBranch.id,
+      userId: admin.id,
       userRole: 'owner',
       userName: admin.businessName,
       loginTime: new Date().toISOString(),
@@ -81,14 +113,15 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
       adminId: admin.id,
       businessName: admin.businessName,
       branchCount: adminBranches.length,
-      selectedBranchId: session.branchId
+      selectedBranchId: session.branchId,
+      selectedBranchName: firstBranch.name
     }, {
       userId: admin.id,
       userName: admin.businessName,
       branchId: session.branchId
     });
 
-    toast.success(`Hoş geldiniz, ${admin.businessName}`);
+    toast.success(`Hoş geldiniz, ${admin.businessName}! ${firstBranch.name} şubesine giriş yapıldı.`);
     
     setTimeout(() => {
       onSuccess(session);
@@ -187,12 +220,13 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
     const session: AuthSession = {
       adminId: newAdminId,
       branchId: newBranchId,
+      userId: newAdminId,
       userRole: 'owner',
       userName: newAdmin.businessName,
       loginTime: new Date().toISOString(),
     };
 
-    toast.success('Hesabınız başarıyla oluşturuldu!');
+    toast.success(`Hesabınız başarıyla oluşturuldu! ${newBranch.name} şubesine giriş yapıldı.`);
     
     setTimeout(() => {
       onSuccess(session);

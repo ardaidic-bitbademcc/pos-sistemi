@@ -770,6 +770,64 @@ export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
         </TabsContent>
         
         <TabsContent value="data" className="space-y-4">
+          <Card className="border-warning bg-warning/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bug className="h-5 w-5" />
+                Sistem Debug Bilgileri
+              </CardTitle>
+              <CardDescription>
+                Mevcut oturum ve şube bilgileri
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2 text-sm">
+                <div className="space-y-1">
+                  <span className="font-medium">Admin ID:</span>
+                  <p className="text-muted-foreground font-mono text-xs">{authSession?.adminId || 'Yok'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium">Branch ID:</span>
+                  <p className="text-muted-foreground font-mono text-xs">{authSession?.branchId || 'Yok'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium">User ID:</span>
+                  <p className="text-muted-foreground font-mono text-xs">{authSession?.userId || 'Yok'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium">User Role:</span>
+                  <p className="text-muted-foreground font-mono text-xs">{authSession?.userRole || 'Yok'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium">Toplam Şube:</span>
+                  <p className="text-muted-foreground font-mono text-xs">{(branches || []).length}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium">Aktif Şube:</span>
+                  <p className="text-muted-foreground font-mono text-xs">
+                    {(branches || []).filter(b => b.isActive && b.adminId === authSession?.adminId).length}
+                  </p>
+                </div>
+              </div>
+              {authSession?.branchId && (
+                <div className="pt-3 border-t">
+                  <span className="font-medium text-sm">Mevcut Şube:</span>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    {(branches || []).find(b => b.id === authSession.branchId)?.name || 'Şube bulunamadı!'}
+                  </p>
+                </div>
+              )}
+              {(!authSession?.branchId || !(branches || []).find(b => b.id === authSession?.branchId)) && (
+                <div className="pt-3 border-t">
+                  <Badge variant="destructive" className="w-full justify-center">
+                    <Warning className="h-4 w-4 mr-2" />
+                    Şube bilgisi bulunamadı veya geçersiz!
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
