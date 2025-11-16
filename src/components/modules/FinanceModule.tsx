@@ -245,8 +245,18 @@ export default function FinanceModule({ onBack, authSession }: FinanceModuleProp
   }, [sales, authSession]);
 
   const handleAddExpense = () => {
-    if (!newExpense.category || !newExpense.amount || !authSession?.branchId) {
-      toast.error('Lütfen tüm alanları doldurun');
+    if (!newExpense.category.trim()) {
+      toast.error('Lütfen kategori giriniz');
+      return;
+    }
+    
+    if (!newExpense.amount || parseFloat(newExpense.amount) <= 0) {
+      toast.error('Lütfen geçerli bir tutar giriniz');
+      return;
+    }
+    
+    if (!authSession?.branchId) {
+      toast.error('Şube bilgisi bulunamadı');
       return;
     }
     
