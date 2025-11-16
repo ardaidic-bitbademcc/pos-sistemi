@@ -405,6 +405,8 @@ function CustomerPanel({
   const [orderQuantity, setOrderQuantity] = useState(1);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [showBulkDeliveryDialog, setShowBulkDeliveryDialog] = useState(false);
   const [billingInfo, setBillingInfo] = useState({
     companyName: '',
     taxNumber: '',
@@ -476,6 +478,47 @@ function CustomerPanel({
       phone: '',
       email: '',
     });
+  };
+
+  const deliverableOrders = orders.filter(
+    order => (order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate
+  );
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === deliverableOrders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(deliverableOrders.map(o => o.id)));
+    }
+  };
+
+  const handleBulkDelivery = () => {
+    if (selectedOrders.size === 0) {
+      toast.error('Lütfen en az bir sipariş seçin');
+      return;
+    }
+    setShowBulkDeliveryDialog(true);
+  };
+
+  const confirmBulkDelivery = () => {
+    selectedOrders.forEach(orderId => {
+      onConfirmDelivery(orderId);
+    });
+    setSelectedOrders(new Set());
+    setShowBulkDeliveryDialog(false);
+    toast.success(`${selectedOrders.size} sipariş teslim alındı!`);
   };
 
   return (
@@ -629,7 +672,35 @@ function CustomerPanel({
 
       <Card>
         <CardHeader>
-          <CardTitle>Siparişlerim</CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Siparişlerim</CardTitle>
+              {deliverableOrders.length > 0 && (
+                <CardDescription className="mt-1">
+                  {deliverableOrders.length} sipariş teslim almaya hazır
+                </CardDescription>
+              )}
+            </div>
+            {deliverableOrders.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                >
+                  {selectedOrders.size === deliverableOrders.length ? 'Tümünü Kaldır' : 'Tümünü Seç'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleBulkDelivery}
+                  disabled={selectedOrders.size === 0}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Toplu Teslim Al ({selectedOrders.size})
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
@@ -638,55 +709,75 @@ function CustomerPanel({
             </div>
           ) : (
             <div className="space-y-3">
-              {orders.map(order => (
-                <Card key={order.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm">{order.orderNumber}</span>
-                          <Badge>{getOrderStatusBadge(order.status)}</Badge>
-                        </div>
-                        <p className="text-sm">Tedarikçi: <strong>{getAnonymousSupplierName(order.supplierId)}</strong></p>
-                        <div className="text-sm space-y-1">
-                          {order.items.map(item => (
-                            <div key={item.id}>
-                              {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-sm">Toplam: <strong>{order.totalAmount.toFixed(2)} ₺</strong></p>
-                        <p className="text-xs text-muted-foreground">
-                          Sipariş tarihi: {new Date(order.orderDate).toLocaleDateString('tr-TR')}
-                        </p>
-                        {order.deliveredDate && (
-                          <p className="text-xs text-green-600 font-medium">
-                            Teslim alındı: {new Date(order.deliveredDate).toLocaleDateString('tr-TR')} {new Date(order.deliveredDate).toLocaleTimeString('tr-TR')}
+              {orders.map(order => {
+                const isDeliverable = (order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate;
+                const isSelected = selectedOrders.has(order.id);
+                
+                return (
+                  <Card 
+                    key={order.id}
+                    className={isSelected ? 'border-primary border-2' : ''}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        {isDeliverable && (
+                          <div className="pt-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleOrderSelection(order.id)}
+                              className="h-5 w-5 rounded border-gray-300 cursor-pointer"
+                            />
+                          </div>
+                        )}
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm">{order.orderNumber}</span>
+                            <Badge>{getOrderStatusBadge(order.status)}</Badge>
+                          </div>
+                          <p className="text-sm">Tedarikçi: <strong>{getAnonymousSupplierName(order.supplierId)}</strong></p>
+                          <div className="text-sm space-y-1">
+                            {order.items.map(item => (
+                              <div key={item.id}>
+                                {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet - {item.totalPrice.toFixed(2)} ₺
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-sm">Toplam: <strong>{order.totalAmount.toFixed(2)} ₺</strong></p>
+                          <p className="text-xs text-muted-foreground">
+                            Sipariş tarihi: {new Date(order.orderDate).toLocaleDateString('tr-TR')}
                           </p>
+                          {order.deliveredDate && (
+                            <p className="text-xs text-green-600 font-medium">
+                              Teslim alındı: {new Date(order.deliveredDate).toLocaleDateString('tr-TR')} {new Date(order.deliveredDate).toLocaleTimeString('tr-TR')}
+                            </p>
+                          )}
+                        </div>
+                        {!isSelected && (
+                          <div className="flex flex-col gap-2">
+                            {isDeliverable && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => onConfirmDelivery(order.id)}
+                                className="whitespace-nowrap"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Teslim Al
+                              </Button>
+                            )}
+                            {order.deliveredDate && (
+                              <Button size="sm" variant="outline" disabled>
+                                <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
+                                Teslim Alındı
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
-                      <div className="flex flex-col gap-2">
-                        {(order.status === 'delivered' || order.status === 'shipped') && !order.deliveredDate && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => onConfirmDelivery(order.id)}
-                            className="whitespace-nowrap"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Teslim Al
-                          </Button>
-                        )}
-                        {order.deliveredDate && (
-                          <Button size="sm" variant="outline" disabled>
-                            <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
-                            Teslim Alındı
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -834,6 +925,73 @@ function CustomerPanel({
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowOrderDialog(false)}>İptal</Button>
             <Button onClick={handleCreateOrder}>Siparişi Onayla</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBulkDeliveryDialog} onOpenChange={setShowBulkDeliveryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Toplu Teslim Alma Onayı</DialogTitle>
+            <DialogDescription>
+              {selectedOrders.size} adet sipariş teslim alınacak ve otomatik olarak stoklara eklenecektir.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <Package className="h-4 w-4" />
+              <AlertDescription>
+                Seçili siparişlerdeki tüm ürünler stok sistemine eklenecek ve maliyet fiyatları güncellenecektir.
+              </AlertDescription>
+            </Alert>
+            <div className="border rounded-lg p-4 space-y-2 max-h-[300px] overflow-y-auto">
+              <h4 className="font-semibold text-sm mb-3">Teslim Alınacak Siparişler:</h4>
+              {orders
+                .filter(order => selectedOrders.has(order.id))
+                .map(order => (
+                  <div key={order.id} className="border-b pb-2 last:border-b-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono text-xs">{order.orderNumber}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {order.totalAmount.toFixed(2)} ₺
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      {order.items.map(item => (
+                        <div key={item.id}>
+                          • {item.productName}{item.variantName ? ` (${item.variantName})` : ''} - {item.quantity} adet
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <div className="bg-muted p-3 rounded-lg">
+              <div className="text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="font-medium">Toplam Sipariş:</span>
+                  <span>{selectedOrders.size} adet</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Toplam Tutar:</span>
+                  <span className="font-bold">
+                    {orders
+                      .filter(order => selectedOrders.has(order.id))
+                      .reduce((sum, order) => sum + order.totalAmount, 0)
+                      .toFixed(2)} ₺
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDeliveryDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={confirmBulkDelivery}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Teslim Al ve Stoklara Ekle
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
