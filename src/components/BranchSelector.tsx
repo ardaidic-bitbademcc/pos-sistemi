@@ -1,10 +1,21 @@
+import { useState } from 'react';
 import { useKV } from '@github/spark/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Buildings, Check, MapPin, Phone } from '@phosphor-icons/react';
+import { Buildings, Check, MapPin, Phone, Warning } from '@phosphor-icons/react';
 import type { Branch, AuthSession } from '@/lib/types';
 import { motion } from 'framer-motion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface BranchSelectorProps {
   authSession: AuthSession;
@@ -13,12 +24,35 @@ interface BranchSelectorProps {
 
 export default function BranchSelector({ authSession, onSelectBranch }: BranchSelectorProps) {
   const [branches] = useKV<Branch[]>('branches', []);
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const adminBranches = (branches || []).filter(
     (b) => b.adminId === authSession.adminId && b.isActive
   );
 
   const currentBranch = adminBranches.find((b) => b.id === authSession.branchId);
+
+  const handleBranchClick = (branch: Branch) => {
+    if (branch.id === authSession.branchId) {
+      return;
+    }
+    setSelectedBranch(branch);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmSwitch = () => {
+    if (selectedBranch) {
+      onSelectBranch(selectedBranch.id);
+    }
+    setShowConfirmDialog(false);
+    setSelectedBranch(null);
+  };
+
+  const handleCancelSwitch = () => {
+    setShowConfirmDialog(false);
+    setSelectedBranch(null);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
@@ -56,7 +90,7 @@ export default function BranchSelector({ authSession, onSelectBranch }: BranchSe
                   className={`cursor-pointer transition-all hover:shadow-lg relative overflow-hidden ${
                     isCurrentBranch ? 'ring-2 ring-primary bg-primary/5' : ''
                   }`}
-                  onClick={() => onSelectBranch(branch.id)}
+                  onClick={() => handleBranchClick(branch)}
                 >
                   {isCurrentBranch && (
                     <div className="absolute top-3 right-3">
@@ -135,6 +169,39 @@ export default function BranchSelector({ authSession, onSelectBranch }: BranchSe
           </div>
         )}
       </motion.div>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-full bg-warning/10">
+                <Warning className="h-6 w-6 text-warning" weight="bold" />
+              </div>
+              <AlertDialogTitle className="text-xl">Şube Değiştir</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3 text-base">
+              <p>
+                <span className="font-semibold text-foreground">{currentBranch?.name}</span> şubesinden{' '}
+                <span className="font-semibold text-foreground">{selectedBranch?.name}</span> şubesine geçmek istediğinize emin misiniz?
+              </p>
+              <div className="bg-muted/50 p-3 rounded-lg space-y-2">
+                <p className="text-sm font-medium text-foreground">Dikkat:</p>
+                <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+                  <li>Tamamlanmamış işlemleriniz kaybolabilir</li>
+                  <li>Açık kasa oturumları etkilenmeyecek</li>
+                  <li>Şube verileri değişecektir</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelSwitch}>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSwitch} className="bg-primary">
+              Şube Değiştir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

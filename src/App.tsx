@@ -9,7 +9,8 @@ import {
   Shield, 
   Buildings, 
   LockKey, 
-  ClockClockwise 
+  ClockClockwise,
+  Warning 
 } from '@phosphor-icons/react';
 import {
   Sidebar,
@@ -23,6 +24,16 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import Login from '@/components/Login';
 import RegisterLogin from '@/components/RegisterLogin';
 import SupplierLogin from '@/components/SupplierLogin';
@@ -68,6 +79,7 @@ function App() {
   const [useOldAuth, setUseOldAuth] = useState(false);
   const [migrationCompleted, setMigrationCompleted] = useState<boolean | null>(null);
   const [showBranchSelector, setShowBranchSelector] = useState(false);
+  const [showBranchConfirmDialog, setShowBranchConfirmDialog] = useState(false);
   const [branches] = useKV<Branch[]>('branches', []);
   const sessionValidated = useRef(false);
   
@@ -195,7 +207,16 @@ function App() {
   };
 
   const openBranchSelector = () => {
+    setShowBranchConfirmDialog(true);
+  };
+
+  const handleConfirmBranchSwitch = () => {
+    setShowBranchConfirmDialog(false);
     setShowBranchSelector(true);
+  };
+
+  const handleCancelBranchSwitch = () => {
+    setShowBranchConfirmDialog(false);
   };
 
   if (migrationCompleted === null) {
@@ -372,6 +393,38 @@ function App() {
         </div>
         <Toaster position="top-right" />
       </main>
+
+      <AlertDialog open={showBranchConfirmDialog} onOpenChange={setShowBranchConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-full bg-warning/10">
+                <Warning className="h-6 w-6 text-warning" weight="bold" />
+              </div>
+              <AlertDialogTitle className="text-xl">Şube Değiştir</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3 text-base">
+              <p>
+                Şube değiştirmek istediğinize emin misiniz?
+              </p>
+              <div className="bg-muted/50 p-3 rounded-lg space-y-2">
+                <p className="text-sm font-medium text-foreground">Dikkat:</p>
+                <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+                  <li>Tamamlanmamış işlemleriniz kaybolabilir</li>
+                  <li>Açık kasa oturumları etkilenmeyecek</li>
+                  <li>Şube verileri değişecektir</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelBranchSwitch}>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmBranchSwitch} className="bg-primary">
+              Devam Et
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   );
 }
