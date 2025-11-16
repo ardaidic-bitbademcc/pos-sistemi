@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, QrCode, ForkKnife, Sparkle, MagnifyingGlass, X, Download, Eye, Image } from '@phosphor-icons/react';
+import { ArrowLeft, QrCode, ForkKnife, Sparkle, MagnifyingGlass, X, Download, Eye, Image, Star } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { MenuItem, Product, QRMenuTheme, AuthSession } from '@/lib/types';
+import type { MenuItem, Product, QRMenuTheme, AuthSession, ProductReview } from '@/lib/types';
 import { formatCurrency } from '@/lib/helpers';
 import { useBranchFilter } from '@/hooks/use-branch-filter';
+import { cn } from '@/lib/utils';
 
 interface QRMenuModuleProps {
   onBack: () => void;
@@ -21,11 +22,13 @@ interface QRMenuModuleProps {
 export default function QRMenuModule({ onBack, authSession }: QRMenuModuleProps) {
   const [menuItems] = useKV<MenuItem[]>('menuItems', []);
   const [products] = useKV<Product[]>('products', []);
+  const [reviews] = useKV<ProductReview[]>('productReviews', []);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [showCustomerView, setShowCustomerView] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
+  const [selectedItemForDetails, setSelectedItemForDetails] = useState<MenuItem | null>(null);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const defaultQRMenuTheme: QRMenuTheme = {
@@ -299,13 +302,20 @@ export default function QRMenuModule({ onBack, authSession }: QRMenuModuleProps)
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {items.map((item) => {
                         const hasCampaign = item.hasActiveCampaign && item.campaignDetails;
+                        const itemReviews = (reviews || []).filter(
+                          r => r.productId === item.id && r.isApproved && r.branchId === authSession?.branchId
+                        );
+                        const averageRating = itemReviews.length > 0
+                          ? itemReviews.reduce((sum, r) => sum + r.rating, 0) / itemReviews.length
+                          : 0;
                         
                         return (
                           <Card 
                             key={item.id} 
-                            className={`hover:shadow-lg transition-all ${
+                            className={`hover:shadow-lg transition-all cursor-pointer ${
                               hasCampaign ? 'ring-2 ring-accent bg-accent/5' : ''
                             }`}
+                            onClick={() => setSelectedItemForDetails(item)}
                           >
                             {item.imageUrl && (qrMenuTheme || defaultQRMenuTheme).showImages && (
                               <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted">
@@ -325,6 +335,25 @@ export default function QRMenuModule({ onBack, authSession }: QRMenuModuleProps)
                                   <CardTitle className="text-base leading-tight">
                                     {item.name}
                                   </CardTitle>
+                                  {averageRating > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                          key={star}
+                                          weight="fill"
+                                          className={cn(
+                                            'h-3 w-3',
+                                            star <= Math.round(averageRating)
+                                              ? 'text-yellow-500'
+                                              : 'text-gray-300'
+                                          )}
+                                        />
+                                      ))}
+                                      <span className="text-xs text-muted-foreground ml-1">
+                                        ({itemReviews.length})
+                                      </span>
+                                    </div>
+                                  )}
                                   {item.description && (qrMenuTheme || defaultQRMenuTheme).showDescriptions && (
                                     <CardDescription className="text-xs line-clamp-2">
                                       {item.description}
@@ -961,6 +990,169 @@ export default function QRMenuModule({ onBack, authSession }: QRMenuModuleProps)
               </p>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={selectedItemForDetails !== null} onOpenChange={() => setSelectedItemForDetails(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {selectedItemForDetails && (() => {
+            const itemReviews = (reviews || []).filter(
+              r => r.productId === selectedItemForDetails.id && r.isApproved && r.branchId === authSession?.branchId
+            );
+            const averageRating = itemReviews.length > 0
+              ? itemReviews.reduce((sum, r) => sum + r.rating, 0) / itemReviews.length
+              : 0;
+            const hasCampaign = selectedItemForDetails.hasActiveCampaign && selectedItemForDetails.campaignDetails;
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-2xl">{selectedItemForDetails.name}</DialogTitle>
+                  <DialogDescription>
+                    {selectedItemForDetails.category}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  {selectedItemForDetails.imageUrl && (
+                    <div className="w-full h-64 overflow-hidden rounded-lg bg-muted">
+                      <img 
+                        src={selectedItemForDetails.imageUrl} 
+                        alt={selectedItemForDetails.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {selectedItemForDetails.description && (
+                    <div>
+                      <h3 className="font-semibold mb-2">Açıklama</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {selectedItemForDetails.description}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <div>
+                      {hasCampaign && selectedItemForDetails.campaignDetails && (
+                        <div className="mb-2">
+                          <span className="text-sm line-through text-muted-foreground">
+                            {formatCurrency(selectedItemForDetails.campaignDetails.originalPrice)}
+                          </span>
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            %{selectedItemForDetails.campaignDetails.discountPercentage} İndirim
+                          </Badge>
+                        </div>
+                      )}
+                      <p className={`text-3xl font-bold font-tabular-nums ${hasCampaign ? 'text-accent' : ''}`}>
+                        {formatCurrency(selectedItemForDetails.sellingPrice)}
+                      </p>
+                      {selectedItemForDetails.servingSize && selectedItemForDetails.servingSize > 1 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedItemForDetails.servingSize} porsiyon
+                        </p>
+                      )}
+                    </div>
+                    {hasCampaign && (
+                      <Badge variant="default" className="bg-accent">
+                        <Sparkle className="h-4 w-4 mr-1" weight="fill" />
+                        Kampanyalı
+                      </Badge>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Star weight="fill" className="h-5 w-5 text-yellow-500" />
+                        Değerlendirmeler
+                      </h3>
+                      {averageRating > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                weight="fill"
+                                className={cn(
+                                  'h-4 w-4',
+                                  star <= Math.round(averageRating)
+                                    ? 'text-yellow-500'
+                                    : 'text-gray-300'
+                                )}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {averageRating.toFixed(1)} ({itemReviews.length} yorum)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {itemReviews.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Star className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                        <p>Henüz değerlendirme yok</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                        {itemReviews.slice(0, 5).map((review) => (
+                          <Card key={review.id}>
+                            <CardContent className="p-4 space-y-2">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="font-semibold">{review.customerName}</p>
+                                  <div className="flex items-center gap-1 mt-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        weight="fill"
+                                        className={cn(
+                                          'h-3 w-3',
+                                          star <= review.rating
+                                            ? 'text-yellow-500'
+                                            : 'text-gray-300'
+                                        )}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(review.createdAt).toLocaleDateString('tr-TR')}
+                                </span>
+                              </div>
+                              {review.comment && (
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                  {review.comment}
+                                </p>
+                              )}
+                              {review.replyText && (
+                                <div className="mt-2 p-2 bg-muted/50 rounded text-sm">
+                                  <p className="font-semibold text-xs mb-1">Satıcı Yanıtı:</p>
+                                  <p className="text-muted-foreground">{review.replyText}</p>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                        {itemReviews.length > 5 && (
+                          <p className="text-center text-sm text-muted-foreground">
+                            ve {itemReviews.length - 5} yorum daha...
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

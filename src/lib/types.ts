@@ -748,3 +748,49 @@ export interface AuthSession {
   userName: string;
   loginTime: string;
 }
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  productName: string;
+  customerId: string;
+  customerName: string;
+  rating: number;
+  comment?: string;
+  images?: string[];
+  isVerifiedPurchase: boolean;
+  saleId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  helpfulCount: number;
+  notHelpfulCount: number;
+  isApproved: boolean;
+  replyText?: string;
+  repliedBy?: string;
+  repliedByName?: string;
+  repliedAt?: string;
+  branchId: string;
+  adminId?: string;
+}
+
+export interface ReviewVote {
+  id: string;
+  reviewId: string;
+  userId: string;
+  isHelpful: boolean;
+  createdAt: string;
+}
+
+export interface ProductRatingStats {
+  productId: string;
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+  verifiedPurchaseCount: number;
+}
