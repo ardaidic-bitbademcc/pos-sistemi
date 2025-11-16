@@ -272,11 +272,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background font-sans">
+      <div className="fixed top-2 left-2 sm:top-4 sm:left-4 z-50">
+        <Badge variant="outline" className="text-sm sm:text-base px-3 sm:px-4 py-1.5 sm:py-2 font-medium bg-card/80 backdrop-blur-sm">
+          <Buildings className="h-4 w-4 mr-2" weight="fill" />
+          {currentBranch?.name || 'Şube'}
+        </Badge>
+      </div>
       <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex flex-wrap items-center gap-1 sm:gap-2 max-w-[calc(100vw-1rem)]">
         {adminBranches.length > 1 && (
           <Button variant="outline" size="sm" onClick={openBranchSelector} className="h-8 px-2 sm:px-3">
             <Buildings className="h-4 w-4 sm:mr-1" weight="fill" />
-            <span className="hidden sm:inline">{currentBranch?.name || 'Şube Seç'}</span>
+            <span className="hidden sm:inline">Şube Değiştir</span>
           </Button>
         )}
         {currentUserRole === 'owner' && (
