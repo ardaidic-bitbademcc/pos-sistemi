@@ -11,6 +11,18 @@ import {
   LockKey, 
   ClockClockwise 
 } from '@phosphor-icons/react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import Login from '@/components/Login';
 import RegisterLogin from '@/components/RegisterLogin';
 import SupplierLogin from '@/components/SupplierLogin';
@@ -271,59 +283,92 @@ function App() {
   const currentBranch = adminBranches.find((b) => b.id === authSession?.branchId);
 
   return (
-    <div className="min-h-screen bg-background font-sans">
-      <div className="fixed top-2 left-2 sm:top-4 sm:left-4 z-50">
-        <Badge variant="outline" className="text-sm sm:text-base px-3 sm:px-4 py-1.5 sm:py-2 font-medium bg-card/80 backdrop-blur-sm">
-          <Buildings className="h-4 w-4 mr-2" weight="fill" />
-          {currentBranch?.name || 'Şube'}
-        </Badge>
-      </div>
-      <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex flex-wrap items-center gap-1 sm:gap-2 max-w-[calc(100vw-1rem)]">
-        {adminBranches.length > 1 && (
-          <Button variant="outline" size="sm" onClick={openBranchSelector} className="h-8 px-2 sm:px-3">
-            <Buildings className="h-4 w-4 sm:mr-1" weight="fill" />
-            <span className="hidden sm:inline">Şube Değiştir</span>
-          </Button>
-        )}
-        {currentUserRole === 'owner' && (
-          <Button variant="outline" size="sm" onClick={() => setActiveModule('admin')} className="h-8 px-2 sm:px-3">
-            <Shield className="h-4 w-4 sm:mr-1" weight="fill" />
-            <span className="hidden sm:inline">Admin</span>
-          </Button>
-        )}
-        {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
-          <>
+    <SidebarProvider>
+      <Sidebar variant="floating" collapsible="icon">
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Şube Bilgisi</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <div className="flex items-center gap-2 px-2 py-1.5">
+                    <Buildings className="h-4 w-4" weight="fill" />
+                    <span className="text-sm font-medium">{currentBranch?.name || 'Şube'}</span>
+                  </div>
+                </SidebarMenuItem>
+                {adminBranches.length > 1 && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={openBranchSelector}>
+                      <Buildings className="h-4 w-4" weight="fill" />
+                      <span>Şube Değiştir</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Yönetim</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {currentUserRole === 'owner' && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setActiveModule('admin')}>
+                        <Shield className="h-4 w-4" weight="fill" />
+                        <span>Admin</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveModule('cash-monitor')}>
+                      <ClockClockwise className="h-4 w-4" weight="fill" />
+                      <span>İzleme</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {currentUserRole === 'owner' && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setActiveModule('roles')}>
+                        <Shield className="h-4 w-4" weight="fill" />
+                        <span>Yetki</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+        </SidebarContent>
+      </Sidebar>
+
+      <div className="flex-1 min-h-screen bg-background font-sans">
+        <div className="fixed top-2 left-2 sm:top-4 sm:left-4 z-50">
+          <SidebarTrigger />
+        </div>
+        <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex flex-wrap items-center gap-1 sm:gap-2 max-w-[calc(100vw-1rem)]">
+          {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
             <Button variant="outline" size="sm" onClick={() => setActiveModule('cash')} className="h-8 px-2 sm:px-3">
               <CurrencyCircleDollar className="h-4 w-4 sm:mr-1" weight="fill" />
               <span className="hidden sm:inline">Kasa</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setActiveModule('cash-monitor')} className="h-8 px-2 sm:px-3 bg-primary/10 hover:bg-primary/20">
-              <ClockClockwise className="h-4 w-4 sm:mr-1" weight="fill" />
-              <span className="hidden sm:inline">İzleme</span>
-            </Button>
-            {currentUserRole === 'owner' && (
-              <Button variant="outline" size="sm" onClick={() => setActiveModule('roles')} className="h-8 px-2 sm:px-3">
-                <Shield className="h-4 w-4 sm:mr-1" weight="fill" />
-                <span className="hidden sm:inline">Yetki</span>
-              </Button>
-            )}
-          </>
-        )}
-        <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 max-w-[120px] truncate">
-          👤 <span className="hidden sm:inline">{currentUserName}</span>
-        </Badge>
-        <Button variant="outline" size="sm" onClick={handleSwitchUser} className="h-8 px-2 sm:px-3">
-          <LockKey className="h-4 w-4 sm:mr-2" weight="bold" />
-          <span className="hidden sm:inline">Kullanıcı Değiştir</span>
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleLogout} className="h-8 px-2 sm:px-3">
-          <SignOut className="h-4 w-4 sm:mr-2" weight="bold" />
-          <span className="hidden sm:inline">Çıkış</span>
-        </Button>
+          )}
+          <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 max-w-[120px] truncate">
+            👤 <span className="hidden sm:inline">{currentUserName}</span>
+          </Badge>
+          <Button variant="outline" size="sm" onClick={handleSwitchUser} className="h-8 px-2 sm:px-3">
+            <LockKey className="h-4 w-4 sm:mr-2" weight="bold" />
+            <span className="hidden sm:inline">Kullanıcı Değiştir</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleLogout} className="h-8 px-2 sm:px-3">
+            <SignOut className="h-4 w-4 sm:mr-2" weight="bold" />
+            <span className="hidden sm:inline">Çıkış</span>
+          </Button>
+        </div>
+        {renderModule()}
+        <Toaster position="top-right" />
       </div>
-      {renderModule()}
-      <Toaster position="top-right" />
-    </div>
+    </SidebarProvider>
   );
 }
 
