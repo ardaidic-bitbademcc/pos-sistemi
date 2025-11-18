@@ -1,0 +1,46 @@
+{
+  "appId": "com.sparkpos.desktop",
+  "productName": "Spark POS Desktop",
+  "directories": {
+    "output": "dist-electron",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "public",
+      "to": "public",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      }
+    ],
+    "icon": "public/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Spark POS"
+  },
+  "mac": {
+    "target": ["dmg", "zip"],
+    "category": "public.app-category.business",
+    "icon": "public/icon.icns"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Office",
+    "icon": "public/icon.png"
+  }
+}

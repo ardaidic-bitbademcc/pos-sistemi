@@ -10,6 +10,10 @@ const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    port: 5173,
+    strictPort: false,
+  },
   plugins: [
     react(),
     tailwindcss(),

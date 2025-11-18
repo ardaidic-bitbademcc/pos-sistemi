@@ -1,11 +1,26 @@
 import type { StorageAdapter, StorageMode } from './adapter';
 import { KVAdapter } from './kv-adapter';
 import { SupabaseAdapter } from './supabase-adapter';
+import { ElectronAdapter } from './electron-adapter';
 
 let storageAdapter: StorageAdapter | null = null;
 let currentAdminId: string | null = null;
 
+// Detect if running in Electron
+function isElectron(): boolean {
+  return typeof window !== 'undefined' && !!(window as any).electronAPI;
+}
+
 export function getStorageAdapter(mode?: StorageMode, adminId?: string): StorageAdapter {
+  // Auto-detect Electron environment
+  if (isElectron() && !mode) {
+    console.log('🖥️  Electron environment detected - using ElectronAdapter');
+    if (!storageAdapter) {
+      storageAdapter = new ElectronAdapter();
+    }
+    return storageAdapter;
+  }
+
   const storageMode = mode || (import.meta.env.VITE_STORAGE_MODE as StorageMode) || 'kv';
 
   // Return existing adapter if mode hasn't changed
@@ -38,3 +53,6 @@ export function setAdminIdForSupabase(adminId: string) {
     storageAdapter.setAdminId(adminId);
   }
 }
+
+// Export for external use
+export { isElectron };

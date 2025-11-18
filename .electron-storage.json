@@ -1,0 +1,24 @@
+{
+  "products": [
+    {
+      "id": "p1",
+      "name": "Türk Kahvesi",
+      "price": 25,
+      "category": "İçecekler",
+      "stock": 100
+    }
+  ],
+  "sales": [
+    {
+      "id": "s1",
+      "date": "2024-01-17T20:30:00.000Z",
+      "total": 50,
+      "items": [
+        {
+          "productId": "p1",
+          "quantity": 2
+        }
+      ]
+    }
+  ]
+}
