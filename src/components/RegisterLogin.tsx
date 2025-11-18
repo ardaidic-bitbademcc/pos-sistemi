@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { useData } from '@/hooks/use-data';
+import { setAdminIdForSupabase, resetStorageAdapter } from '@/lib/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,9 +18,9 @@ interface RegisterLoginProps {
 }
 
 export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLoginProps) {
-  const [admins, setAdmins] = useKV<Admin[]>('admins', []);
-  const [branches, setBranches] = useKV<Branch[]>('branches', []);
-  const [categories, setCategories] = useKV<Category[]>('categories', []);
+  const [admins, setAdmins] = useData<Admin[]>('admins', []);
+  const [branches, setBranches] = useData<Branch[]>('branches', []);
+  const [categories, setCategories] = useData<Category[]>('categories', []);
   
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -121,6 +122,13 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
       branchId: session.branchId
     });
 
+    // Supabase adapter'ı için adminId'yi set et
+    if (import.meta.env.VITE_STORAGE_MODE === 'supabase') {
+      setAdminIdForSupabase(admin.id);
+      resetStorageAdapter();
+      Logger.info('AUTH', 'Supabase adapter adminId güncellendi', { adminId: admin.id });
+    }
+
     toast.success(`Hoş geldiniz, ${admin.businessName}! ${firstBranch.name} şubesine giriş yapıldı.`);
     
     setTimeout(() => {
@@ -216,6 +224,13 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
       branchId: newBranchId,
       branchName: newBranch.name
     });
+
+    // Supabase adapter'ı için adminId'yi set et
+    if (import.meta.env.VITE_STORAGE_MODE === 'supabase') {
+      setAdminIdForSupabase(newAdminId);
+      resetStorageAdapter();
+      Logger.info('AUTH', 'Supabase adapter adminId güncellendi', { adminId: newAdminId });
+    }
 
     const session: AuthSession = {
       adminId: newAdminId,

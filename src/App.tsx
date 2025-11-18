@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { useData } from '@/hooks/use-data';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,16 +71,16 @@ type LoginMode = 'customer' | 'supplier' | 'demo';
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authSession, setAuthSession] = useKV<AuthSession | null>('authSession', null);
-  const [supplierSession, setSupplierSession] = useKV<SupplierAuthSession | null>('supplierSession', null);
+  const [authSession, setAuthSession] = useData<AuthSession | null>('authSession', null);
+  const [supplierSession, setSupplierSession] = useData<SupplierAuthSession | null>('supplierSession', null);
   const [loginMode, setLoginMode] = useState<LoginMode>('customer');
-  const [currentUserRole, setCurrentUserRole] = useKV<UserRole>('currentUserRole', 'owner');
+  const [currentUserRole, setCurrentUserRole] = useData<UserRole>('currentUserRole', 'owner');
   const [currentUserName, setCurrentUserName] = useState('');
   const [useOldAuth, setUseOldAuth] = useState(false);
   const [migrationCompleted, setMigrationCompleted] = useState<boolean | null>(null);
   const [showBranchSelector, setShowBranchSelector] = useState(false);
   const [showBranchConfirmDialog, setShowBranchConfirmDialog] = useState(false);
-  const [branches] = useKV<Branch[]>('branches', []);
+  const [branches] = useData<Branch[]>('branches', []);
   const sessionValidated = useRef(false);
   
   useSeedData();
