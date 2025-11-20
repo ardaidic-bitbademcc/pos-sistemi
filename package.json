@@ -1,7 +1,10 @@
 {
-    "name": "spark-template",
+    "name": "spark-pos-desktop",
+    "productName": "Spark POS Desktop",
+    "description": "Modern POS Sistemi - Masaüstü Uygulaması",
+    "author": "Spark POS Team",
     "private": true,
-    "version": "0.0.0",
+    "version": "1.0.0",
     "type": "module",
     "scripts": {
         "dev": "vite",

@@ -1,6 +1,7 @@
 {
   "appId": "com.sparkpos.desktop",
   "productName": "Spark POS Desktop",
+  "copyright": "Copyright © 2025 Spark POS Team",
   "directories": {
     "output": "dist-electron",
     "buildResources": "build"
@@ -8,30 +9,44 @@
   "files": [
     "dist/**/*",
     "electron/**/*",
-    "package.json"
+    "package.json",
+    "!node_modules/**/*",
+    "!src/**/*",
+    "!**/*.ts",
+    "!**/*.map"
   ],
-  "extraResources": [
-    {
-      "from": "public",
-      "to": "public",
-      "filter": ["**/*"]
-    }
-  ],
+  "extraResources": [],
   "win": {
     "target": [
       {
         "target": "nsis",
-        "arch": ["x64", "ia32"]
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
       }
     ],
-    "icon": "public/icon.ico"
+    "requestedExecutionLevel": "asInvoker",
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "Spark POS"
+    "shortcutName": "Spark POS",
+    "deleteAppDataOnUninstall": false,
+    "menuCategory": true,
+    "displayLanguageSelector": false,
+    "perMachine": false,
+    "allowElevation": true,
+    "installerLanguages": ["tr_TR", "en_US"],
+    "language": "1055",
+    "warningsAsErrors": false
+  },
+  "portable": {
+    "artifactName": "${productName}-${version}-Portable.${ext}"
   },
   "mac": {
     "target": ["dmg", "zip"],
