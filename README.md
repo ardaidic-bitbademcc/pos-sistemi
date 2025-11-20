@@ -1,23 +1,42 @@
-# ✨ Welcome to Your Spark Template!
-You've just launched your brand-new Spark Template Codespace — everything’s fired up and ready for you to explore, build, and create with Spark!
+# 🚀 Spark POS Desktop - Windows Installer
 
-This template is your blank canvas. It comes with a minimal setup to help you get started quickly with Spark development.
+Modern POS sistemi için Electron masaüstü uygulaması.
 
-🚀 What's Inside?
-- A clean, minimal Spark environment
-- Pre-configured for local development
-- Ready to scale with your ideas
-  
-🧠 What Can You Do?
+## ⚡ Hızlı Başlangıç
 
-Right now, this is just a starting point — the perfect place to begin building and testing your Spark applications.
+```bash
+git clone https://github.com/ardaidic-bitbademcc/pos-sistemi.git
+cd pos-sistemi
+git checkout feature/electron-desktop
+```
 
-🧹 Just Exploring?
-No problem! If you were just checking things out and don’t need to keep this code:
+Windows'ta:
+```
+build-installer.bat      # ÇİFT TIKLA
+```
 
-- Simply delete your Spark.
-- Everything will be cleaned up — no traces left behind.
+## 📦 Özellikler
 
-📄 License For Spark Template Resources 
+- ✅ Windows Desktop App (Electron)
+- ✅ REST API Server (Port 3333)
+- ✅ WebSocket Real-time Sync (Port 3334)
+- ✅ NSIS Installer + Portable Version
+- ✅ Offline-first Architecture
+- ✅ Mobile Terminal Support
 
-The Spark Template files and resources from GitHub are licensed under the terms of the MIT license, Copyright GitHub, Inc.
+## 📚 Dokümantasyon
+
+- **[INSTALLER_GUIDE.md](INSTALLER_GUIDE.md)** - Windows installer rehberi
+- **[KURULUM.md](KURULUM.md)** - Hızlı kurulum
+- **[WINDOWS_DEPLOYMENT.md](WINDOWS_DEPLOYMENT.md)** - Dağıtım stratejisi
+- **[ELECTRON_SETUP_SUMMARY.md](ELECTRON_SETUP_SUMMARY.md)** - Teknik detaylar
+- **[MOBILE_TERMINAL_API.md](MOBILE_TERMINAL_API.md)** - API referansı
+
+## 🎯 Branch Yapısı
+
+- **`main`** → Web uygulaması (Supabase)
+- **`feature/electron-desktop`** → Desktop app (Electron)
+
+## 📄 Lisans
+
+MIT License - Copyright GitHub, Inc.
