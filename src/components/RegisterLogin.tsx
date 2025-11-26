@@ -53,7 +53,7 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         return;
       }
 
-      toast.success(\`Hoş geldiniz, \${data.admin.businessName}\`);
+      toast.success(`Hoş geldiniz, ${data.admin.businessName}`);
       
       setTimeout(() => {
         onSuccess(data.session);
