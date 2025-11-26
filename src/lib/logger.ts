@@ -53,8 +53,8 @@ export class Logger {
 
   private static async getLogs(): Promise<LogEntry[]> {
     try {
-      const logs = await window.spark.kv.get<LogEntry[]>(this.STORAGE_KEY);
-      return logs || [];
+      const logsStr = localStorage.getItem(this.STORAGE_KEY);
+      return logsStr ? JSON.parse(logsStr) : [];
     } catch (error) {
       console.error('Failed to get logs:', error);
       return [];
@@ -64,7 +64,7 @@ export class Logger {
   private static async saveLogs(logs: LogEntry[]): Promise<void> {
     try {
       const trimmedLogs = logs.slice(-this.MAX_LOGS);
-      await window.spark.kv.set(this.STORAGE_KEY, trimmedLogs);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(trimmedLogs));
     } catch (error) {
       console.error('Failed to save logs:', error);
     }

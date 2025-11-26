@@ -275,7 +275,7 @@ function App() {
     }
     return (
       <div>
-        <RegisterLogin onSuccess={handleAuthSuccess} onSupplierLogin={() => setLoginMode('supplier')} />
+        <RegisterLogin onSuccess={handleAuthSuccess} />
         <div className="fixed bottom-4 left-4 z-50">
           <Button variant="outline" size="sm" onClick={() => setUseOldAuth(true)}>
             Demo Giriş
