@@ -36,6 +36,8 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
     setIsLoading(true);
 
     try {
+      console.log('Login attempt:', { email: loginEmail });
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +47,9 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         }),
       });
 
+      console.log('Login response status:', response.status);
       const data = await response.json();
+      console.log('Login response data:', data);
 
       if (!response.ok) {
         toast.error(data.error || 'Giriş başarısız');
@@ -53,15 +57,22 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         return;
       }
 
-      toast.success(`Hoş geldiniz, ${data.admin.businessName}`);
+      if (!data.session) {
+        toast.error('Session bilgisi alınamadı');
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success(`Hoş geldiniz, ${data.admin?.businessName || 'Kullanıcı'}`);
       
+      console.log('Calling onSuccess with session:', data.session);
       setTimeout(() => {
         onSuccess(data.session);
         setIsLoading(false);
       }, 500);
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Giriş sırasında bir hata oluştu');
+      toast.error(`Giriş sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
       setIsLoading(false);
     }
   };
@@ -92,6 +103,8 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
     setIsLoading(true);
 
     try {
+      console.log('Register attempt:', { email: registerEmail, businessName: registerBusinessName });
+      
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +119,9 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         }),
       });
 
+      console.log('Register response status:', response.status);
       const data = await response.json();
+      console.log('Register response data:', data);
 
       if (!response.ok) {
         toast.error(data.error || 'Kayıt başarısız');
@@ -114,15 +129,22 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         return;
       }
 
+      if (!data.session) {
+        toast.error('Session bilgisi alınamadı');
+        setIsLoading(false);
+        return;
+      }
+
       toast.success('Hesabınız başarıyla oluşturuldu!');
       
+      console.log('Calling onSuccess with session:', data.session);
       setTimeout(() => {
         onSuccess(data.session);
         setIsLoading(false);
       }, 500);
     } catch (error) {
       console.error('Register error:', error);
-      toast.error('Kayıt sırasında bir hata oluştu');
+      toast.error(`Kayıt sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
       setIsLoading(false);
     }
   };

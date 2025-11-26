@@ -151,13 +151,20 @@ function App() {
     }
   }, [isAuthenticated, loginMode]);
 
-  const handleAuthSuccess = (session: AuthSession) => {
-    setAuthSession(session);
-    setCurrentUserRole(session.userRole);
-    setCurrentUserName(session.userName);
-    setIsAuthenticated(true);
-    setLoginMode('customer');
-    setActiveModule('dashboard');
+  const handleAuthSuccess = async (session: AuthSession) => {
+    console.log('handleAuthSuccess called with session:', session);
+    try {
+      await setAuthSession(session);
+      setCurrentUserRole(session.userRole);
+      setCurrentUserName(session.userName);
+      setIsAuthenticated(true);
+      setLoginMode('customer');
+      setActiveModule('dashboard');
+      console.log('Auth success completed');
+    } catch (error) {
+      console.error('Error in handleAuthSuccess:', error);
+      toast.error('Giriş işlemi sırasında bir hata oluştu');
+    }
   };
 
   const handleSupplierAuthSuccess = (session: SupplierAuthSession) => {
