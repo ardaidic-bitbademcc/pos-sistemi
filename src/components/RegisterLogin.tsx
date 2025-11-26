@@ -63,6 +63,16 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         return;
       }
 
+      // Save branches to KV storage if returned
+      if (data.branches && data.branches.length > 0) {
+        console.log('Saving branches to KV:', data.branches);
+        await fetch('/api/kv/branches', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: data.branches }),
+        });
+      }
+
       toast.success(`Hoş geldiniz, ${data.admin?.businessName || 'Kullanıcı'}`);
       
       console.log('Calling onSuccess with session:', data.session);
@@ -133,6 +143,26 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         toast.error('Session bilgisi alınamadı');
         setIsLoading(false);
         return;
+      }
+
+      // Save branch to KV storage
+      if (data.branch) {
+        console.log('Saving branch to KV:', data.branch);
+        const branchData = {
+          id: data.branch.id,
+          name: data.branch.name,
+          code: data.branch.code,
+          address: 'Kayıt sırasında oluşturuldu',
+          phone: registerBranchPhone || registerPhone,
+          isActive: true,
+          adminId: data.admin.id,
+        };
+        
+        await fetch('/api/kv/branches', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: [branchData] }),
+        });
       }
 
       toast.success('Hesabınız başarıyla oluşturuldu!');
