@@ -45,7 +45,7 @@ export interface TransactionLogData {
 
 export class Logger {
   private static readonly MAX_LOGS = 1000;
-  private static readonly STORAGE_KEY = 'systemLogs';
+  private static readonly STORAGE_KEY = 'system-logs';
 
   private static generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -53,8 +53,12 @@ export class Logger {
 
   private static async getLogs(): Promise<LogEntry[]> {
     try {
-      const logsStr = localStorage.getItem(this.STORAGE_KEY);
-      return logsStr ? JSON.parse(logsStr) : [];
+      const response = await fetch(`/api/kv/${this.STORAGE_KEY}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.value || [];
+      }
+      return [];
     } catch (error) {
       console.error('Failed to get logs:', error);
       return [];
@@ -64,7 +68,13 @@ export class Logger {
   private static async saveLogs(logs: LogEntry[]): Promise<void> {
     try {
       const trimmedLogs = logs.slice(-this.MAX_LOGS);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(trimmedLogs));
+      await fetch(`/api/kv/${this.STORAGE_KEY}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ value: trimmedLogs }),
+      });
     } catch (error) {
       console.error('Failed to save logs:', error);
     }
