@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { useKV } from './use-kv-store';
 import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem, B2BSupplier, B2BProduct, Admin, TableSection } from '@/lib/types';
 import { generateId, generateSaleNumber, calculateTax, getBaseCategories } from '@/lib/helpers';
 

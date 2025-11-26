@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { useKV } from './use-kv-store';
 import { toast } from 'sonner';
 import type { Task, AuthSession } from '@/lib/types';
 

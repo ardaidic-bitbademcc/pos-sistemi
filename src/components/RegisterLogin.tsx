@@ -1,28 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Storefront, EnvelopeSimple, LockKey, Phone, Buildings, Package } from '@phosphor-icons/react';
+import { Storefront, EnvelopeSimple, LockKey, Phone, Buildings } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { Admin, AuthSession, Branch, Category } from '@/lib/types';
-import { generateId, getBaseCategories } from '@/lib/helpers';
-import { Logger } from '@/lib/logger';
+import type { AuthSession } from '@/lib/types';
 
 interface RegisterLoginProps {
   onSuccess: (session: AuthSession) => void;
-  onSupplierLogin?: () => void;
 }
 
-export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLoginProps) {
-  const [admins, setAdmins] = useKV<Admin[]>('admins', []);
-  const [branches, setBranches] = useKV<Branch[]>('branches', []);
-  const [categories, setCategories] = useKV<Category[]>('categories', []);
-  
+export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -36,97 +27,43 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
   const [registerBranchAddress, setRegisterBranchAddress] = useState('');
   const [registerBranchPhone, setRegisterBranchPhone] = useState('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDataLoaded(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleLogin = async () => {
     if (!loginEmail.trim() || !loginPassword.trim()) {
-      Logger.warn('AUTH', 'Login başarısız: E-posta ve şifre gerekli');
       toast.error('E-posta ve şifre gerekli');
       return;
     }
 
     setIsLoading(true);
-    
-    Logger.info('AUTH', 'Login denemesi başladı', { email: loginEmail });
 
-    const admin = (admins || []).find(
-      (a) => a.email.toLowerCase() === loginEmail.toLowerCase() && a.password === loginPassword && a.isActive
-    );
-
-    if (!admin) {
-      Logger.error('AUTH', 'Login başarısız: Geçersiz kimlik bilgileri', { email: loginEmail });
-      toast.error('Geçersiz e-posta veya şifre');
-      setIsLoading(false);
-      return;
-    }
-
-    Logger.info('AUTH', 'Admin bulundu, şubeler kontrol ediliyor', { 
-      adminId: admin.id,
-      businessName: admin.businessName,
-      totalBranches: (branches || []).filter(b => b.adminId === admin.id).length
-    });
-
-    const adminBranches = (branches || []).filter((b) => b.adminId === admin.id && b.isActive);
-    
-    Logger.info('AUTH', 'Aktif şube kontrolü', {
-      adminId: admin.id,
-      activeBranches: adminBranches.length,
-      branchDetails: adminBranches.map(b => ({ id: b.id, name: b.name, isActive: b.isActive }))
-    });
-    
-    if (adminBranches.length === 0) {
-      Logger.error('AUTH', 'Login başarısız: Aktif şube yok', {
-        adminId: admin.id,
-        businessName: admin.businessName,
-        totalBranchesForAdmin: (branches || []).filter(b => b.adminId === admin.id).length
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword,
+        }),
       });
-      toast.error('Hesabınıza ait aktif şube bulunmuyor. Lütfen admin ile iletişime geçin.');
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'Giriş başarısız');
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success(\`Hoş geldiniz, \${data.admin.businessName}\`);
+      
+      setTimeout(() => {
+        onSuccess(data.session);
+        setIsLoading(false);
+      }, 500);
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Giriş sırasında bir hata oluştu');
       setIsLoading(false);
-      return;
     }
-
-    const firstBranch = adminBranches[0];
-    
-    if (!firstBranch.id) {
-      Logger.error('AUTH', 'Login başarısız: Şube ID bulunamadı', {
-        adminId: admin.id,
-        branchData: firstBranch
-      });
-      toast.error('Şube bilgisi hatalı. Lütfen admin ile iletişime geçin.');
-      setIsLoading(false);
-      return;
-    }
-
-    const session: AuthSession = {
-      adminId: admin.id,
-      branchId: firstBranch.id,
-      userId: admin.id,
-      userRole: 'owner',
-      userName: admin.businessName,
-      loginTime: new Date().toISOString(),
-    };
-
-    Logger.success('AUTH', 'Login başarılı', {
-      adminId: admin.id,
-      businessName: admin.businessName,
-      branchCount: adminBranches.length,
-      selectedBranchId: session.branchId,
-      selectedBranchName: firstBranch.name
-    }, {
-      userId: admin.id,
-      userName: admin.businessName,
-      branchId: session.branchId
-    });
-
-    toast.success(`Hoş geldiniz, ${admin.businessName}! ${firstBranch.name} şubesine giriş yapıldı.`);
-    
-    setTimeout(() => {
-      onSuccess(session);
-      setIsLoading(false);
-    }, 500);
   };
 
   const handleRegister = async () => {
@@ -138,100 +75,56 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
       !registerPhone.trim() ||
       !registerBranchName.trim()
     ) {
-      Logger.warn('AUTH', 'Kayıt başarısız: Eksik alanlar var');
       toast.error('Tüm zorunlu alanları doldurun');
       return;
     }
 
     if (registerPassword !== registerConfirmPassword) {
-      Logger.warn('AUTH', 'Kayıt başarısız: Şifreler eşleşmiyor');
       toast.error('Şifreler eşleşmiyor');
       return;
     }
 
     if (registerPassword.length < 6) {
-      Logger.warn('AUTH', 'Kayıt başarısız: Şifre çok kısa');
       toast.error('Şifre en az 6 karakter olmalı');
       return;
     }
 
-    const emailExists = (admins || []).some((a) => a.email.toLowerCase() === registerEmail.toLowerCase());
-    if (emailExists) {
-      Logger.warn('AUTH', 'Kayıt başarısız: E-posta kullanımda', { email: registerEmail });
-      toast.error('Bu e-posta adresi zaten kullanılıyor');
-      return;
-    }
-
     setIsLoading(true);
-    
-    Logger.info('AUTH', 'Yeni hesap oluşturuluyor', {
-      businessName: registerBusinessName,
-      branchName: registerBranchName
-    });
 
-    const newAdminId = generateId();
-    const newBranchId = generateId();
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: registerEmail,
+          password: registerPassword,
+          businessName: registerBusinessName,
+          phone: registerPhone,
+          branchName: registerBranchName,
+          branchAddress: registerBranchAddress,
+          branchPhone: registerBranchPhone,
+        }),
+      });
 
-    const newAdmin: Admin = {
-      id: newAdminId,
-      email: registerEmail.trim(),
-      password: registerPassword,
-      businessName: registerBusinessName.trim(),
-      phone: registerPhone.trim(),
-      createdAt: new Date().toISOString(),
-      isActive: true,
-    };
+      const data = await response.json();
 
-    const newBranch: Branch = {
-      id: newBranchId,
-      name: registerBranchName.trim(),
-      code: `BR${Date.now().toString().slice(-6)}`,
-      address: registerBranchAddress.trim() || 'Adres bilgisi girilmedi',
-      phone: registerBranchPhone.trim() || registerPhone.trim(),
-      isActive: true,
-      adminId: newAdminId,
-      createdAt: new Date().toISOString(),
-    };
+      if (!response.ok) {
+        toast.error(data.error || 'Kayıt başarısız');
+        setIsLoading(false);
+        return;
+      }
 
-    const baseCategories = getBaseCategories().map(cat => ({
-      ...cat,
-      id: `${newAdminId}-${cat.id}`,
-      adminId: newAdminId,
-      branchId: newBranchId,
-    }));
-
-    setAdmins((current) => [...(current || []), newAdmin]);
-    setBranches((current) => [...(current || []), newBranch]);
-    setCategories((current) => [...(current || []), ...baseCategories]);
-
-    Logger.success('AUTH', 'Yeni hesap oluşturuldu', {
-      adminId: newAdminId,
-      businessName: newAdmin.businessName,
-      branchId: newBranchId,
-      branchName: newBranch.name,
-      categoryCount: baseCategories.length
-    }, {
-      userId: newAdminId,
-      userName: newAdmin.businessName,
-      branchId: newBranchId,
-      branchName: newBranch.name
-    });
-
-    const session: AuthSession = {
-      adminId: newAdminId,
-      branchId: newBranchId,
-      userId: newAdminId,
-      userRole: 'owner',
-      userName: newAdmin.businessName,
-      loginTime: new Date().toISOString(),
-    };
-
-    toast.success(`Hesabınız başarıyla oluşturuldu! ${newBranch.name} şubesine giriş yapıldı.`);
-    
-    setTimeout(() => {
-      onSuccess(session);
+      toast.success('Hesabınız başarıyla oluşturuldu!');
+      
+      setTimeout(() => {
+        onSuccess(data.session);
+        setIsLoading(false);
+      }, 500);
+    } catch (error) {
+      console.error('Register error:', error);
+      toast.error('Kayıt sırasında bir hata oluştu');
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -414,19 +307,6 @@ export default function RegisterLogin({ onSuccess, onSupplierLogin }: RegisterLo
               </Button>
             </TabsContent>
           </Tabs>
-          
-          {onSupplierLogin && (
-            <div className="mt-6 pt-6 border-t">
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={onSupplierLogin}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Tedarikçi Girişi
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
