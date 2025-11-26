@@ -1,0 +1,66 @@
+name: Deploy to Production VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Manuel tetikleme
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "🚀 Deployment başladı..."
+            
+            # Proje dizinine git
+            cd /home/deploy/apps/pos-sistemi
+            
+            # Son değişiklikleri çek
+            echo "📥 Git pull..."
+            git pull origin main
+            
+            # Bağımlılıkları güncelle
+            echo "📦 npm install..."
+            npm install
+            
+            # Prisma client güncelle
+            echo "🔄 Prisma generate..."
+            npx prisma generate
+            
+            # Database migration (eğer varsa)
+            echo "🗄️ Database migration..."
+            npx prisma migrate deploy || true
+            
+            # Frontend build
+            echo "🏗️ Frontend build..."
+            npm run build
+            
+            # Backend restart
+            echo "🔄 Backend restart..."
+            pm2 restart pos-backend
+            
+            # Durum kontrol
+            echo "✅ Deployment tamamlandı!"
+            pm2 status
+            
+      - name: Notification
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment başarılı!"
+          else
+            echo "❌ Deployment başarısız!"
+          fi

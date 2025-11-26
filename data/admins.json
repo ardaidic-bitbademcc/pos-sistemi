@@ -1,0 +1,11 @@
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "demo@posaca.com",
+    "password": "demo123",
+    "businessName": "Demo Restoran",
+    "phone": "0555 000 0000",
+    "createdAt": "2025-11-12T00:00:00.000Z",
+    "isActive": true
+  }
+]

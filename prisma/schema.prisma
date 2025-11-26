@@ -1,0 +1,554 @@
+// Prisma Schema - POS System Database
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// NOT: Development için SQLite kullanmak isterseniz:
+// provider = "sqlite"
+// url = "file:./dev.db"
+// directUrl satırını silin
+
+// Production için Supabase PostgreSQL:
+// provider = "postgresql"
+// url = env("DATABASE_URL")
+// directUrl = env("DIRECT_URL")
+
+// Admin (İşletme Sahibi)
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  businessName String   @map("business_name")
+  phone        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  isActive     Boolean  @default(true) @map("is_active")
+
+  // Relations
+  branches          Branch[]
+  employees         Employee[]
+  products          Product[]
+  categories        Category[]
+  menuItems         MenuItem[]
+  sales             Sale[]
+  salaryCalculations SalaryCalculation[]
+  customerAccounts  CustomerAccount[]
+  b2bSuppliers      B2BSupplier[]
+  b2bProducts       B2BProduct[]
+  b2bOrders         B2BOrder[]
+  sampleRequests    SampleRequest[]
+  invoices          Invoice[]
+  expenses          Expense[]
+  cashTransactions  CashTransaction[]
+  recipes           Recipe[]
+
+  @@map("admins")
+}
+
+// Branch (Şube)
+model Branch {
+  id       String  @id @default(uuid())
+  name     String
+  code     String  @unique
+  address  String?
+  phone    String?
+  isActive Boolean @default(true) @map("is_active")
+  adminId  String  @map("admin_id")
+
+  // Relations
+  admin             Admin               @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  employees         Employee[]
+  products          Product[]
+  categories        Category[]
+  menuItems         MenuItem[]
+  sales             Sale[]
+  salaryCalculations SalaryCalculation[]
+  tasks             Task[]
+  customerAccounts  CustomerAccount[]
+  b2bOrders         B2BOrder[]
+  sampleRequests    SampleRequest[]
+  invoices          Invoice[]
+  expenses          Expense[]
+  cashTransactions  CashTransaction[]
+  recipes           Recipe[]
+
+  @@map("branches")
+}
+
+// Employee (Personel)
+model Employee {
+  id          String  @id @default(uuid())
+  fullName    String  @map("full_name")
+  email       String  @unique
+  phone       String?
+  role        String  // cashier, chef, waiter, manager
+  branchId    String  @map("branch_id")
+  isActive    Boolean @default(true) @map("is_active")
+  hourlyRate  Float   @map("hourly_rate")
+  employeePin String  @unique @map("employee_pin")
+  qrCode      String  @unique @map("qr_code")
+  adminId     String  @map("admin_id")
+
+  // Relations
+  admin              Admin               @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch             Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  salaryCalculations SalaryCalculation[]
+  tasks              Task[]
+
+  @@map("employees")
+}
+
+// Category (Kategori)
+model Category {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  showInPOS   Boolean @default(true) @map("show_in_pos")
+  sortOrder   Int     @default(0) @map("sort_order")
+  adminId     String  @map("admin_id")
+  branchId    String  @map("branch_id")
+
+  // Relations
+  admin     Admin      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch    Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  products  Product[]
+  menuItems MenuItem[]
+
+  @@map("categories")
+}
+
+// Product (Stok Ürünü / Ham Madde)
+model Product {
+  id            String   @id @default(uuid())
+  sku           String   @unique
+  name          String
+  categoryId    String
+  category      String
+  basePrice     Float    @default(0)
+  costPrice     Float
+  taxRate       Float
+  unit          String
+  isActive      Boolean  @default(true)
+  stock         Int      @default(0)
+  minStockLevel Int      @default(0)
+  adminId       String?
+  branchId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  admin          Admin?            @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  branch         Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  categoryRef    Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  recipeItems    RecipeItem[]
+  productOptions ProductOption[]
+
+  @@map("products")
+}
+
+// MenuItem (Menü Ürünü - Satış)
+model MenuItem {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  categoryId  String
+  basePrice   Float
+  taxRate     Float
+  isActive    Boolean  @default(true)
+  imageUrl    String?
+  adminId     String
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  admin       Admin           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch      Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  saleItems   SaleItem[]
+  recipeItems RecipeItem[]
+  options     MenuItemOption[]
+
+  @@map("menu_items")
+}
+
+// MenuItemOption (Ürün Seçenekleri)
+model MenuItemOption {
+  id         String @id @default(uuid())
+  menuItemId String
+  name       String
+  price      Float  @default(0)
+
+  // Relations
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("menu_item_options")
+}
+
+// ProductOption (Stok Ürün Seçenekleri)
+model ProductOption {
+  id        String @id @default(uuid())
+  productId String
+  name      String
+  price     Float  @default(0)
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_options")
+}
+
+// Sale (Satış)
+model Sale {
+  id            String   @id @default(uuid())
+  saleNumber    String   @unique
+  totalAmount   Float
+  taxAmount     Float
+  paymentMethod String   // cash, card, mixed
+  cashAmount    Float    @default(0)
+  cardAmount    Float    @default(0)
+  customerId    String?
+  customerName  String?
+  branchId      String
+  adminId       String?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  admin     Admin?     @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  branch    Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  items     SaleItem[]
+
+  @@map("sales")
+}
+
+// SaleItem (Satış Kalemi)
+model SaleItem {
+  id         String  @id @default(uuid())
+  saleId     String
+  menuItemId String
+  name       String
+  quantity   Int
+  price      Float
+  taxRate    Float
+  taxAmount  Float
+  total      Float
+  options    String? // JSON string
+
+  // Relations
+  sale     Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("sale_items")
+}
+
+// SalaryCalculation (Maaş Hesabı)
+model SalaryCalculation {
+  id         String   @id @default(uuid())
+  employeeId String
+  period     String
+  hours      Float
+  hourlyRate Float
+  totalSalary Float
+  bonuses    Float    @default(0)
+  deductions Float    @default(0)
+  netSalary  Float
+  isPaid     Boolean  @default(false)
+  paidAt     DateTime?
+  adminId    String
+  branchId   String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  admin    Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("salary_calculations")
+}
+
+// Task (Görev)
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  assignedTo  String
+  status      String   @default("pending") // pending, in-progress, completed
+  priority    String   @default("medium") // low, medium, high
+  dueDate     DateTime?
+  completedAt DateTime?
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [assignedTo], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+// CustomerAccount (Cari Hesap)
+model CustomerAccount {
+  id           String   @id @default(uuid())
+  accountNumber String  @unique
+  name         String
+  email        String?
+  phone        String?
+  address      String?
+  balance      Float    @default(0)
+  creditLimit  Float    @default(0)
+  isEmployee   Boolean  @default(false)
+  employeeId   String?
+  isActive     Boolean  @default(true)
+  adminId      String
+  branchId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  admin        Admin                    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch       Branch                   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  transactions CustomerAccountTransaction[]
+
+  @@map("customer_accounts")
+}
+
+// CustomerAccountTransaction (Cari Hareket)
+model CustomerAccountTransaction {
+  id          String   @id @default(uuid())
+  accountId   String
+  type        String   // debit, credit
+  amount      Float
+  description String?
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  account CustomerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("customer_account_transactions")
+}
+
+// B2BSupplier (B2B Tedarikçi)
+model B2BSupplier {
+  id          String   @id @default(uuid())
+  companyName String
+  contactName String
+  email       String
+  phone       String
+  address     String?
+  taxNumber   String?
+  rating      Float    @default(0)
+  totalProducts Int    @default(0)
+  isActive    Boolean  @default(true)
+  adminId     String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  admin          Admin           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  products       B2BProduct[]
+  orders         B2BOrder[]
+  sampleRequests SampleRequest[]
+
+  @@map("b2b_suppliers")
+}
+
+// B2BProduct (B2B Ürün)
+model B2BProduct {
+  id              String   @id @default(uuid())
+  supplierId      String
+  supplierName    String
+  name            String
+  description     String?
+  category        String
+  unitPrice       Float
+  minOrderQuantity Int
+  unit            String
+  canProvideSample Boolean @default(false)
+  requiresDesign  Boolean  @default(false)
+  shippingMethod  String   // free, buyer_pays
+  stock           Int      @default(0)
+  isActive        Boolean  @default(true)
+  adminId         String
+  createdAt       DateTime @default(now())
+
+  // Relations
+  admin          Admin           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  supplier       B2BSupplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  orderItems     B2BOrderItem[]
+  sampleRequests SampleRequest[]
+
+  @@map("b2b_products")
+}
+
+// B2BOrder (B2B Sipariş)
+model B2BOrder {
+  id            String   @id @default(uuid())
+  orderNumber   String   @unique
+  supplierId    String
+  totalAmount   Float
+  status        String   @default("pending") // pending, approved, shipped, delivered, cancelled
+  orderDate     DateTime @default(now())
+  deliveryDate  DateTime?
+  notes         String?
+  adminId       String
+  branchId      String
+
+  // Relations
+  admin    Admin          @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch   Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier B2BSupplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items    B2BOrderItem[]
+
+  @@map("b2b_orders")
+}
+
+// B2BOrderItem (B2B Sipariş Kalemi)
+model B2BOrderItem {
+  id         String @id @default(uuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+
+  // Relations
+  order   B2BOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product B2BProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("b2b_order_items")
+}
+
+// SampleRequest (Numune Talebi)
+model SampleRequest {
+  id            String   @id @default(uuid())
+  supplierId    String
+  productId     String
+  quantity      Int
+  requestedDate DateTime @default(now())
+  status        String   @default("pending") // pending, approved, shipped, received, rejected
+  notes         String?
+  adminId       String
+  branchId      String
+
+  // Relations
+  admin    Admin       @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch   Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier B2BSupplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  product  B2BProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("sample_requests")
+}
+
+// Invoice (Fatura)
+model Invoice {
+  id            String   @id @default(uuid())
+  invoiceNumber String   @unique
+  customerName  String
+  customerTaxId String?
+  totalAmount   Float
+  taxAmount     Float
+  status        String   @default("pending") // pending, paid, cancelled
+  dueDate       DateTime
+  paidDate      DateTime?
+  adminId       String
+  branchId      String
+  createdAt     DateTime @default(now())
+
+  // Relations
+  admin  Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+// Expense (Gider)
+model Expense {
+  id          String   @id @default(uuid())
+  category    String
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  receiptUrl  String?
+  adminId     String
+  branchId    String
+
+  // Relations
+  admin  Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+// CashTransaction (Kasa Hareketi)
+model CashTransaction {
+  id          String   @id @default(uuid())
+  type        String   // opening, sale, withdrawal, deposit, closing
+  amount      Float
+  description String?
+  cashierId   String?
+  adminId     String
+  branchId    String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  admin  Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("cash_transactions")
+}
+
+// Recipe (Reçete - Ürün Tarifi)
+model Recipe {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  servings    Int      @default(1)
+  adminId     String
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  admin  Admin        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  branch Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  items  RecipeItem[]
+
+  @@map("recipes")
+}
+
+// RecipeItem (Reçete Kalemi)
+model RecipeItem {
+  id           String @id @default(uuid())
+  recipeId     String
+  itemType     String // product, menuItem
+  itemId       String
+  quantity     Float
+  unit         String
+  costPerUnit  Float
+  totalCost    Float
+
+  // Relations
+  recipe   Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  product  Product?  @relation(fields: [itemId], references: [id], onDelete: Cascade, map: "recipe_items_product_fkey")
+  menuItem MenuItem? @relation(fields: [itemId], references: [id], onDelete: Cascade, map: "recipe_items_menuitem_fkey")
+
+  @@map("recipe_items")
+}
+
+// KV Storage for runtime data
+model KvStorage {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("kv_storage")
+}
+

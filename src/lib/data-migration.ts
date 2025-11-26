@@ -21,6 +21,39 @@ import type {
 const DEFAULT_ADMIN_ID = 'admin-1';
 const DEFAULT_BRANCH_ID = 'branch-1';
 
+// Helper functions using Vercel API (which connects to Supabase via Prisma)
+async function getKV<T>(key: string): Promise<T | null> {
+  try {
+    const response = await fetch(`/api/kv/${key}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.value;
+    }
+  } catch (err) {
+    console.warn('API read failed:', err);
+  }
+  
+  return null;
+}
+
+async function setKV<T>(key: string, value: T): Promise<void> {
+  try {
+    const response = await fetch(`/api/kv/${key}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`API write failed: ${JSON.stringify(error)}`);
+    }
+  } catch (err) {
+    console.error('API write failed:', err);
+    throw err;
+  }
+}
+
 export interface MigrationResult {
   migrated: boolean;
   migratedTables: string[];
@@ -83,17 +116,19 @@ export async function migrateAllData(): Promise<MigrationResult> {
     await migrateRecipes();
     migratedTables.push('recipes');
 
-    await window.spark.kv.set('data-migration-completed', {
-      migrated: true,
-      migratedTables,
-      timestamp,
-    });
-
-    return {
+    // Save migration status
+    const migrationResult = {
       migrated: true,
       migratedTables,
       timestamp,
     };
+
+    await setKV('data-migration-completed', migrationResult);
+
+    // Verify it was saved
+    console.log('Migration completed and status saved:', migrationResult);
+
+    return migrationResult;
   } catch (error) {
     console.error('Migration error:', error);
     throw error;
@@ -101,7 +136,7 @@ export async function migrateAllData(): Promise<MigrationResult> {
 }
 
 async function migrateEmployees() {
-  const employees = await window.spark.kv.get<Employee[]>('employees');
+  const employees = await getKV<Employee[]>('employees');
   if (!employees || employees.length === 0) return;
 
   const migratedEmployees = employees.map((emp) => ({
@@ -110,11 +145,11 @@ async function migrateEmployees() {
     branchId: emp.branchId || DEFAULT_BRANCH_ID,
   }));
 
-  await window.spark.kv.set('employees', migratedEmployees);
+  await setKV('employees', migratedEmployees);
 }
 
 async function migrateProducts() {
-  const products = await window.spark.kv.get<Product[]>('products');
+  const products = await getKV<Product[]>('products');
   if (!products || products.length === 0) return;
 
   const migratedProducts = products.map((prod) => ({
@@ -123,11 +158,11 @@ async function migrateProducts() {
     branchId: prod.branchId || DEFAULT_BRANCH_ID,
   }));
 
-  await window.spark.kv.set('products', migratedProducts);
+  await setKV('products', migratedProducts);
 }
 
 async function migrateMenuItems() {
-  const menuItems = await window.spark.kv.get<MenuItem[]>('menuItems');
+  const menuItems = await getKV<MenuItem[]>('menuItems');
   if (!menuItems || menuItems.length === 0) return;
 
   const migratedMenuItems = menuItems.map((item) => ({
@@ -136,11 +171,11 @@ async function migrateMenuItems() {
     branchId: item.branchId || DEFAULT_BRANCH_ID,
   }));
 
-  await window.spark.kv.set('menuItems', migratedMenuItems);
+  await setKV('menuItems', migratedMenuItems);
 }
 
 async function migrateCategories() {
-  const categories = await window.spark.kv.get<Category[]>('categories');
+  const categories = await getKV<Category[]>('categories');
   if (!categories || categories.length === 0) return;
 
   const migratedCategories = categories.map((cat) => ({
@@ -149,11 +184,11 @@ async function migrateCategories() {
     branchId: cat.branchId || DEFAULT_BRANCH_ID,
   }));
 
-  await window.spark.kv.set('categories', migratedCategories);
+  await setKV('categories', migratedCategories);
 }
 
 async function migrateBranches() {
-  const branches = await window.spark.kv.get<Branch[]>('branches');
+  const branches = await getKV<Branch[]>('branches');
   if (!branches || branches.length === 0) return;
 
   const migratedBranches = branches.map((branch) => ({
@@ -161,11 +196,11 @@ async function migrateBranches() {
     adminId: branch.adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('branches', migratedBranches);
+  await setKV('branches', migratedBranches);
 }
 
 async function migrateSales() {
-  const sales = await window.spark.kv.get<Sale[]>('sales');
+  const sales = await getKV<Sale[]>('sales');
   if (!sales || sales.length === 0) return;
 
   const migratedSales = sales.map((sale) => ({
@@ -173,11 +208,11 @@ async function migrateSales() {
     branchId: sale.branchId || DEFAULT_BRANCH_ID,
   }));
 
-  await window.spark.kv.set('sales', migratedSales);
+  await setKV('sales', migratedSales);
 }
 
 async function migrateSalaryCalculations() {
-  const salaries = await window.spark.kv.get<SalaryCalculation[]>('salaryCalculations');
+  const salaries = await getKV<SalaryCalculation[]>('salaryCalculations');
   if (!salaries || salaries.length === 0) return;
 
   const migratedSalaries = salaries.map((salary) => ({
@@ -186,11 +221,11 @@ async function migrateSalaryCalculations() {
     branchId: salary.branchId || DEFAULT_BRANCH_ID,
   }));
 
-  await window.spark.kv.set('salaryCalculations', migratedSalaries);
+  await setKV('salaryCalculations', migratedSalaries);
 }
 
 async function migrateTasks() {
-  const tasks = await window.spark.kv.get<Task[]>('tasks');
+  const tasks = await getKV<Task[]>('tasks');
   if (!tasks || tasks.length === 0) return;
 
   const migratedTasks = tasks.map((task) => ({
@@ -198,11 +233,11 @@ async function migrateTasks() {
     branchId: task.branchId || DEFAULT_BRANCH_ID,
   }));
 
-  await window.spark.kv.set('tasks', migratedTasks);
+  await setKV('tasks', migratedTasks);
 }
 
 async function migrateCustomerAccounts() {
-  const accounts = await window.spark.kv.get<CustomerAccount[]>('customer-accounts');
+  const accounts = await getKV<CustomerAccount[]>('customer-accounts');
   if (!accounts || accounts.length === 0) return;
 
   const migratedAccounts = accounts.map((account) => ({
@@ -211,11 +246,11 @@ async function migrateCustomerAccounts() {
     adminId: (account as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('customer-accounts', migratedAccounts);
+  await setKV('customer-accounts', migratedAccounts);
 }
 
 async function migrateB2BSuppliers() {
-  const suppliers = await window.spark.kv.get<B2BSupplier[]>('b2b-suppliers');
+  const suppliers = await getKV<B2BSupplier[]>('b2b-suppliers');
   if (!suppliers || suppliers.length === 0) return;
 
   const migratedSuppliers = suppliers.map((supplier) => ({
@@ -223,11 +258,11 @@ async function migrateB2BSuppliers() {
     adminId: (supplier as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('b2b-suppliers', migratedSuppliers);
+  await setKV('b2b-suppliers', migratedSuppliers);
 }
 
 async function migrateB2BProducts() {
-  const products = await window.spark.kv.get<B2BProduct[]>('b2b-products');
+  const products = await getKV<B2BProduct[]>('b2b-products');
   if (!products || products.length === 0) return;
 
   const migratedProducts = products.map((product) => ({
@@ -235,11 +270,11 @@ async function migrateB2BProducts() {
     adminId: (product as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('b2b-products', migratedProducts);
+  await setKV('b2b-products', migratedProducts);
 }
 
 async function migrateB2BOrders() {
-  const orders = await window.spark.kv.get<B2BOrder[]>('b2b-orders');
+  const orders = await getKV<B2BOrder[]>('b2b-orders');
   if (!orders || orders.length === 0) return;
 
   const migratedOrders = orders.map((order) => ({
@@ -248,11 +283,11 @@ async function migrateB2BOrders() {
     adminId: (order as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('b2b-orders', migratedOrders);
+  await setKV('b2b-orders', migratedOrders);
 }
 
 async function migrateSampleRequests() {
-  const requests = await window.spark.kv.get<SampleRequest[]>('b2b-sample-requests');
+  const requests = await getKV<SampleRequest[]>('b2b-sample-requests');
   if (!requests || requests.length === 0) return;
 
   const migratedRequests = requests.map((request) => ({
@@ -261,11 +296,11 @@ async function migrateSampleRequests() {
     adminId: (request as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('b2b-sample-requests', migratedRequests);
+  await setKV('b2b-sample-requests', migratedRequests);
 }
 
 async function migrateInvoices() {
-  const invoices = await window.spark.kv.get<Invoice[]>('invoices');
+  const invoices = await getKV<Invoice[]>('invoices');
   if (!invoices || invoices.length === 0) return;
 
   const migratedInvoices = invoices.map((invoice) => ({
@@ -274,11 +309,11 @@ async function migrateInvoices() {
     adminId: (invoice as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('invoices', migratedInvoices);
+  await setKV('invoices', migratedInvoices);
 }
 
 async function migrateExpenses() {
-  const expenses = await window.spark.kv.get<Expense[]>('expenses');
+  const expenses = await getKV<Expense[]>('expenses');
   if (!expenses || expenses.length === 0) return;
 
   const migratedExpenses = expenses.map((expense) => ({
@@ -287,11 +322,11 @@ async function migrateExpenses() {
     adminId: (expense as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('expenses', migratedExpenses);
+  await setKV('expenses', migratedExpenses);
 }
 
 async function migrateCashTransactions() {
-  const transactions = await window.spark.kv.get<CashTransaction[]>('cash-transactions');
+  const transactions = await getKV<CashTransaction[]>('cash-transactions');
   if (!transactions || transactions.length === 0) return;
 
   const migratedTransactions = transactions.map((transaction) => ({
@@ -300,11 +335,11 @@ async function migrateCashTransactions() {
     adminId: (transaction as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('cash-transactions', migratedTransactions);
+  await setKV('cash-transactions', migratedTransactions);
 }
 
 async function migrateRecipes() {
-  const recipes = await window.spark.kv.get<Recipe[]>('recipes');
+  const recipes = await getKV<Recipe[]>('recipes');
   if (!recipes || recipes.length === 0) return;
 
   const migratedRecipes = recipes.map((recipe) => ({
@@ -313,14 +348,27 @@ async function migrateRecipes() {
     adminId: (recipe as any).adminId || DEFAULT_ADMIN_ID,
   }));
 
-  await window.spark.kv.set('recipes', migratedRecipes);
+  await setKV('recipes', migratedRecipes);
 }
 
 export async function checkMigrationStatus(): Promise<MigrationResult | null> {
-  const result = await window.spark.kv.get<MigrationResult>('data-migration-completed');
-  return result || null;
+  try {
+    const result = await getKV<MigrationResult>('data-migration-completed');
+    console.log('Migration status check:', result);
+    return result || null;
+  } catch (error) {
+    console.error('Failed to check migration status:', error);
+    return null;
+  }
 }
 
 export async function resetMigration(): Promise<void> {
-  await window.spark.kv.delete('data-migration-completed');
+  try {
+    await fetch('/api/kv/data-migration-completed', {
+      method: 'DELETE',
+    });
+  } catch (err) {
+    console.error('Migration reset failed:', err);
+    throw err;
+  }
 }

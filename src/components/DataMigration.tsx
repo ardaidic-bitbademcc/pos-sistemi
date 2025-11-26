@@ -34,7 +34,19 @@ export default function DataMigration() {
       setIsMigrating(true);
       setError(null);
       const result = await migrateAllData();
+      console.log('Migration result received:', result);
       setMigrationStatus(result);
+      
+      // Wait a bit then verify status was saved
+      setTimeout(async () => {
+        const status = await checkMigrationStatus();
+        console.log('Verification check:', status);
+        if (status) {
+          setMigrationStatus(status);
+          // Dispatch event to notify App.tsx
+          window.dispatchEvent(new Event('migration-completed'));
+        }
+      }, 1000);
     } catch (err) {
       setError('Migration başarısız oldu: ' + (err as Error).message);
       console.error(err);
@@ -122,7 +134,12 @@ export default function DataMigration() {
                   Migration'ı Sıfırla
                 </Button>
                 <Button 
-                  onClick={() => window.location.reload()}
+                  onClick={async () => {
+                    await checkStatus();
+                    if (migrationStatus?.migrated) {
+                      window.location.href = '/';
+                    }
+                  }}
                   className="flex-1"
                 >
                   Uygulamayı Yeniden Başlat

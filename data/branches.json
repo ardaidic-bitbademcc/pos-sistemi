@@ -1,0 +1,29 @@
+[
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Kadıköy Şubesi",
+    "code": "KDK001",
+    "address": "Kadıköy, İstanbul",
+    "phone": "0216 555 0001",
+    "isActive": true,
+    "adminId": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440002",
+    "name": "Beşiktaş Şubesi",
+    "code": "BJK002",
+    "address": "Beşiktaş, İstanbul",
+    "phone": "0212 555 0002",
+    "isActive": true,
+    "adminId": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440003",
+    "name": "Üsküdar Şubesi",
+    "code": "USK003",
+    "address": "Üsküdar, İstanbul",
+    "phone": "0216 555 0003",
+    "isActive": true,
+    "adminId": "550e8400-e29b-41d4-a716-446655440000"
+  }
+]

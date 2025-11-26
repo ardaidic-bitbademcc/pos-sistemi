@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { useKV } from './use-kv-store';
 import type { Employee, CustomerAccount } from '@/lib/types';
 import { generateId, generateAccountNumber } from '@/lib/helpers';
 

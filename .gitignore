@@ -32,3 +32,21 @@ pids
 .devcontainer/
 
 .spark-workbench-id
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+.vitest/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Database
+*.db
+*.db-journal
+prisma/migrations/
+/server/dist/
+.vercel
