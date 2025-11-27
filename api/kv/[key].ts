@@ -1,5 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { prisma } from '../../lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+// Singleton Prisma client for KV endpoint
+const globalForPrisma = global as unknown as { kvPrisma: PrismaClient };
+const prisma = globalForPrisma.kvPrisma || new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['error'] : []
+});
+if (process.env.NODE_ENV !== 'production') globalForPrisma.kvPrisma = prisma;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { key } = req.query;
