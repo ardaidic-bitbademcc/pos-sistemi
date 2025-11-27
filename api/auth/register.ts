@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -119,7 +117,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: 'Kayıt işlemi sırasında bir hata oluştu',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }
