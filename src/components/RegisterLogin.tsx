@@ -86,10 +86,16 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       toast.success(`Hoş geldiniz, ${data.admin?.businessName || 'Kullanıcı'}`);
       
       console.log('Calling onSuccess with session and branches:', data.session, data.branches);
-      setTimeout(() => {
-        onSuccess(data.session, data.branches || []);
-        setIsLoading(false);
-      }, 500);
+      
+      try {
+        await onSuccess(data.session, data.branches || []);
+        console.log('onSuccess completed successfully');
+      } catch (callbackError) {
+        console.error('onSuccess callback error:', callbackError);
+        toast.error('Giriş işlemi sırasında bir hata oluştu');
+      }
+      
+      setIsLoading(false);
     } catch (error) {
       console.error('Login error:', error);
       toast.error(`Giriş sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
@@ -199,10 +205,16 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       }] : [];
       
       console.log('Calling onSuccess with session and branches:', data.session, branches);
-      setTimeout(() => {
-        onSuccess(data.session, branches);
-        setIsLoading(false);
-      }, 500);
+      
+      try {
+        await onSuccess(data.session, branches);
+        console.log('onSuccess completed successfully');
+      } catch (callbackError) {
+        console.error('onSuccess callback error:', callbackError);
+        toast.error('Giriş işlemi sırasında bir hata oluştu');
+      }
+      
+      setIsLoading(false);
     } catch (error) {
       console.error('Register error:', error);
       toast.error(`Kayıt sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
