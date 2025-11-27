@@ -96,60 +96,72 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Skip validation if branches not loaded yet
-    if (!branches || branches.length === 0) {
-      console.log('Session validation skipped: branches not loaded yet');
+    // Don't validate if not authenticated or wrong mode
+    if (!authSession || !isAuthenticated || loginMode !== 'customer') {
       return;
     }
 
-    if (authSession && isAuthenticated && loginMode === 'customer' && !sessionValidated.current) {
-      sessionValidated.current = true;
+    // Wait for branches to load from KV
+    if (!branches || branches.length === 0) {
+      console.log('Session validation waiting: branches loading from KV...');
+      return;
+    }
+
+    // Run validation only once
+    if (sessionValidated.current) {
+      return;
+    }
+    sessionValidated.current = true;
       
-      const adminBranches = (branches || []).filter(
-        (b) => b.isActive && authSession.adminId && b.adminId === authSession.adminId
-      );
+    const adminBranches = branches.filter(
+      (b) => b.isActive && b.adminId === authSession.adminId
+    );
       
-      Logger.info('SESSION', 'Session doğrulanıyor', {
+    console.log('Session validation running:', {
+      adminId: authSession.adminId,
+      branchId: authSession.branchId,
+      totalBranches: branches.length,
+      adminBranches: adminBranches.length,
+      branchIds: adminBranches.map(b => b.id)
+    });
+      
+    if (adminBranches.length === 0) {
+      console.error('No branches found for admin:', authSession.adminId);
+      Logger.error('SESSION', 'Geçersiz session: Aktif şube bulunamadı', {
         adminId: authSession.adminId,
         branchId: authSession.branchId,
-        totalBranches: (branches || []).length,
-        adminBranches: adminBranches.length
+        allBranches: branches
+      });
+      toast.error('Şube bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+      handleSwitchUser();
+      sessionValidated.current = false;
+      return;
+    }
+
+    const currentBranch = adminBranches.find((b) => b.id === authSession.branchId);
+      
+    if (!currentBranch) {
+      console.warn('Current branch not found, switching to first branch');
+      Logger.warn('SESSION', 'Mevcut şube bulunamadı, ilk şubeye geçiliyor', {
+        oldBranchId: authSession.branchId,
+        newBranchId: adminBranches[0].id,
+        newBranchName: adminBranches[0].name
       });
       
-      if (adminBranches.length === 0) {
-        Logger.error('SESSION', 'Geçersiz session: Aktif şube bulunamadı', {
-          adminId: authSession.adminId,
-          branchId: authSession.branchId
-        });
-        toast.error('Şube bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
-        handleSwitchUser();
-        sessionValidated.current = false;
-        return;
-      }
-
-      const currentBranch = adminBranches.find((b) => b.id === authSession.branchId);
-      
-      if (!currentBranch) {
-        Logger.warn('SESSION', 'Mevcut şube bulunamadı, ilk şubeye geçiliyor', {
-          oldBranchId: authSession.branchId,
-          newBranchId: adminBranches[0].id,
-          newBranchName: adminBranches[0].name
-        });
-        
-        const updatedSession: AuthSession = {
-          ...authSession,
-          branchId: adminBranches[0].id,
-        };
-        setAuthSession(updatedSession);
-        toast.info(`${adminBranches[0].name} şubesine geçildi`);
-      } else {
-        Logger.success('SESSION', 'Session geçerli', {
-          branchId: currentBranch.id,
-          branchName: currentBranch.name
-        });
-      }
+      const updatedSession: AuthSession = {
+        ...authSession,
+        branchId: adminBranches[0].id,
+      };
+      setAuthSession(updatedSession);
+      toast.info(`${adminBranches[0].name} şubesine geçildi`);
+    } else {
+      console.log('Session valid:', currentBranch.name);
+      Logger.success('SESSION', 'Session geçerli', {
+        branchId: currentBranch.id,
+        branchName: currentBranch.name
+      });
     }
-  }, [authSession, branches, isAuthenticated, loginMode]);
+  }, [authSession, branches, isAuthenticated, loginMode, setAuthSession]);
 
   useEffect(() => {
     if (!isAuthenticated || loginMode !== 'customer') {
