@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Storefront, EnvelopeSimple, LockKey, Phone, Buildings } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-import type { AuthSession } from '@/lib/types';
+import type { AuthSession, Branch } from '@/lib/types';
 
 interface RegisterLoginProps {
-  onSuccess: (session: AuthSession) => void;
+  onSuccess: (session: AuthSession, branches?: Branch[]) => void;
 }
 
 export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
@@ -85,11 +85,11 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
 
       toast.success(`Hoş geldiniz, ${data.admin?.businessName || 'Kullanıcı'}`);
       
-      console.log('Calling onSuccess with session:', data.session);
+      console.log('Calling onSuccess with session and branches:', data.session, data.branches);
       setTimeout(() => {
-        onSuccess(data.session);
+        onSuccess(data.session, data.branches || []);
         setIsLoading(false);
-      }, 1000); // Increased timeout to ensure KV write completes
+      }, 500);
     } catch (error) {
       console.error('Login error:', error);
       toast.error(`Giriş sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
@@ -187,11 +187,22 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
 
       toast.success('Hesabınız başarıyla oluşturuldu!');
       
-      console.log('Calling onSuccess with session:', data.session);
+      // Pass branch data directly to avoid KV timing issues
+      const branches = data.branch ? [{
+        id: data.branch.id,
+        name: data.branch.name,
+        code: data.branch.code,
+        address: 'Kayıt sırasında oluşturuldu',
+        phone: registerBranchPhone || registerPhone,
+        isActive: true,
+        adminId: data.admin.id,
+      }] : [];
+      
+      console.log('Calling onSuccess with session and branches:', data.session, branches);
       setTimeout(() => {
-        onSuccess(data.session);
+        onSuccess(data.session, branches);
         setIsLoading(false);
-      }, 1000); // Increased timeout to ensure KV write completes
+      }, 500);
     } catch (error) {
       console.error('Register error:', error);
       toast.error(`Kayıt sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);

@@ -157,10 +157,21 @@ function App() {
     }
   }, [isAuthenticated, loginMode]);
 
-  const handleAuthSuccess = async (session: AuthSession) => {
-    console.log('handleAuthSuccess called with session:', session);
+  const handleAuthSuccess = async (session: AuthSession, branches?: Branch[]) => {
+    console.log('handleAuthSuccess called with session and branches:', session, branches);
     try {
       await setAuthSession(session);
+      
+      // If branches provided, save them immediately to KV
+      if (branches && branches.length > 0) {
+        console.log('Saving branches from auth to KV:', branches);
+        await fetch('/api/kv/branches', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: branches }),
+        });
+      }
+      
       setCurrentUserRole(session.userRole);
       setCurrentUserName(session.userName);
       setIsAuthenticated(true);
