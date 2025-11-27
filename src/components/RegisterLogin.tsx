@@ -66,11 +66,21 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       // Save branches to KV storage if returned
       if (data.branches && data.branches.length > 0) {
         console.log('Saving branches to KV:', data.branches);
-        await fetch('/api/kv/branches', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: data.branches }),
-        });
+        try {
+          const kvResponse = await fetch('/api/kv/branches', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: data.branches }),
+          });
+          
+          if (!kvResponse.ok) {
+            console.error('Failed to save branches to KV:', await kvResponse.text());
+          } else {
+            console.log('Branches saved to KV successfully');
+          }
+        } catch (kvError) {
+          console.error('KV write error:', kvError);
+        }
       }
 
       toast.success(`Hoş geldiniz, ${data.admin?.businessName || 'Kullanıcı'}`);
@@ -79,7 +89,7 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       setTimeout(() => {
         onSuccess(data.session);
         setIsLoading(false);
-      }, 500);
+      }, 1000); // Increased timeout to ensure KV write completes
     } catch (error) {
       console.error('Login error:', error);
       toast.error(`Giriş sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
@@ -158,11 +168,21 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
           adminId: data.admin.id,
         };
         
-        await fetch('/api/kv/branches', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: [branchData] }),
-        });
+        try {
+          const kvResponse = await fetch('/api/kv/branches', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: [branchData] }),
+          });
+          
+          if (!kvResponse.ok) {
+            console.error('Failed to save branch to KV:', await kvResponse.text());
+          } else {
+            console.log('Branch saved to KV successfully');
+          }
+        } catch (kvError) {
+          console.error('KV write error:', kvError);
+        }
       }
 
       toast.success('Hesabınız başarıyla oluşturuldu!');
@@ -171,7 +191,7 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       setTimeout(() => {
         onSuccess(data.session);
         setIsLoading(false);
-      }, 500);
+      }, 1000); // Increased timeout to ensure KV write completes
     } catch (error) {
       console.error('Register error:', error);
       toast.error(`Kayıt sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);

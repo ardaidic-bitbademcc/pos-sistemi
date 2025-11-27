@@ -96,6 +96,12 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Skip validation if branches not loaded yet
+    if (!branches || branches.length === 0) {
+      console.log('Session validation skipped: branches not loaded yet');
+      return;
+    }
+
     if (authSession && isAuthenticated && loginMode === 'customer' && !sessionValidated.current) {
       sessionValidated.current = true;
       
