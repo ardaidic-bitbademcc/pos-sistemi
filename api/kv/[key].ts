@@ -54,7 +54,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT' || req.method === 'POST') {
       // Set value in Supabase - two-step upsert
       const { value } = req.body;
-      console.log('[KV API] Upserting key:', key);
+      console.log('[KV API] Upserting key:', key, 'value:', typeof value, value === null ? 'NULL' : value === undefined ? 'UNDEFINED' : 'OK');
+
+      // Handle null/undefined values
+      if (value === null || value === undefined) {
+        console.log('[KV API] Attempting to delete key due to null/undefined value');
+        // If value is null, delete the key instead
+        const deleteResponse = await fetch(`${SUPABASE_URL}/rest/v1/kv_storage?key=eq.${key}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        });
+
+        if (deleteResponse.ok) {
+          return res.status(200).json({ success: true, deleted: true });
+        } else {
+          return res.status(200).json({ success: true, value: null });
+        }
+      }
 
       try {
         // Step 1: Check if key exists
