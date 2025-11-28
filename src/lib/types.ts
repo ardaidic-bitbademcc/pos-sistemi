@@ -566,6 +566,7 @@ export interface B2BSupplier {
 export interface SupplierAuthSession {
   supplierId: string;
   supplierName: string;
+  adminId: string; // Tedarikçiler hangi admin'e ait olduğunu bilmeli
   loginTime: string;
 }
 

@@ -16,7 +16,7 @@ interface SupplierLoginProps {
 }
 
 export default function SupplierLogin({ onSuccess, onBack }: SupplierLoginProps) {
-  const [suppliers] = useKV<B2BSupplier[]>('b2b-suppliers', []);
+  const [suppliers] = useKV<B2BSupplier[]>('b2b-suppliers', []); // Global - tüm adminlerin tedarikçileri
   
   const [isLoading, setIsLoading] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -47,6 +47,7 @@ export default function SupplierLogin({ onSuccess, onBack }: SupplierLoginProps)
     const session: SupplierAuthSession = {
       supplierId: supplier.id,
       supplierName: supplier.companyName,
+      adminId: supplier.adminId || 'unknown', // Tedarikçinin bağlı olduğu admin
       loginTime: new Date().toISOString(),
     };
 

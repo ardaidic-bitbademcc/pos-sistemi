@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Global keys that should NOT be prefixed with adminId
-const GLOBAL_KEYS = ['authSession', 'supplierSession', 'currentUserRole', 'data-migration-completed'];
+const GLOBAL_KEYS = [
+  'authSession', 
+  'supplierSession', 
+  'currentUserRole', 
+  'data-migration-completed',
+  'b2b-suppliers', // Tedarikçiler global - tüm adminler için ortak
+  'admins' // Admin kayıtları global
+];
 
 // Custom KV store hook that uses Vercel API (which connects to Supabase via Prisma)
 // Automatically prefixes keys with adminId for multi-tenancy isolation (except global keys)
