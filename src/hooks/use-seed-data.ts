@@ -18,7 +18,13 @@ export function useSeedData(adminId?: string | null) {
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
+    // Seed data sadece demo-admin için veya adminId yoksa çalışmalı
     if (seeded) return;
+    if (adminId && adminId !== 'demo-admin') {
+      // Yeni adminler için seed data oluşturma
+      setSeeded(true);
+      return;
+    }
     
     if (!admins || admins.length === 0) {
       const demoAdmin: Admin = {

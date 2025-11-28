@@ -208,6 +208,15 @@ function App() {
   };
 
   const handleLogin = (role: UserRole, userName: string) => {
+    // Demo login için özel session oluştur
+    const demoSession: AuthSession = {
+      adminId: 'demo-admin',
+      branchId: 'demo-branch',
+      userRole: role,
+      userName: userName,
+      loginTime: new Date().toISOString(),
+    };
+    setAuthSession(demoSession);
     setCurrentUserRole(role);
     setCurrentUserName(userName);
     setIsAuthenticated(true);
