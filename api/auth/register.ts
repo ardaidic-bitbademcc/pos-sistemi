@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { prisma } from '../../lib/prisma';
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lvciqbweooripjmltxwh.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2Y2lxYndlb29yaXBqbWx0eHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODU3NTUsImV4cCI6MjA3ODk2MTc1NX0.MNifk5ItkD276Dhih5PT3Lw4wCrTckA6ZyYR6iAy--k';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -38,56 +40,94 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Check if email exists
-    const existingAdmin = await prisma.admin.findUnique({
-      where: { email: email.toLowerCase().trim() },
+    const checkResponse = await fetch(`${SUPABASE_URL}/rest/v1/admins?email=eq.${email.toLowerCase().trim()}&select=id`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
     });
 
-    if (existingAdmin) {
+    const existing = await checkResponse.json();
+    if (Array.isArray(existing) && existing.length > 0) {
       return res.status(409).json({ error: 'Bu e-posta adresi zaten kullanılıyor' });
     }
 
     // Create admin
-    const admin = await prisma.admin.create({
-      data: {
-        email: email.toLowerCase().trim(),
-        password, // TODO: Hash password in production!
-        businessName: businessName.trim(),
-        phone: phone.trim(),
-        isActive: true,
+    const adminResponse = await fetch(`${SUPABASE_URL}/rest/v1/admins`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
       },
+      body: JSON.stringify({
+        email: email.toLowerCase().trim(),
+        password,
+        business_name: businessName.trim(),
+        phone: phone.trim(),
+        is_active: true,
+      }),
     });
 
+    if (!adminResponse.ok) {
+      const error = await adminResponse.text();
+      return res.status(500).json({ error: 'Admin oluşturulamadı', details: error });
+    }
+
+    const adminData = await adminResponse.json();
+    const admin = adminData[0];
+
     // Create branch
-    const branch = await prisma.branch.create({
-      data: {
+    const branchResponse = await fetch(`${SUPABASE_URL}/rest/v1/branches`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({
         name: branchName.trim(),
         code: `BR${Date.now().toString().slice(-6)}`,
         address: branchAddress?.trim() || 'Adres bilgisi girilmedi',
         phone: branchPhone?.trim() || phone.trim(),
-        isActive: true,
-        adminId: admin.id,
-      },
+        is_active: true,
+        admin_id: admin.id,
+      }),
     });
+
+    if (!branchResponse.ok) {
+      const error = await branchResponse.text();
+      return res.status(500).json({ error: 'Şube oluşturulamadı', details: error });
+    }
+
+    const branchData = await branchResponse.json();
+    const branch = branchData[0];
 
     // Create default categories
     const baseCategories = [
-      { name: 'Yiyecek', description: 'Yiyecek ürünleri', showInPOS: true, sortOrder: 1 },
-      { name: 'İçecek', description: 'İçecek ürünleri', showInPOS: true, sortOrder: 2 },
-      { name: 'Tatlı', description: 'Tatlı ürünleri', showInPOS: true, sortOrder: 3 },
-      { name: 'Kahvaltı', description: 'Kahvaltı ürünleri', showInPOS: true, sortOrder: 4 },
+      { name: 'Yiyecek', description: 'Yiyecek ürünleri', show_in_pos: true, sort_order: 1 },
+      { name: 'İçecek', description: 'İçecek ürünleri', show_in_pos: true, sort_order: 2 },
+      { name: 'Tatlı', description: 'Tatlı ürünleri', show_in_pos: true, sort_order: 3 },
+      { name: 'Kahvaltı', description: 'Kahvaltı ürünleri', show_in_pos: true, sort_order: 4 },
     ];
 
-    await Promise.all(
-      baseCategories.map((cat) =>
-        prisma.category.create({
-          data: {
-            ...cat,
-            adminId: admin.id,
-            branchId: branch.id,
-          },
-        })
-      )
-    );
+    for (const cat of baseCategories) {
+      await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...cat,
+          admin_id: admin.id,
+          branch_id: branch.id,
+        }),
+      });
+    }
 
     // Return session data
     return res.status(201).json({
@@ -102,7 +142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       admin: {
         id: admin.id,
         email: admin.email,
-        businessName: admin.businessName,
+        businessName: admin.business_name,
         phone: admin.phone,
       },
       branch: {
