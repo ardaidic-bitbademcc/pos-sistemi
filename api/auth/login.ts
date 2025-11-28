@@ -83,6 +83,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         code: b.code,
         address: b.address,
         phone: b.phone,
+        isActive: b.is_active,
+        adminId: b.admin_id,
       })),
     });
   } catch (error) {

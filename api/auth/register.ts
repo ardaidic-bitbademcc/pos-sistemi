@@ -145,11 +145,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         businessName: admin.business_name,
         phone: admin.phone,
       },
-      branch: {
+      branches: [{
         id: branch.id,
         name: branch.name,
         code: branch.code,
-      },
+        address: branch.address,
+        phone: branch.phone,
+        isActive: branch.is_active,
+        adminId: branch.admin_id,
+      }],
     });
   } catch (error) {
     console.error('Register error:', error);

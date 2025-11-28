@@ -161,30 +161,21 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
         return;
       }
 
-      // Save branch to KV storage
-      if (data.branch) {
-        console.log('Saving branch to KV:', data.branch);
-        const branchData = {
-          id: data.branch.id,
-          name: data.branch.name,
-          code: data.branch.code,
-          address: 'Kayıt sırasında oluşturuldu',
-          phone: registerBranchPhone || registerPhone,
-          isActive: true,
-          adminId: data.admin.id,
-        };
+      // Save branches to KV storage
+      if (data.branches && data.branches.length > 0) {
+        console.log('Saving branches to KV:', data.branches);
         
         try {
           const kvResponse = await fetch('/api/kv/branches', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ value: [branchData] }),
+            body: JSON.stringify({ value: data.branches }),
           });
           
           if (!kvResponse.ok) {
-            console.error('Failed to save branch to KV:', await kvResponse.text());
+            console.error('Failed to save branches to KV:', await kvResponse.text());
           } else {
-            console.log('Branch saved to KV successfully');
+            console.log('Branches saved to KV successfully');
           }
         } catch (kvError) {
           console.error('KV write error:', kvError);
@@ -193,21 +184,10 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
 
       toast.success('Hesabınız başarıyla oluşturuldu!');
       
-      // Pass branch data directly to avoid KV timing issues
-      const branches = data.branch ? [{
-        id: data.branch.id,
-        name: data.branch.name,
-        code: data.branch.code,
-        address: 'Kayıt sırasında oluşturuldu',
-        phone: registerBranchPhone || registerPhone,
-        isActive: true,
-        adminId: data.admin.id,
-      }] : [];
-      
-      console.log('Calling onSuccess with session and branches:', data.session, branches);
+      console.log('Calling onSuccess with session and branches:', data.session, data.branches);
       
       try {
-        await onSuccess(data.session, branches);
+        await onSuccess(data.session, data.branches || []);
         console.log('onSuccess completed successfully');
       } catch (callbackError) {
         console.error('onSuccess callback error:', callbackError);
