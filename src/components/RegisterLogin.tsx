@@ -64,10 +64,11 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       }
 
       // Save branches to KV storage if returned
-      if (data.branches && data.branches.length > 0) {
-        console.log('Saving branches to KV:', data.branches);
+      if (data.branches && data.branches.length > 0 && data.session.adminId) {
+        console.log('Saving branches to KV for admin:', data.session.adminId, data.branches);
+        const branchesKey = `branches_${data.session.adminId}`;
         try {
-          const kvResponse = await fetch('/api/kv/branches', {
+          const kvResponse = await fetch(`/api/kv/${branchesKey}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ value: data.branches }),
@@ -162,11 +163,12 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
       }
 
       // Save branches to KV storage
-      if (data.branches && data.branches.length > 0) {
-        console.log('Saving branches to KV:', data.branches);
+      if (data.branches && data.branches.length > 0 && data.session.adminId) {
+        console.log('Saving branches to KV for admin:', data.session.adminId, data.branches);
+        const branchesKey = `branches_${data.session.adminId}`;
         
         try {
-          const kvResponse = await fetch('/api/kv/branches', {
+          const kvResponse = await fetch(`/api/kv/${branchesKey}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ value: data.branches }),

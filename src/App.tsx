@@ -80,7 +80,11 @@ function App() {
   const [migrationCompleted, setMigrationCompleted] = useState<boolean | null>(null);
   const [showBranchSelector, setShowBranchSelector] = useState(false);
   const [showBranchConfirmDialog, setShowBranchConfirmDialog] = useState(false);
-  const [branches] = useKV<Branch[]>('branches', []);
+  
+  // Branches: Use adminId-specific key if authenticated, otherwise use global key for demo
+  const branchesKey = authSession?.adminId ? `branches_${authSession.adminId}` : 'branches';
+  const [branches] = useKV<Branch[]>(branchesKey, []);
+  
   const sessionValidated = useRef(false);
   
   useSeedData();
@@ -174,10 +178,11 @@ function App() {
     try {
       await setAuthSession(session);
       
-      // If branches provided, save them immediately to KV
-      if (branches && branches.length > 0) {
-        console.log('Saving branches from auth to KV:', branches);
-        await fetch('/api/kv/branches', {
+      // If branches provided, save them immediately to KV with admin-specific key
+      if (branches && branches.length > 0 && session.adminId) {
+        const branchesKey = `branches_${session.adminId}`;
+        console.log('Saving branches from auth to KV:', branchesKey, branches);
+        await fetch(`/api/kv/${branchesKey}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ value: branches }),
