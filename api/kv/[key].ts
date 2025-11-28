@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT' || req.method === 'POST') {
       // Set value in Supabase
       const { value } = req.body;
-      console.log('[KV API] Upserting key:', key);
+      console.log('[KV API] Upserting key:', key, 'value type:', typeof value);
 
       const response = await fetch(`${SUPABASE_URL}/rest/v1/kv_storage`, {
         method: 'POST',
@@ -62,18 +62,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates',
+          'Prefer': 'resolution=merge-duplicates,return=representation',
         },
         body: JSON.stringify({ key, value }),
       });
 
+      console.log('[KV API] Supabase response status:', response.status);
+
       if (!response.ok) {
-        console.error('[KV API] Supabase error:', response.status, await response.text());
-        return res.status(500).json({ error: 'Database error' });
+        const errorText = await response.text();
+        console.error('[KV API] Supabase error:', response.status, errorText);
+        return res.status(500).json({ error: 'Database error', details: errorText });
       }
 
-      const result = await response.json();
-      console.log('[KV API] Upsert success');
+      const responseText = await response.text();
+      console.log('[KV API] Supabase response body length:', responseText.length);
+      
+      let result = null;
+      if (responseText && responseText.length > 0) {
+        try {
+          result = JSON.parse(responseText);
+          console.log('[KV API] Upsert success, result:', result);
+        } catch (e) {
+          console.error('[KV API] JSON parse error:', e, 'text:', responseText);
+        }
+      }
 
       return res.status(200).json({ success: true, value });
     }
