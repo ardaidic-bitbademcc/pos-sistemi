@@ -27,12 +27,14 @@ interface PeriodComparison {
 }
 
 export default function FinanceModule({ onBack, authSession }: FinanceModuleProps) {
-  const [sales] = useKV<Sale[]>('sales', []);
-  const [expenses, setExpenses] = useKV<Expense[]>('expenses', []);
-  const [cashRegister] = useKV<CashRegister | null>('cashRegister', null);
-  const [salaries] = useKV<SalaryCalculation[]>('salaries', []);
-  const [invoices] = useKV<Invoice[]>('invoices', []);
-  const [b2bOrders] = useKV<B2BOrder[]>('b2bOrders', []);
+  const adminId = authSession?.adminId;
+  
+  const [sales] = useKV<Sale[]>('sales', [], adminId);
+  const [expenses, setExpenses] = useKV<Expense[]>('expenses', [], adminId);
+  const [cashRegister] = useKV<CashRegister | null>('cashRegister', null, adminId);
+  const [salaries] = useKV<SalaryCalculation[]>('salaries', [], adminId);
+  const [invoices] = useKV<Invoice[]>('invoices', [], adminId);
+  const [b2bOrders] = useKV<B2BOrder[]>('b2bOrders', [], adminId);
   
   const [periodType, setPeriodType] = useState<PeriodType>('day');
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);

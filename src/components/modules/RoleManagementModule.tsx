@@ -147,10 +147,13 @@ const MODULE_LABELS: Record<ModulePermission, string> = {
   tasks: 'Görev Yönetimi',
 };
 
-export default function RoleManagementModule({ onBack }: RoleManagementModuleProps) {
+export default function RoleManagementModule({ onBack, authSession }: RoleManagementModuleProps) {
+  const adminId = authSession?.adminId;
+  
   const [rolePermissions, setRolePermissions] = useKV<RolePermissions[]>(
     'rolePermissions',
-    DEFAULT_ROLE_PERMISSIONS
+    DEFAULT_ROLE_PERMISSIONS,
+    adminId
   );
 
   const updateRolePermission = (

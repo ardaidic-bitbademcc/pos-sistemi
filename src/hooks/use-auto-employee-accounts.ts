@@ -3,9 +3,9 @@ import { useKV } from './use-kv-store';
 import type { Employee, CustomerAccount } from '@/lib/types';
 import { generateId, generateAccountNumber } from '@/lib/helpers';
 
-export function useAutoEmployeeAccounts() {
-  const [employees] = useKV<Employee[]>('employees', []);
-  const [accounts, setAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
+export function useAutoEmployeeAccounts(adminId?: string | null) {
+  const [employees] = useKV<Employee[]>('employees', [], adminId);
+  const [accounts, setAccounts] = useKV<CustomerAccount[]>('customerAccounts', [], adminId);
 
   useEffect(() => {
     const checkAndCreateAccounts = async () => {

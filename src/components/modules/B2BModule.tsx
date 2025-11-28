@@ -24,15 +24,16 @@ interface B2BModuleProps {
 }
 
 export default function B2BModule({ onBack, currentUserRole, currentUserName, authSession }: B2BModuleProps) {
-  const [isSupplierMode, setIsSupplierMode] = useKV<boolean>('b2b-is-supplier-mode', false);
-  const [products, setProducts] = useKV<B2BProduct[]>('b2b-products', []);
-  const [orders, setOrders] = useKV<B2BOrder[]>('b2b-orders', []);
-  const [sampleRequests, setSampleRequests] = useKV<SampleRequest[]>('b2b-sample-requests', []);
-  const [commissionRate] = useKV<number>('b2b-commission-rate', 10);
-  const [supplierPanelStatus, setSupplierPanelStatus] = useKV<SupplierPanelStatus>('b2b-supplier-panel-status', 'active');
-  const [supplierPausedUntil, setSupplierPausedUntil] = useKV<string | null>('b2b-supplier-paused-until', null);
-  const [stockProducts, setStockProducts] = useKV<Product[]>('products', []);
-  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
+  const adminId = authSession?.adminId;
+  const [isSupplierMode, setIsSupplierMode] = useKV<boolean>('b2b-is-supplier-mode', false, adminId);
+  const [products, setProducts] = useKV<B2BProduct[]>('b2b-products', [], adminId);
+  const [orders, setOrders] = useKV<B2BOrder[]>('b2b-orders', [], adminId);
+  const [sampleRequests, setSampleRequests] = useKV<SampleRequest[]>('b2b-sample-requests', [], adminId);
+  const [commissionRate] = useKV<number>('b2b-commission-rate', 10, adminId);
+  const [supplierPanelStatus, setSupplierPanelStatus] = useKV<SupplierPanelStatus>('b2b-supplier-panel-status', 'active', adminId);
+  const [supplierPausedUntil, setSupplierPausedUntil] = useKV<string | null>('b2b-supplier-paused-until', null, adminId);
+  const [stockProducts, setStockProducts] = useKV<Product[]>('products', [], adminId);
+  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', [], adminId);
   const actualCommissionRate = commissionRate ?? 10;
   
   const currentUserId = 'user-1';

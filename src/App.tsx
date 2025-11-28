@@ -87,8 +87,8 @@ function App() {
   
   const sessionValidated = useRef(false);
   
-  useSeedData();
-  useAutoEmployeeAccounts();
+  useSeedData(adminId);
+  useAutoEmployeeAccounts(adminId);
   useTaskReminders(authSession);
 
   useEffect(() => {

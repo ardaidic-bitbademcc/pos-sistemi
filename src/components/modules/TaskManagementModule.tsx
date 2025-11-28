@@ -161,9 +161,11 @@ export default function TaskManagementModule({
   currentUserName = 'Kullanıcı',
   authSession
 }: TaskManagementModuleProps) {
-  const [tasks, setTasks] = useKV<Task[]>('tasks', []);
-  const [employees] = useKV<Employee[]>('employees', []);
-  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
+  const adminId = authSession?.adminId;
+  
+  const [tasks, setTasks] = useKV<Task[]>('tasks', [], adminId);
+  const [employees] = useKV<Employee[]>('employees', [], adminId);
+  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS, adminId);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);

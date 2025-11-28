@@ -27,12 +27,13 @@ interface CustomerAccountModuleProps {
 }
 
 export default function CustomerAccountModule({ onBack, authSession }: CustomerAccountModuleProps) {
-  const [accounts, setAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
-  const [transactions, setTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
-  const [employees] = useKV<Employee[]>('employees', []);
-  const [sales] = useKV<Sale[]>('sales', []);
-  const [categories] = useKV<Category[]>('categories', []);
-  const [products] = useKV<Product[]>('products', []);
+  const adminId = authSession?.adminId;
+  const [accounts, setAccounts] = useKV<CustomerAccount[]>('customerAccounts', [], adminId);
+  const [transactions, setTransactions] = useKV<CustomerTransaction[]>('customerTransactions', [], adminId);
+  const [employees] = useKV<Employee[]>('employees', [], adminId);
+  const [sales] = useKV<Sale[]>('sales', [], adminId);
+  const [categories] = useKV<Category[]>('categories', [], adminId);
+  const [products] = useKV<Product[]>('products', [], adminId);
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);

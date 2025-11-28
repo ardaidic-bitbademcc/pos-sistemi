@@ -22,11 +22,13 @@ const DEFAULT_SETTINGS: TaskReminderSettings = {
 };
 
 export function useTaskReminders(authSession?: AuthSession | null) {
-  const [tasks] = useKV<Task[]>('tasks', []);
-  const [reminderSettings] = useKV<TaskReminderSettings>('taskReminderSettings', DEFAULT_SETTINGS);
+  const adminId = authSession?.adminId;
+  const [tasks] = useKV<Task[]>('tasks', [], adminId);
+  const [reminderSettings] = useKV<TaskReminderSettings>('taskReminderSettings', DEFAULT_SETTINGS, adminId);
   const [lastReminderTime, setLastReminderTime] = useKV<string>(
     `lastTaskReminderTime_${authSession?.userId || 'guest'}`, 
-    ''
+    '',
+    adminId
   );
 
   useEffect(() => {

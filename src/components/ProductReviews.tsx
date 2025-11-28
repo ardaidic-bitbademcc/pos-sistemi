@@ -17,10 +17,11 @@ interface ProductReviewsProps {
 }
 
 export default function ProductReviews({ productId, authSession }: ProductReviewsProps) {
-  const [reviews, setReviews] = useKV<ProductReview[]>('productReviews', []);
-  const [votes, setVotes] = useKV<ReviewVote[]>('reviewVotes', []);
-  const [products] = useKV<Product[]>('products', []);
-  const [b2bOrders] = useKV<B2BOrder[]>('b2b-orders', []);
+  const adminId = authSession?.adminId;
+  const [reviews, setReviews] = useKV<ProductReview[]>('productReviews', [], adminId);
+  const [votes, setVotes] = useKV<ReviewVote[]>('reviewVotes', [], adminId);
+  const [products] = useKV<Product[]>('products', [], adminId);
+  const [b2bOrders] = useKV<B2BOrder[]>('b2b-orders', [], adminId);
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [hoveredStar, setHoveredStar] = useState(0);

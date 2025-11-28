@@ -23,7 +23,8 @@ interface BranchSelectorProps {
 }
 
 export default function BranchSelector({ authSession, onSelectBranch }: BranchSelectorProps) {
-  const [branches] = useKV<Branch[]>('branches', []);
+  const adminId = authSession?.adminId;
+  const [branches] = useKV<Branch[]>('branches', [], adminId);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 

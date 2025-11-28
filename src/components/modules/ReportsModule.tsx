@@ -18,12 +18,14 @@ interface ReportsModuleProps {
 }
 
 export default function ReportsModule({ onBack, authSession }: ReportsModuleProps) {
-  const [sales] = useKV<Sale[]>('sales', []);
-  const [employees] = useKV<Employee[]>('employees', []);
-  const [products] = useKV<Product[]>('products', []);
-  const [branches] = useKV<Branch[]>('branches', []);
-  const [tables] = useKV<Table[]>('tables', []);
-  const [tableSections] = useKV<TableSection[]>('tableSections', []);
+  const adminId = authSession?.adminId;
+  
+  const [sales] = useKV<Sale[]>('sales', [], adminId);
+  const [employees] = useKV<Employee[]>('employees', [], adminId);
+  const [products] = useKV<Product[]>('products', [], adminId);
+  const [branches] = useKV<Branch[]>('branches', [], adminId);
+  const [tables] = useKV<Table[]>('tables', [], adminId);
+  const [tableSections] = useKV<TableSection[]>('tableSections', [], adminId);
   
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('week');

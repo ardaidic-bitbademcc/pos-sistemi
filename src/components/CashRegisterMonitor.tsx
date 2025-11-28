@@ -60,10 +60,11 @@ interface ActivityEvent {
 }
 
 export default function CashRegisterMonitor({ onBack, authSession }: CashRegisterMonitorProps) {
-  const [cashRegisters] = useKV<CashRegisterStatus[]>('cashRegisters', []);
-  const [cashTransactions] = useKV<CashTransaction[]>('cashTransactions', []);
-  const [sales] = useKV<Sale[]>('sales', []);
-  const [branches] = useKV<Branch[]>('branches', []);
+  const adminId = authSession?.adminId;
+  const [cashRegisters] = useKV<CashRegisterStatus[]>('cashRegisters', [], adminId);
+  const [cashTransactions] = useKV<CashTransaction[]>('cashTransactions', [], adminId);
+  const [sales] = useKV<Sale[]>('sales', [], adminId);
+  const [branches] = useKV<Branch[]>('branches', [], adminId);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showDetails, setShowDetails] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(5);

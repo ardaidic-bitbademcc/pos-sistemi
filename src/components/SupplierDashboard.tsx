@@ -39,9 +39,10 @@ interface SupplierDashboardProps {
 }
 
 export default function SupplierDashboard({ session, onLogout }: SupplierDashboardProps) {
-  const [products, setProducts] = useKV<B2BProduct[]>('b2b-products', []);
-  const [orders, setOrders] = useKV<B2BOrder[]>('b2b-orders', []);
-  const [sampleRequests, setSampleRequests] = useKV<SampleRequest[]>('b2b-sample-requests', []);
+  const adminId = session.adminId; // Tedarikçiler için adminId (hangi admin'e bağlı olduklarını gösterir)
+  const [products, setProducts] = useKV<B2BProduct[]>('b2b-products', [], adminId);
+  const [orders, setOrders] = useKV<B2BOrder[]>('b2b-orders', [], adminId);
+  const [sampleRequests, setSampleRequests] = useKV<SampleRequest[]>('b2b-sample-requests', [], adminId);
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showPanelStatusDialog, setShowPanelStatusDialog] = useState(false);

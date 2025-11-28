@@ -33,12 +33,14 @@ interface PriceChangeProposal {
 }
 
 export default function MenuModule({ onBack, authSession }: MenuModuleProps) {
-  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
-  const [recipes, setRecipes] = useKV<Recipe[]>('recipes', []);
-  const [products, setProducts] = useKV<Product[]>('products', []);
-  const [categories, setCategories] = useKV<Category[]>('categories', []);
-  const [invoices, setInvoices] = useKV<Invoice[]>('invoices', []);
-  const [sales] = useKV<Sale[]>('sales', []);
+  const adminId = authSession?.adminId;
+  
+  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', [], adminId);
+  const [recipes, setRecipes] = useKV<Recipe[]>('recipes', [], adminId);
+  const [products, setProducts] = useKV<Product[]>('products', [], adminId);
+  const [categories, setCategories] = useKV<Category[]>('categories', [], adminId);
+  const [invoices, setInvoices] = useKV<Invoice[]>('invoices', [], adminId);
+  const [sales] = useKV<Sale[]>('sales', [], adminId);
   
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysis, setAnalysis] = useState<MenuAnalysis[]>([]);

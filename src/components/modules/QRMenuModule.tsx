@@ -20,9 +20,10 @@ interface QRMenuModuleProps {
 }
 
 export default function QRMenuModule({ onBack, authSession }: QRMenuModuleProps) {
-  const [menuItems] = useKV<MenuItem[]>('menuItems', []);
-  const [products] = useKV<Product[]>('products', []);
-  const [reviews] = useKV<ProductReview[]>('productReviews', []);
+  const adminId = authSession?.adminId;
+  const [menuItems] = useKV<MenuItem[]>('menuItems', [], adminId);
+  const [products] = useKV<Product[]>('products', [], adminId);
+  const [reviews] = useKV<ProductReview[]>('productReviews', [], adminId);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showQRDialog, setShowQRDialog] = useState(false);
@@ -44,7 +45,7 @@ export default function QRMenuModule({ onBack, authSession }: QRMenuModuleProps)
     layout: 'grid',
   };
 
-  const [qrMenuTheme, setQRMenuTheme] = useKV<QRMenuTheme>('qrMenuTheme', defaultQRMenuTheme);
+  const [qrMenuTheme, setQRMenuTheme] = useKV<QRMenuTheme>('qrMenuTheme', defaultQRMenuTheme, adminId);
 
   const activeMenuItems = (menuItems || []).filter(item => item.isActive);
   

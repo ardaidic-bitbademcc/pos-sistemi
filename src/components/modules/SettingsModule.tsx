@@ -53,10 +53,12 @@ interface StockEntry {
 }
 
 export default function SettingsModule({ onBack, authSession }: SettingsModuleProps) {
-  const [products, setProducts] = useKV<Product[]>('products', []);
-  const [categories, setCategories] = useKV<Category[]>('categories', []);
-  const [tableSections, setTableSections] = useKV<TableSection[]>('tableSections', []);
-  const [tables, setTables] = useKV<Table[]>('tables', []);
+  const adminId = authSession?.adminId;
+  
+  const [products, setProducts] = useKV<Product[]>('products', [], adminId);
+  const [categories, setCategories] = useKV<Category[]>('categories', [], adminId);
+  const [tableSections, setTableSections] = useKV<TableSection[]>('tableSections', [], adminId);
+  const [tables, setTables] = useKV<Table[]>('tables', [], adminId);
   
   const { filteredItems: filteredProducts } = useBranchFilter(products, authSession);
   const { filteredItems: filteredCategories } = useBranchFilter(categories, authSession);
@@ -83,7 +85,7 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
     requireGuestCount: false,
   };
   
-  const [settings, setSettings] = useKV<AppSettings>('appSettings', defaultSettings);
+  const [settings, setSettings] = useKV<AppSettings>('appSettings', defaultSettings, adminId);
 
   const [showTaxDialog, setShowTaxDialog] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);

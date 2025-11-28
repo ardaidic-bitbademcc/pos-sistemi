@@ -30,9 +30,11 @@ interface StockTransfer {
 }
 
 export default function BranchModule({ onBack, authSession }: BranchModuleProps) {
-  const [branches, setBranches] = useKV<Branch[]>('branches', []);
-  const [products] = useKV<Product[]>('products', []);
-  const [stockTransfers, setStockTransfers] = useKV<StockTransfer[]>('stockTransfers', []);
+  const adminId = authSession?.adminId;
+  
+  const [branches, setBranches] = useKV<Branch[]>('branches', [], adminId);
+  const [products] = useKV<Product[]>('products', [], adminId);
+  const [stockTransfers, setStockTransfers] = useKV<StockTransfer[]>('stockTransfers', [], adminId);
   
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [isBranchDialogOpen, setIsBranchDialogOpen] = useState(false);

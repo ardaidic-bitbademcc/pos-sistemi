@@ -3,18 +3,18 @@ import { useKV } from './use-kv-store';
 import type { Employee, Product, Table, MenuItem, Category, Branch, Sale, SaleItem, B2BSupplier, B2BProduct, Admin, TableSection } from '@/lib/types';
 import { generateId, generateSaleNumber, calculateTax, getBaseCategories } from '@/lib/helpers';
 
-export function useSeedData() {
-  const [admins, setAdmins] = useKV<Admin[]>('admins', []);
-  const [employees, setEmployees] = useKV<Employee[]>('employees', []);
-  const [products, setProducts] = useKV<Product[]>('products', []);
-  const [categories, setCategories] = useKV<Category[]>('categories', []);
-  const [tables, setTables] = useKV<Table[]>('tables', []);
-  const [tableSections, setTableSections] = useKV<TableSection[]>('tableSections', []);
-  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', []);
-  const [branches, setBranches] = useKV<Branch[]>('branches', []);
-  const [sales, setSales] = useKV<Sale[]>('sales', []);
-  const [b2bSuppliers, setB2BSuppliers] = useKV<B2BSupplier[]>('b2b-suppliers', []);
-  const [b2bProducts, setB2BProducts] = useKV<B2BProduct[]>('b2b-products', []);
+export function useSeedData(adminId?: string | null) {
+  const [admins, setAdmins] = useKV<Admin[]>('admins', []); // Global - tüm adminler
+  const [employees, setEmployees] = useKV<Employee[]>('employees', [], adminId);
+  const [products, setProducts] = useKV<Product[]>('products', [], adminId);
+  const [categories, setCategories] = useKV<Category[]>('categories', [], adminId);
+  const [tables, setTables] = useKV<Table[]>('tables', [], adminId);
+  const [tableSections, setTableSections] = useKV<TableSection[]>('tableSections', [], adminId);
+  const [menuItems, setMenuItems] = useKV<MenuItem[]>('menuItems', [], adminId);
+  const [branches, setBranches] = useKV<Branch[]>('branches', [], adminId);
+  const [sales, setSales] = useKV<Sale[]>('sales', [], adminId);
+  const [b2bSuppliers, setB2BSuppliers] = useKV<B2BSupplier[]>('b2b-suppliers', [], adminId);
+  const [b2bProducts, setB2BProducts] = useKV<B2BProduct[]>('b2b-products', [], adminId);
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {

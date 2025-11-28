@@ -177,10 +177,12 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
 ];
 
 export default function CashModule({ onBack, currentUserRole = 'owner', authSession }: CashModuleProps) {
-  const [branches] = useKV<Branch[]>('branches', []);
-  const [sales] = useKV<Sale[]>('sales', []);
-  const [cashRegisters, setCashRegisters] = useKV<CashRegisterStatus[]>('cashRegisters', []);
-  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
+  const adminId = authSession?.adminId;
+  
+  const [branches] = useKV<Branch[]>('branches', [], adminId);
+  const [sales] = useKV<Sale[]>('sales', [], adminId);
+  const [cashRegisters, setCashRegisters] = useKV<CashRegisterStatus[]>('cashRegisters', [], adminId);
+  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS, adminId);
   const [selectedBranch, setSelectedBranch] = useState<string>('');
 
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);

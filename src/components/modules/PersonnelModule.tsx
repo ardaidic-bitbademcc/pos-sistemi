@@ -25,12 +25,14 @@ interface PersonnelModuleProps {
 }
 
 export default function PersonnelModule({ onBack, authSession }: PersonnelModuleProps) {
-  const [employees, setEmployees] = useKV<Employee[]>('employees', []);
-  const [shifts, setShifts] = useKV<Shift[]>('shifts', []);
-  const [salaries, setSalaries] = useKV<SalaryCalculation[]>('salaries', []);
-  const [salarySettings, setSalarySettings] = useKV<SalaryCalculationSettings[]>('salarySettings', []);
-  const [customerAccounts] = useKV<CustomerAccount[]>('customerAccounts', []);
-  const [customerTransactions, setCustomerTransactions] = useKV<CustomerTransaction[]>('customerTransactions', []);
+  const adminId = authSession?.adminId;
+  
+  const [employees, setEmployees] = useKV<Employee[]>('employees', [], adminId);
+  const [shifts, setShifts] = useKV<Shift[]>('shifts', [], adminId);
+  const [salaries, setSalaries] = useKV<SalaryCalculation[]>('salaries', [], adminId);
+  const [salarySettings, setSalarySettings] = useKV<SalaryCalculationSettings[]>('salarySettings', [], adminId);
+  const [customerAccounts] = useKV<CustomerAccount[]>('customerAccounts', [], adminId);
+  const [customerTransactions, setCustomerTransactions] = useKV<CustomerTransaction[]>('customerTransactions', [], adminId);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showSalaryCalc, setShowSalaryCalc] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
