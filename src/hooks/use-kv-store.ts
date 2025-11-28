@@ -3,10 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 // Custom KV store hook that uses Vercel API (which connects to Supabase via Prisma)
 export function useKV<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => Promise<void>] {
   const [state, setState] = useState<T>(initialValue);
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Load initial value from API
+  // Load initial value from API only once
   useEffect(() => {
+    if (hasLoaded) return;
+    
     const loadValue = async () => {
       try {
         const response = await fetch(`/api/kv/${key}`);
@@ -17,40 +19,35 @@ export function useKV<T>(key: string, initialValue: T): [T, (value: T | ((prev: 
       } catch (error) {
         console.warn(`Failed to load KV key: ${key}`, error);
       } finally {
-        setIsLoading(false);
+        setHasLoaded(true);
       }
     };
 
     loadValue();
-  }, [key]);
+  }, [key, hasLoaded]);
 
   // Update value via API
   const setValue = useCallback(async (newValue: T | ((prev: T) => T)) => {
-    // Support both direct value and updater function
-    const valueToSet = typeof newValue === 'function' 
-      ? (newValue as (prev: T) => T)(state) 
-      : newValue;
-    
-    setState(valueToSet);
-
-    // Save via API
-    try {
-      const response = await fetch(`/api/kv/${key}`, {
+    // Use functional update to get current state
+    setState((currentState) => {
+      const valueToSet = typeof newValue === 'function' 
+        ? (newValue as (prev: T) => T)(currentState) 
+        : newValue;
+      
+      // Save via API (don't await to avoid blocking)
+      fetch(`/api/kv/${key}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ value: valueToSet }),
+      }).catch((error) => {
+        console.warn(`Failed to update KV key: ${key}`, error);
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.warn(`API update failed for ${key}:`, error);
-      }
-    } catch (error) {
-      console.warn(`Failed to update KV key: ${key}`, error);
-    }
-  }, [key, state]);
+      return valueToSet;
+    });
+  }, [key]);
 
   return [state, setValue];
 }
