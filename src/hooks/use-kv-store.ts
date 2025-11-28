@@ -70,7 +70,10 @@ export function useKV<T>(
 
       // Sync to database if needed
       if (DB_SYNC_KEYS.includes(key) && adminId) {
-        syncToDatabase(key, valueToSet, adminId);
+        console.log(`[DB-SYNC] Syncing ${key} to database for admin:`, adminId);
+        syncToDatabase(key, valueToSet, adminId).catch(err => 
+          console.error(`[DB-SYNC] Failed to sync ${key}:`, err)
+        );
       }
 
       return valueToSet;
@@ -83,22 +86,31 @@ export function useKV<T>(
 // Sync data to database
 async function syncToDatabase(key: string, value: any, adminId: string) {
   try {
+    console.log(`[DB-SYNC] Starting sync for ${key}, items count:`, Array.isArray(value) ? value.length : 'not array');
     const endpoint = `/api/${key}`;
     
     // For arrays, sync each item
     if (Array.isArray(value)) {
       // We'll do a simple bulk sync - send all items
       // The API will handle create/update logic
-      await fetch(`${endpoint}/sync`, {
+      const response = await fetch(`${endpoint}/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           adminId,
           items: value 
         }),
-      }).catch(err => console.warn(`DB sync failed for ${key}:`, err));
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`[DB-SYNC] Success for ${key}:`, result);
+      } else {
+        const error = await response.text();
+        console.error(`[DB-SYNC] Failed for ${key}:`, response.status, error);
+      }
     }
   } catch (error) {
-    console.warn(`Database sync failed for key: ${key}`, error);
+    console.error(`[DB-SYNC] Exception for ${key}:`, error);
   }
 }
