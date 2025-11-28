@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Supabase REST API configuration
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lvciqbweooripjmltxwh.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2Y2lxYndlb29yaXBqbWx0eHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMTM2MjUsImV4cCI6MjA1Nzg4OTYyNX0.Fz6-qMZjXqHaV-9TzdBqwsN7GV-gxE59c_rAE_H7V-k';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2Y2lxYndlb29yaXBqbWx0eHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODU3NTUsImV4cCI6MjA3ODk2MTc1NX0.MNifk5ItkD276Dhih5PT3Lw4wCrTckA6ZyYR6iAy--k';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { key } = req.query;
