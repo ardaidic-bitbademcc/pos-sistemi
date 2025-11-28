@@ -32,6 +32,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (const item of items) {
       try {
+        // Validate required fields
+        if (!item.id || !item.name) {
+          console.warn('Skipping product - missing required fields:', item);
+          results.errors++;
+          continue;
+        }
+
+        // If categoryId is missing or invalid, try to find or create a default category
+        let categoryId = item.categoryId;
+        if (!categoryId) {
+          // Try to find "Genel" category for this admin
+          const defaultCategory = await prisma.category.findFirst({
+            where: {
+              adminId: adminId,
+              name: 'Genel',
+            },
+          });
+
+          if (defaultCategory) {
+            categoryId = defaultCategory.id;
+          } else {
+            // Create default category
+            const newCategory = await prisma.category.create({
+              data: {
+                name: 'Genel',
+                description: 'Genel ürünler',
+                adminId: adminId,
+                branchId: item.branchId || '',
+                showInPOS: true,
+                sortOrder: 0,
+              },
+            });
+            categoryId = newCategory.id;
+          }
+        }
+
         // Check if product exists
         const existing = await prisma.product.findUnique({
           where: { id: item.id },
@@ -51,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               unit: item.unit || 'adet',
               taxRate: item.taxRate || 20,
               isActive: item.isActive !== false,
-              categoryId: item.categoryId,
+              categoryId: categoryId,
               minStockLevel: item.minStock || item.minStockLevel || 0,
             },
           });
@@ -72,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               isActive: item.isActive !== false,
               adminId: adminId,
               branchId: item.branchId,
-              categoryId: item.categoryId,
+              categoryId: categoryId,
               minStockLevel: item.minStock || item.minStockLevel || 0,
             },
           });
@@ -80,6 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       } catch (itemError) {
         console.error('Product sync error for item:', item.id, itemError);
+        console.error('Item data:', JSON.stringify(item, null, 2));
         results.errors++;
       }
     }

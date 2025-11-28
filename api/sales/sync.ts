@@ -32,6 +32,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (const item of items) {
       try {
+        // Validate required fields
+        if (!item.id || !item.saleNumber) {
+          console.warn('Skipping sale - missing required fields:', item);
+          results.errors++;
+          continue;
+        }
+
         // Check if sale exists
         const existing = await prisma.sale.findUnique({
           where: { id: item.id },
@@ -44,6 +51,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Create new sale with items
+        // Filter valid sale items that have menuItemId
+        const validSaleItems = (item.items || []).filter((si: any) => 
+          si.productId || si.menuItemId
+        );
+
+        if (validSaleItems.length === 0) {
+          console.warn('Skipping sale - no valid sale items:', item.id);
+          results.errors++;
+          continue;
+        }
+
         await prisma.sale.create({
           data: {
             id: item.id,
@@ -59,9 +77,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             branchId: item.branchId,
             createdAt: item.saleDate ? new Date(item.saleDate) : new Date(),
             items: {
-              create: (item.items || []).map((saleItem: any) => ({
+              create: validSaleItems.map((saleItem: any) => ({
                 id: saleItem.id,
-                menuItemId: saleItem.productId,
+                menuItemId: saleItem.productId || saleItem.menuItemId,
                 name: saleItem.productName || saleItem.name,
                 quantity: saleItem.quantity,
                 price: saleItem.unitPrice || saleItem.price,
@@ -76,6 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         results.created++;
       } catch (itemError) {
         console.error('Sale sync error for item:', item.id, itemError);
+        console.error('Item data:', JSON.stringify(item, null, 2));
         results.errors++;
       }
     }

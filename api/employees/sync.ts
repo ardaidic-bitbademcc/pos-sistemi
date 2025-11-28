@@ -75,6 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       } catch (itemError) {
         console.error('Employee sync error for item:', item.id, itemError);
+        console.error('Item data:', JSON.stringify(item, null, 2));
         results.errors++;
       }
     }
