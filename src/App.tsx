@@ -83,7 +83,7 @@ function App() {
   
   // Use adminId for all data keys (multi-tenancy isolation)
   const adminId = authSession?.adminId;
-  const [branches] = useKV<Branch[]>('branches', [], adminId);
+  const [branches, setBranches] = useKV<Branch[]>('branches', [], adminId);
   
   const sessionValidated = useRef(false);
   
@@ -178,15 +178,11 @@ function App() {
     try {
       await setAuthSession(session);
       
-      // If branches provided, save them immediately to KV with admin-specific key
+      // If branches provided, save them immediately to both KV and state
       if (branches && branches.length > 0 && session.adminId) {
-        const branchesKey = `${session.adminId}_branches`;
-        console.log('Saving branches from auth to KV:', branchesKey, branches);
-        await fetch(`/api/kv/${branchesKey}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: branches }),
-        });
+        console.log('Saving branches from auth to KV and state:', branches);
+        // Save to state immediately for instant UI update
+        await setBranches(branches);
       }
       
       setCurrentUserRole(session.userRole);
