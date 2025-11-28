@@ -136,7 +136,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         adminId: admin.id,
         branchId: branch.id,
         userRole: 'owner',
-        userName: admin.businessName,
+        userName: admin.business_name,
         loginTime: new Date().toISOString(),
       },
       admin: {
