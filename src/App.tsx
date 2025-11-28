@@ -81,9 +81,9 @@ function App() {
   const [showBranchSelector, setShowBranchSelector] = useState(false);
   const [showBranchConfirmDialog, setShowBranchConfirmDialog] = useState(false);
   
-  // Branches: Use adminId-specific key if authenticated, otherwise use global key for demo
-  const branchesKey = authSession?.adminId ? `branches_${authSession.adminId}` : 'branches';
-  const [branches] = useKV<Branch[]>(branchesKey, []);
+  // Use adminId for all data keys (multi-tenancy isolation)
+  const adminId = authSession?.adminId;
+  const [branches] = useKV<Branch[]>('branches', [], adminId);
   
   const sessionValidated = useRef(false);
   
@@ -180,7 +180,7 @@ function App() {
       
       // If branches provided, save them immediately to KV with admin-specific key
       if (branches && branches.length > 0 && session.adminId) {
-        const branchesKey = `branches_${session.adminId}`;
+        const branchesKey = `${session.adminId}_branches`;
         console.log('Saving branches from auth to KV:', branchesKey, branches);
         await fetch(`/api/kv/${branchesKey}`, {
           method: 'PUT',

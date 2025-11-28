@@ -61,14 +61,16 @@ interface SelectedPaymentItem {
 }
 
 export default function POSModule({ onBack, currentUserRole = 'cashier', authSession }: POSModuleProps) {
-  const [products, setProducts] = useKV<Product[]>('products', []);
-  const [menuItems] = useKV<MenuItem[]>('menuItems', []);
-  const [categories] = useKV<Category[]>('categories', []);
-  const [sales, setSales] = useKV<Sale[]>('sales', []);
-  const [tables, setTables] = useKV<Table[]>('tables', []);
-  const [tableSections] = useKV<TableSection[]>('tableSections', []);
-  const [tableOrders, setTableOrders] = useKV<TableOrder[]>('tableOrders', []);
-  const [cashRegisters] = useKV<any[]>('cashRegisters', []);
+  const adminId = authSession?.adminId;
+  
+  const [products, setProducts] = useKV<Product[]>('products', [], adminId);
+  const [menuItems] = useKV<MenuItem[]>('menuItems', [], adminId);
+  const [categories] = useKV<Category[]>('categories', [], adminId);
+  const [sales, setSales] = useKV<Sale[]>('sales', [], adminId);
+  const [tables, setTables] = useKV<Table[]>('tables', [], adminId);
+  const [tableSections] = useKV<TableSection[]>('tableSections', [], adminId);
+  const [tableOrders, setTableOrders] = useKV<TableOrder[]>('tableOrders', [], adminId);
+  const [cashRegisters] = useKV<any[]>('cashRegisters', [], adminId);
   const [cashRegister, setCashRegister] = useKV<CashRegister>('cashRegister', {
     id: generateId(),
     branchId: 'branch-1',
@@ -82,7 +84,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
     totalMultinetSales: 0,
     totalSales: 0,
     lastUpdated: new Date().toISOString(),
-  });
+  }, adminId);
   const [settings] = useKV<AppSettings>('appSettings', {
     taxRates: [],
     paymentMethods: [

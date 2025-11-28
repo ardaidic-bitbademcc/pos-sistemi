@@ -144,11 +144,13 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
 ];
 
 export default function Dashboard({ onNavigate, currentUserRole = 'owner', authSession }: DashboardProps) {
-  const [sales] = useKV<Sale[]>('sales', []);
-  const [employees] = useKV<any[]>('employees', []);
-  const [products] = useKV<any[]>('products', []);
-  const [tasks] = useKV<Task[]>('tasks', []);
-  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS);
+  const adminId = authSession?.adminId;
+  
+  const [sales] = useKV<Sale[]>('sales', [], adminId);
+  const [employees] = useKV<any[]>('employees', [], adminId);
+  const [products] = useKV<any[]>('products', [], adminId);
+  const [tasks] = useKV<Task[]>('tasks', [], adminId);
+  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', DEFAULT_ROLE_PERMISSIONS, adminId);
 
   const { filteredItems: filteredSales } = useBranchFilter(sales, authSession);
   const { filteredItems: filteredEmployees } = useBranchFilter(employees, authSession);

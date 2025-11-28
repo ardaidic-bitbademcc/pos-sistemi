@@ -54,17 +54,19 @@ interface BranchStats {
 }
 
 export default function AdminModule({ onBack, authSession }: AdminModuleProps) {
-  const [branches, setBranches] = useKV<Branch[]>('branches', []);
-  const [employees, setEmployees] = useKV<Employee[]>('employees', []);
-  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', []);
-  const [products, setProducts] = useKV<any[]>('products', []);
-  const [categories, setCategories] = useKV<any[]>('categories', []);
-  const [orders, setOrders] = useKV<any[]>('orders', []);
-  const [transactions, setTransactions] = useKV<any[]>('transactions', []);
-  const [customers, setCustomers] = useKV<any[]>('customers', []);
-  const [tasks, setTasks] = useKV<any[]>('tasks', []);
-  const [b2bOrders, setB2bOrders] = useKV<any[]>('b2bOrders', []);
-  const [cashRegisters, setCashRegisters] = useKV<any[]>('cashRegisters', []);
+  const adminId = authSession?.adminId;
+  
+  const [branches, setBranches] = useKV<Branch[]>('branches', [], adminId);
+  const [employees, setEmployees] = useKV<Employee[]>('employees', [], adminId);
+  const [rolePermissions] = useKV<RolePermissions[]>('rolePermissions', [], adminId);
+  const [products, setProducts] = useKV<any[]>('products', [], adminId);
+  const [categories, setCategories] = useKV<any[]>('categories', [], adminId);
+  const [orders, setOrders] = useKV<any[]>('orders', [], adminId);
+  const [transactions, setTransactions] = useKV<any[]>('transactions', [], adminId);
+  const [customers, setCustomers] = useKV<any[]>('customers', [], adminId);
+  const [tasks, setTasks] = useKV<any[]>('tasks', [], adminId);
+  const [b2bOrders, setB2bOrders] = useKV<any[]>('b2bOrders', [], adminId);
+  const [cashRegisters, setCashRegisters] = useKV<any[]>('cashRegisters', [], adminId);
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
