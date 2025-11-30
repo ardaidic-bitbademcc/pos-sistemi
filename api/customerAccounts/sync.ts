@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -28,23 +30,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           continue;
         }
 
+        // Generate unique account number if not exists
+        const accountNumber = item.accountNumber || `ACC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         // Check if exists
         const existing = await prisma.customerAccount.findUnique({
           where: { id: item.id },
         });
 
         const accountData = {
-          customerName: item.customerName,
-          branchId: item.branchId || 'branch-1',
-          adminId: adminId,
+          name: item.customerName,
+          accountNumber: accountNumber,
           phone: item.phone || null,
           email: item.email || null,
           address: item.address || null,
-          taxNumber: item.taxNumber || null,
-          totalDebt: item.totalDebt || 0,
+          balance: item.totalDebt || 0,
           creditLimit: item.creditLimit || 0,
-          status: item.status || 'active',
-          notes: item.notes || null,
+          isActive: item.status === 'active',
           updatedAt: new Date(),
         };
 
@@ -58,6 +60,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           await prisma.customerAccount.create({
             data: {
               id: item.id,
+              branchId: item.branchId || 'branch-1',
+              adminId: adminId,
               ...accountData,
               createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
             },

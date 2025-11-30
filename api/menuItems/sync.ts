@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -22,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const item of items) {
       try {
         // Validate required fields
-        if (!item.id || !item.name) {
+        if (!item.id || !item.name || !item.categoryId) {
           console.warn('[SYNC] Skipping menu item - missing required fields:', item);
           errors++;
           continue;
@@ -35,25 +37,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const menuItemData = {
           name: item.name,
-          branchId: item.branchId || 'branch-1',
-          adminId: adminId,
-          categoryId: item.categoryId || null,
-          categoryName: item.categoryName || null,
-          basePrice: item.basePrice || 0,
-          currentPrice: item.currentPrice || item.basePrice || 0,
           description: item.description || null,
-          image: item.image || null,
-          isAvailable: item.isAvailable !== undefined ? item.isAvailable : true,
-          preparationTime: item.preparationTime || null,
-          calories: item.calories || null,
-          allergens: item.allergens || null,
-          isVegetarian: item.isVegetarian || false,
-          isVegan: item.isVegan || false,
-          isGlutenFree: item.isGlutenFree || false,
-          spicyLevel: item.spicyLevel || null,
-          stockTracking: item.stockTracking || false,
-          currentStock: item.currentStock || null,
-          lowStockThreshold: item.lowStockThreshold || null,
+          categoryId: item.categoryId,
+          basePrice: item.basePrice || 0,
+          taxRate: item.taxRate || 18, // Default KDV %18
+          isActive: item.isAvailable !== undefined ? item.isAvailable : true,
+          imageUrl: item.image || item.imageUrl || null,
           updatedAt: new Date(),
         };
 
@@ -67,6 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           await prisma.menuItem.create({
             data: {
               id: item.id,
+              branchId: item.branchId || 'branch-1',
+              adminId: adminId,
               ...menuItemData,
               createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
             },

@@ -11,16 +11,13 @@ const GLOBAL_KEYS = [
 ];
 
 // Keys that should be synced to database
+// Only sync keys that have dedicated database tables
 const DB_SYNC_KEYS = [
   'products', 
   'sales', 
   'employees', 
   'branches', 
   'categories',
-  'appSettings',
-  'tableSections',
-  'tables',
-  'cashRegister',
   'customerAccounts',
   'menuItems'
 ];
