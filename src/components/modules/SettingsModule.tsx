@@ -424,8 +424,8 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
                 ...t,
                 tableNumber,
                 capacity: tableCapacity,
-                sectionId: tableSection || undefined,
-                section: tableSection
+                sectionId: (tableSection && tableSection !== 'no-section') ? tableSection : undefined,
+                section: (tableSection && tableSection !== 'no-section')
                   ? filteredTableSections.find((s) => s.id === tableSection)?.name
                   : undefined,
                 updatedAt: new Date().toISOString(),
@@ -442,8 +442,8 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
         tableNumber,
         capacity: tableCapacity,
         status: 'available',
-        sectionId: tableSection || undefined,
-        section: tableSection
+        sectionId: (tableSection && tableSection !== 'no-section') ? tableSection : undefined,
+        section: (tableSection && tableSection !== 'no-section')
           ? filteredTableSections.find((s) => s.id === tableSection)?.name
           : undefined,
         isActive: true,
@@ -1493,7 +1493,7 @@ export default function SettingsModule({ onBack, authSession }: SettingsModulePr
                   <SelectValue placeholder="Bölge seçin..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Bölge Yok</SelectItem>
+                  <SelectItem value="no-section">Bölge Yok</SelectItem>
                   {filteredTableSections
                     .filter((s) => s.isActive)
                     .map((section) => (

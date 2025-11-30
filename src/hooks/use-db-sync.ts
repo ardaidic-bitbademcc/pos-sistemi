@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react';
 import type { Product, Sale } from '@/lib/types';
 

@@ -86,6 +86,16 @@ export default function RegisterLogin({ onSuccess }: RegisterLoginProps) {
 
       toast.success(`Hoş geldiniz, ${data.admin?.businessName || 'Kullanıcı'}`);
       
+      // Sync database to KV storage for this admin
+      if (data.session?.adminId) {
+        console.log('Syncing database to KV for admin:', data.session.adminId);
+        fetch('/api/sync/db-to-kv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: data.session.adminId }),
+        }).catch(err => console.warn('DB to KV sync failed:', err));
+      }
+      
       console.log('Calling onSuccess with session and branches:', data.session, data.branches);
       
       try {
