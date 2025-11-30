@@ -11,7 +11,19 @@ const GLOBAL_KEYS = [
 ];
 
 // Keys that should be synced to database
-const DB_SYNC_KEYS = ['products', 'sales', 'employees', 'branches', 'categories'];
+const DB_SYNC_KEYS = [
+  'products', 
+  'sales', 
+  'employees', 
+  'branches', 
+  'categories',
+  'appSettings',
+  'tableSections',
+  'tables',
+  'cashRegister',
+  'customerAccounts',
+  'menuItems'
+];
 
 // Custom KV store hook that uses Vercel API (which connects to Supabase via Prisma)
 // Automatically prefixes keys with adminId for multi-tenancy isolation (except global keys)
@@ -86,29 +98,28 @@ export function useKV<T>(
 // Sync data to database
 async function syncToDatabase(key: string, value: any, adminId: string) {
   try {
-    console.log(`[DB-SYNC] Starting sync for ${key}, items count:`, Array.isArray(value) ? value.length : 'not array');
+    console.log(`[DB-SYNC] Starting sync for ${key}, type:`, typeof value, Array.isArray(value) ? `array[${value.length}]` : 'object');
     const endpoint = `/api/${key}`;
     
-    // For arrays, sync each item
-    if (Array.isArray(value)) {
-      // We'll do a simple bulk sync - send all items
-      // The API will handle create/update logic
-      const response = await fetch(`${endpoint}/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          adminId,
-          items: value 
-        }),
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log(`[DB-SYNC] Success for ${key}:`, result);
-      } else {
-        const error = await response.text();
-        console.error(`[DB-SYNC] Failed for ${key}:`, response.status, error);
-      }
+    // For single objects (appSettings, cashRegister), send as items
+    // For arrays, send as items array
+    const isSingleObject = !Array.isArray(value) && typeof value === 'object';
+    
+    const response = await fetch(`${endpoint}/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        adminId,
+        items: value // Both arrays and single objects go as "items"
+      }),
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`[DB-SYNC] Success for ${key}:`, result);
+    } else {
+      const error = await response.text();
+      console.error(`[DB-SYNC] Failed for ${key}:`, response.status, error);
     }
   } catch (error) {
     console.error(`[DB-SYNC] Exception for ${key}:`, error);

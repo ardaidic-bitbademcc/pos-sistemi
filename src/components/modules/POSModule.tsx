@@ -883,9 +883,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
     }
 
     const currentBranchId = authSession?.branchId || 'branch-1';
-    const isCashOpen = (cashRegisters || []).some(
-      cr => cr.branchId === currentBranchId && cr.isOpen
-    );
+    const isCashOpen = cashRegister?.isOpen && cashRegister.branchId === currentBranchId;
 
     if (!isCashOpen) {
       toast.error('Kasa açık değil! Ödeme alınamaz. Lütfen önce kasayı açın.', {
@@ -1122,9 +1120,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
     }
 
     const currentBranchId = authSession?.branchId || 'branch-1';
-    const isCashOpen = (cashRegisters || []).some(
-      cr => cr.branchId === currentBranchId && cr.isOpen
-    );
+    const isCashOpen = cashRegister?.isOpen && cashRegister.branchId === currentBranchId;
 
     if (!isCashOpen) {
       toast.error('Kasa açık değil! Ödeme alınamaz. Lütfen önce kasayı açın.', {
@@ -1317,9 +1313,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
     }
 
     const currentBranchId = authSession?.branchId || 'branch-1';
-    const isCashOpen = (cashRegisters || []).some(
-      cr => cr.branchId === currentBranchId && cr.isOpen
-    );
+    const isCashOpen = cashRegister?.isOpen && cashRegister.branchId === currentBranchId;
 
     if (!isCashOpen) {
       toast.error('Kasa açık değil! Ödeme alınamaz. Lütfen önce kasayı açın.', {
@@ -1610,9 +1604,7 @@ export default function POSModule({ onBack, currentUserRole = 'cashier', authSes
   const totals = calculateTotals();
 
   const currentBranchId = authSession?.branchId || 'branch-1';
-  const isCashOpen = (cashRegisters || []).some(
-    cr => cr.branchId === currentBranchId && cr.isOpen
-  );
+  const isCashOpen = cashRegister?.isOpen && cashRegister.branchId === currentBranchId;
 
   return (
     <div className="min-h-screen p-3 sm:p-6 space-y-4 sm:space-y-6">
