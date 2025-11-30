@@ -119,8 +119,8 @@ async function syncProducts(adminId: string, items: any[]) {
             id: item.id,
             branchId: item.branchId || 'branch-1',
             adminId: adminId,
-            ...productData,
             createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+            ...productData,
           },
         });
         created++;
