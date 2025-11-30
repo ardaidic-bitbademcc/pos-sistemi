@@ -96,18 +96,15 @@ export function useKV<T>(
 async function syncToDatabase(key: string, value: any, adminId: string) {
   try {
     console.log(`[DB-SYNC] Starting sync for ${key}, type:`, typeof value, Array.isArray(value) ? `array[${value.length}]` : 'object');
-    const endpoint = `/api/${key}`;
     
-    // For single objects (appSettings, cashRegister), send as items
-    // For arrays, send as items array
-    const isSingleObject = !Array.isArray(value) && typeof value === 'object';
-    
-    const response = await fetch(`${endpoint}/sync`, {
+    // Use unified sync endpoint
+    const response = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         adminId,
-        items: value // Both arrays and single objects go as "items"
+        type: key,
+        items: value
       }),
     });
     
