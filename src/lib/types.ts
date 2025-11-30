@@ -278,6 +278,11 @@ export interface CashRegister {
   totalTransferSales: number;
   totalMultinetSales: number;
   totalSales: number;
+  isOpen?: boolean;
+  openedBy?: string;
+  openedAt?: string;
+  closedBy?: string;
+  closedAt?: string;
   lastUpdated: string;
 }
 
