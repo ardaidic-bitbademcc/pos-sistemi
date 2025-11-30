@@ -99,6 +99,7 @@ async function syncProducts(adminId: string, items: any[]) {
         sku: item.sku || `SKU-${Date.now()}`,
         description: item.description || null,
         categoryId: categoryId,
+        category: item.category || 'Genel', // Category name as string
         basePrice: item.basePrice || 0,
         costPrice: item.costPrice || 0,
         taxRate: item.taxRate || 18,
